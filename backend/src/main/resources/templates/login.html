@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Login', hideNav=true, content=~{::div.login-content})}">
+<body>
+    <div class="login-content w-full max-w-sm p-4">
+        <!-- Logo -->
+        <div class="mb-8 text-center">
+            <div class="inline-flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 bg-transparent flex items-center justify-center">
+                    <img th:src="@{/images/logo.png}" alt="Logo" class="w-full h-full object-contain">
+                </div>
+                <span class="text-xl font-semibold text-foreground">LegionAsd</span>
+            </div>
+            <p class="text-foreground-muted text-sm">Accedi al pannello di gestione</p>
+        </div>
+
+        <!-- Card -->
+        <div class="card p-6">
+            <form id="login-form" class="space-y-4">
+                <div id="error-message" class="hidden text-danger text-sm font-medium bg-danger-bg p-2 rounded"></div>
+                
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">
+                        Email
+                    </label>
+                    <input type="email" id="email" placeholder="admin@legionasd.com" required class="input" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">
+                        Password
+                    </label>
+                    <input type="password" id="password" placeholder="••••••••" required class="input" />
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-primary w-full mt-2 flex items-center justify-center gap-2">
+                    <span id="spinner" class="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin hidden"></span>
+                    <span id="btn-text">Accedi</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Login Script -->
+        <script>
+            $(document).ready(function() {
+                let token = localStorage.getItem('jwt_token');
+
+                if (token) {
+                    try {
+                        const base64 = token.split('.')[1];
+                        if (!base64) throw new Error("Invalid token");
+
+                        const payload = JSON.parse(atob(base64));
+
+                        if (!payload.exp) {
+                            throw new Error("Missing exp");
+                        }
+
+                        if (payload.exp * 1000 > Date.now()) {
+                            window.location.href = '/';
+                        } else {
+                            localStorage.removeItem('jwt_token');
+                        }
+
+                    } catch (e) {
+                        localStorage.removeItem('jwt_token');
+                    }
+                }
+
+                $('#login-form').on('submit', function(e) {
+                    e.preventDefault();
+                    const email = $('#email').val();
+                    const password = $('#password').val();
+                    const btn = $('#submit-btn');
+                    const spinner = $('#spinner');
+                    const btnText = $('#btn-text');
+                    const errorMsg = $('#error-message');
+
+                    // Loading state
+                    btn.prop('disabled', true);
+                    spinner.removeClass('hidden');
+                    btnText.text('Accesso...');
+                    errorMsg.addClass('hidden');
+
+                    $.ajax({
+                        url: '/api/auth/login',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ email: email, password: password }),
+                        success: function(response) {
+
+                            console.log("LOGIN RESPONSE", response);
+
+                            if (response.accessToken) {
+
+                                localStorage.setItem('jwt_token', response.accessToken);
+
+                                if (response.refreshToken) {
+                                    localStorage.setItem('refresh_token', response.refreshToken);
+                                }
+
+                                localStorage.setItem('user_full_name', response.fullName || '');
+                                localStorage.setItem('user_role', response.role || '');
+                                window.location.href = '/dashboard';
+
+                            } else {
+                                showError("Token non ricevuto dal server");
+                            }
+                        },
+                        error: function(xhr) {
+                            showError("Credenziali non valide o errore di rete");
+                        },
+                        complete: function() {
+                            btn.prop('disabled', false);
+                            spinner.addClass('hidden');
+                            btnText.text('Accedi');
+                        }
+                    });
+
+                    function showError(msg) {
+                        errorMsg.text(msg).removeClass('hidden');
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

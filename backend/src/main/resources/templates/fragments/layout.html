@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, hideNav, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title != null ? title + ' - LegionAsd' : 'LegionAsd'}">LegionAsd</title>
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" th:href="@{/favicon.png}">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+
+    <!-- Custom Scripts -->
+    <script th:src="@{/js/fiscal-code.js}"></script>
+    <script th:src="@{/js/main.js}"></script>
+    
+    <!-- Additional head elements -->
+    <th:block th:if="${additionalHead != null}">
+        <th:block th:replace="${additionalHead}"></th:block>
+    </th:block>
+</head>
+<body class="bg-background text-foreground overflow-hidden h-screen flex flex-col font-sans antialiased">
+    
+    <!-- Only show sidebar and topbar if not on login page -->
+    <div th:if="${hideNav == null or hideNav == false}" class="flex h-screen overflow-hidden w-full">
+        <!-- Sidebar -->
+        <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+        
+        <div class="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+            <!-- Topbar -->
+            <div th:replace="~{fragments/topbar :: topbar}"></div>
+            
+            <!-- Main Content -->
+            <main class="flex-1 overflow-y-auto p-5 animate-fade-in" id="main-content">
+                <th:block th:replace="${content}"></th:block>
+            </main>
+        </div>
+    </div>
+
+    <!-- For Login page -->
+    <div th:if="${hideNav != null and hideNav == true}" class="flex h-screen items-center justify-center">
+        <th:block th:replace="${content}"></th:block>
+    </div>
+
+    <script>
+        // Initialize Lucide icons on page load
+        $(document).ready(function() {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

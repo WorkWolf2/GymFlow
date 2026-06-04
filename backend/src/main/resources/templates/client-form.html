@@ -1,0 +1,242 @@
+﻿<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title=${title}, hideNav=false, content=~{::div.client-form-content})}">
+<body>
+    <div class="client-form-content space-y-6">
+        <div class="flex items-center gap-4">
+            <a href="/clients" class="p-2 rounded-full hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <div>
+                <h1 class="text-xl font-semibold text-foreground">Nuovo Cliente</h1>
+                <p class="text-sm text-foreground-muted">Inserisci i dati del nuovo cliente</p>
+            </div>
+        </div>
+
+        <div class="card overflow-hidden">
+            <form id="new-client-form" class="p-6 space-y-6">
+                <!-- Anagrafica -->
+                <div>
+                    <h2 class="text-base font-medium text-foreground mb-4">Anagrafica</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Nome *</label>
+                            <input type="text" id="firstName" required class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Cognome *</label>
+                            <input type="text" id="lastName" required class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data di nascita</label>
+                            <input type="date" id="birthDate" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Luogo di nascita</label>
+                            <input type="text" id="birthPlace" class="input" placeholder="Es. Cosenza, Rende" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Provincia</label>
+                            <select id="birthProvince" class="input">
+                                <option value="">Seleziona provincia</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Sesso</label>
+                            <select id="sex" class="input">
+                                <option value="">Seleziona</option>
+                                <option value="M">Maschile</option>
+                                <option value="F">Femminile</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Codice Fiscale</label>
+                            <input type="text" id="fiscalCode" class="input uppercase" />
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-surface-border">
+
+                <!-- Contatti -->
+                <div>
+                    <h2 class="text-base font-medium text-foreground mb-4">Contatti</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Email</label>
+                            <input type="email" id="email" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Telefono</label>
+                            <input type="tel" id="phone" class="input" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Indirizzo</label>
+                            <input type="text" id="address" class="input" />
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-surface-border">
+
+                <!-- Documenti (Opzionali per la creazione in questo form, verranno caricati tramite AJAX) -->
+                <div>
+                    <h2 class="text-base font-medium text-foreground mb-4">Documenti e Certificati</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Foto Profilo (Avatar)</label>
+                            <input type="file" id="avatar" accept="image/*" class="input" />
+                        </div>
+                        <div class="md:col-span-2 space-y-4">
+                            <p class="text-xs font-medium text-foreground-muted">Certificato Medico</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data emissione</label>
+                                    <input type="date" id="certIssuedDate" class="input" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data scadenza</label>
+                                    <input type="date" id="certExpiryDate" class="input" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-foreground-muted mb-1.5">File (opzionale)</label>
+                                <input type="file" id="certificate" accept=".pdf,image/*" class="input" />
+                            </div>
+                            <p class="text-[10px] text-foreground-subtle">Puoi registrare il certificato solo con le date, senza caricare un file.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Documento d'identità (Fronte)</label>
+                            <input type="file" id="docFront" accept="image/*,.pdf" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Documento d'identità (Retro)</label>
+                            <input type="file" id="docBack" accept="image/*,.pdf" class="input" />
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-surface-border">
+
+                <!-- Note -->
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note libere</label>
+                    <textarea id="notes" rows="3" class="input resize-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-3">
+                    <a href="/clients" class="btn-ghost">Annulla</a>
+                    <button type="submit" id="submit-btn" class="btn-primary">Salva Cliente</button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                FiscalCode.loadProvinceSelect('#birthProvince');
+
+                const refreshFiscalCode = FiscalCode.bindAutofill('#fiscalCode', {
+                    firstName: '#firstName',
+                    lastName: '#lastName',
+                    birthDate: '#birthDate',
+                    birthPlace: '#birthPlace',
+                    birthProvince: '#birthProvince',
+                    sex: '#sex'
+                });
+
+                $('#new-client-form').submit(function(e) {
+                    e.preventDefault();
+                    const btn = $('#submit-btn');
+                    btn.prop('disabled', true).text('Salvataggio...');
+
+                    Promise.resolve()
+                        .then(function () { return refreshFiscalCode(); })
+                        .catch(function () { /* CF opzionale: procedi comunque */ })
+                        .finally(function () { submitNewClient(btn); });
+                });
+
+                function submitNewClient(btn) {
+                    const requestData = {
+                        firstName: $('#firstName').val(),
+                        lastName: $('#lastName').val(),
+                        birthDate: $('#birthDate').val() || null,
+                        birthPlace: $('#birthPlace').val() || null,
+                        birthProvince: $('#birthProvince').val() || null,
+                        sex: $('#sex').val() || null,
+                        fiscalCode: ($('#fiscalCode').val().trim().toUpperCase() || null),
+                        email: $('#email').val() || null,
+                        phone: $('#phone').val() || null,
+                        address: $('#address').val() || null,
+                        notes: $('#notes').val() || null
+                    };
+
+                    $.ajax({
+                        url: '/api/users',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(requestData),
+                        success: function(user) {
+                            const userId = user.id;
+                            
+                            const avatarFile = $('#avatar')[0].files[0];
+                            const certFile = $('#certificate')[0].files[0];
+                            const certIssued = $('#certIssuedDate').val();
+                            const certExpiry = $('#certExpiryDate').val();
+                            const docFrontFile = $('#docFront')[0].files[0];
+                            const docBackFile = $('#docBack')[0].files[0];
+
+                            // Array of promises for file uploads
+                            const uploadPromises = [];
+
+                            if (avatarFile) {
+                                const formData = new FormData();
+                                formData.append('file', avatarFile);
+                                uploadPromises.push(
+                                    $.ajax({ url: `/api/users/${userId}/avatar`, type: 'POST', data: formData, processData: false, contentType: false })
+                                );
+                            }
+
+                            if (docFrontFile || docBackFile) {
+                                const formData = new FormData();
+                                if (docFrontFile) formData.append('docFront', docFrontFile);
+                                if (docBackFile) formData.append('docBack', docBackFile);
+                                uploadPromises.push(
+                                    $.ajax({ url: `/api/users/${userId}/documents`, type: 'POST', data: formData, processData: false, contentType: false })
+                                );
+                            }
+
+                            if (certFile || certExpiry) {
+                                const formData = new FormData();
+                                if (certFile) formData.append('file', certFile);
+                                if (certIssued) formData.append('issuedDate', certIssued);
+                                if (certExpiry) formData.append('expiryDate', certExpiry);
+                                uploadPromises.push(
+                                    $.ajax({ url: `/api/users/${userId}/certificate`, type: 'POST', data: formData, processData: false, contentType: false })
+                                );
+                            }
+
+                            // Wait for all uploads to finish, then redirect
+                            Promise.all(uploadPromises)
+                                .then(() => {
+                                    window.location = `/clients/${userId}`;
+                                })
+                                .catch(err => {
+                                    console.error('Error during file uploads', err);
+                                    alert('Il cliente è stato creato, ma si è verificato un errore nel caricamento dei file.');
+                                    window.location = `/clients/${userId}`;
+                                });
+                        },
+                        error: function(err) {
+                            console.error('Error creating user', err);
+                            alert('Errore durante la creazione del cliente.');
+                            btn.prop('disabled', false).text('Salva Cliente');
+                        }
+                    });
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>
+
+
+

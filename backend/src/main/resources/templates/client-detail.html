@@ -1,0 +1,922 @@
+﻿<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org"
+    th:replace="~{fragments/layout :: layout(title=${title}, hideNav=false, content=~{::div.client-detail-content})}">
+
+<body>
+    <div class="client-detail-content space-y-12">
+        <!-- Header -->
+        <div class="flex items-center gap-4">
+            <a href="/clients"
+                class="p-2 rounded-full hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <div>
+                <h1 class="text-xl font-semibold text-foreground" id="client-name">Caricamento...</h1>
+                <p class="text-sm text-foreground-muted" id="client-email"></p>
+                <p class="text-xs font-mono text-foreground-subtle" id="client-code"></p>
+            </div>
+            <div class="ml-auto flex flex-wrap gap-2">
+                <button type="button" id="download-sheet-btn"
+                    class="btn-ghost text-foreground-muted hover:text-foreground hover:bg-surface-active flex items-center gap-2"
+                    title="Scarica scheda PDF">
+                    <i data-lucide="file-down" class="w-[15px] h-[15px]"></i>
+                    <span class="hidden sm:inline">PDF</span>
+                </button>
+                <button id="edit-client-btn"
+                    class="btn-ghost text-accent hover:bg-surface-active flex items-center gap-2">
+                    <i data-lucide="pencil" class="w-[15px] h-[15px]"></i>
+                    Modifica
+                </button>
+                <button id="new-sub-btn" class="btn-primary flex items-center gap-2">
+                    <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
+                    Nuovo Abbonamento
+                </button>
+                <button id="assign-nfc-btn" class="btn-ghost flex items-center gap-2">
+                    <i data-lucide="badge-check" class="w-[15px] h-[15px]"></i>
+                    Assegna NFC
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Abbonamenti -->
+            <div class="card overflow-hidden flex flex-col mb-5">
+                <div class="px-5 py-4 border-b border-surface-border">
+                    <h2 class="font-medium text-foreground">Stato Abbonamenti</h2>
+                </div>
+                <div id="sub-list" class="divide-y divide-surface-border flex-1">
+                    <p class="px-5 py-6 text-sm text-foreground-subtle text-center">Nessun abbonamento attivo</p>
+                </div>
+            </div>
+
+            <!-- Storico Pagamenti -->
+            <div class="card overflow-hidden flex flex-col mb-5">
+                <div class="px-5 py-4 border-b border-surface-border">
+                    <h2 class="font-medium text-foreground">Storico Pagamenti</h2>
+                </div>
+                <div id="payment-list" class="divide-y divide-surface-border flex-1 h-[300px] overflow-y-auto">
+                    <p class="px-5 py-6 text-sm text-foreground-subtle text-center">Nessun pagamento registrato</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+            <div class="card overflow-hidden">
+                <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
+                    <h2 class="font-medium text-foreground">Accesso</h2>
+                    <span class="text-xs text-foreground-muted text-right" id="current-nfc-tag">Nessun tag assegnato</span>
+                </div>
+            </div>
+
+            <div class="card overflow-hidden">
+                <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
+                    <h2 class="font-medium text-foreground">Certificato Medico</h2>
+                    <div class="flex items-center gap-3">
+                        <span id="cert-status-badge"
+                            class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-border text-foreground-muted">CARICAMENTO</span>
+                        <button id="manage-cert-btn"
+                            class="text-accent hover:text-accent-hover text-sm font-medium">Gestisci</button>
+                    </div>
+                </div>
+                <p id="cert-dates-info" class="px-5 py-3 text-sm text-foreground-muted"></p>
+            </div>
+        </div>
+
+        <div class="card overflow-hidden mb-5">
+            <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between gap-3">
+                <h2 class="font-medium text-foreground">Documenti Cliente</h2>
+                <button id="manage-docs-btn" class="text-accent hover:text-accent-hover text-sm font-medium">Carica</button>
+            </div>
+            <div id="docs-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 p-5">
+                <p class="md:col-span-2 text-sm text-foreground-subtle text-center">Nessun documento caricato</p>
+            </div>
+        </div>
+
+        <!-- New Subscription Modal for User -->
+        <div id="sub-modal"
+            class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div
+                class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Assegna Abbonamento</h2>
+                    <button class="close-sub-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="sub-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Piano</label>
+                        <select id="sub-type-id" required class="input"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio</label>
+                        <input type="date" id="sub-start-date" required class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo Finale (â‚¬)</label>
+                        <input type="number" step="0.01" min="0" id="sub-price" required class="input" />
+                        <p class="text-[10px] text-foreground-subtle mt-1">L'incasso verrà registrato in data odierna in
+                            automatico.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di
+                            Pagamento</label>
+                        <select id="sub-payment-method" required class="input">
+                            <option value="CASH">Contanti</option>
+                            <option value="CARD">Carta / Bancomat</option>
+                            <option value="TRANSFER">Bonifico</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-sub-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-sub-btn" class="btn-primary">Conferma ed Incassa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="cert-modal"
+            class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div
+                class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Certificato Medico</h2>
+                    <button class="close-cert-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="cert-form" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data emissione</label>
+                            <input type="date" id="cert-issued-date" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data scadenza</label>
+                            <input type="date" id="cert-expiry-date" class="input" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">File (opzionale)</label>
+                        <input type="file" id="cert-file" accept=".pdf,image/*" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note (opzionale)</label>
+                        <textarea id="cert-notes" rows="2" class="input resize-none"></textarea>
+                    </div>
+                    <p class="text-[10px] text-foreground-subtle">Indica almeno la data di scadenza oppure carica un file.
+                        Se non specifichi le date, verranno impostate automaticamente (oggi + 1 anno).</p>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-cert-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-cert-btn" class="btn-primary">Salva</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="docs-modal"
+            class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div
+                class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Documenti Cliente</h2>
+                    <button class="close-docs-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="docs-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Documento fronte</label>
+                        <input type="file" id="doc-front-file" accept="image/*,.pdf" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Documento retro</label>
+                        <input type="file" id="doc-back-file" accept="image/*,.pdf" class="input" />
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-docs-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-docs-btn" class="btn-primary">Salva</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="nfc-modal" class="modal-overlay hidden">
+            <div
+                class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Assegna Tag NFC</h2>
+                    <button class="close-nfc-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="nfc-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tag rilevato</label>
+                        <select id="nfc-tag-uid" required class="input"></select>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-nfc-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-nfc-btn" class="btn-primary">Assegna Tag</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Client Modal -->
+        <div id="edit-client-modal"
+            class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div
+                class="bg-surface border border-surface-border rounded shadow-card w-full max-w-lg overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Modifica Dati Cliente</h2>
+                    <button class="close-edit-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="edit-client-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">ID cliente</label>
+                        <input type="text" id="edit-client-code" class="input font-mono" disabled />
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Nome</label>
+                            <input type="text" id="edit-first-name" required class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Cognome</label>
+                            <input type="text" id="edit-last-name" required class="input" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Email</label>
+                            <input type="email" id="edit-email" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Telefono</label>
+                            <input type="text" id="edit-phone" class="input" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data di
+                                Nascita</label>
+                            <input type="date" id="edit-birth-date" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Luogo di nascita</label>
+                            <input type="text" id="edit-birth-place" class="input" placeholder="Es. Cosenza, Rende" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Provincia</label>
+                            <select id="edit-birth-province" class="input">
+                                <option value="">Seleziona provincia</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Sesso</label>
+                            <select id="edit-sex" class="input">
+                                <option value="">Seleziona</option>
+                                <option value="M">Maschile</option>
+                                <option value="F">Femminile</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Codice Fiscale</label>
+                        <input type="text" id="edit-fiscal-code" class="input uppercase" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Indirizzo</label>
+                        <input type="text" id="edit-address" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note</label>
+                        <textarea id="edit-notes" class="input min-h-[80px]"></textarea>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3 border-t border-surface-border mt-6">
+                        <button type="button" class="close-edit-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-edit-btn" class="btn-primary">Salva Modifiche</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            const clientId = /*[[${clientId}]]*/ '';
+
+            $(document).ready(function () {
+                let provincesLoaded = FiscalCode.loadProvinceSelect('#edit-birth-province');
+
+                const refreshFiscalCode = FiscalCode.bindAutofill('#edit-fiscal-code', {
+                    firstName: '#edit-first-name',
+                    lastName: '#edit-last-name',
+                    birthDate: '#edit-birth-date',
+                    birthPlace: '#edit-birth-place',
+                    birthProvince: '#edit-birth-province',
+                    sex: '#edit-sex'
+                });
+
+                function loadUser() {
+                    $.ajax({
+                        url: '/api/users/' + clientId,
+                        type: 'GET',
+                        success: function (user) {
+                            $('#client-name').text(user.fullName);
+                            $('#client-email').text(user.email || user.phone || '');
+                            $('#client-code').text(user.clientCode ? 'ID cliente #' + user.clientCode : '');
+                            $('#edit-client-code').val(user.clientCode ? '#' + user.clientCode : '');
+                            $('#current-nfc-tag').text(user.nfcTagUid ? 'Tag NFC ' + user.nfcTagUid : (user.clientCode ? 'Accesso con ID #' + user.clientCode : 'Nessun tag assegnato'));
+                            renderDocuments(user);
+
+                            // Populate edit form
+                            $('#edit-first-name').val(user.firstName);
+                            $('#edit-last-name').val(user.lastName);
+                            $('#edit-email').val(user.email);
+                            $('#edit-phone').val(user.phone);
+                            $('#edit-birth-date').val(user.birthDate);
+                            $('#edit-birth-place').val(user.birthPlace);
+                            provincesLoaded.always(function () {
+                                $('#edit-birth-province').val(user.birthProvince || '');
+                            });
+                            $('#edit-sex').val(user.sex || '');
+                            $('#edit-fiscal-code').val(user.fiscalCode || '');
+                            $('#edit-address').val(user.address);
+                            $('#edit-notes').val(user.notes);
+                            if (!user.fiscalCode) {
+                                refreshFiscalCode();
+                            }
+
+                            // Cert badge
+                            const badge = $('#cert-status-badge');
+
+                            badge.removeClass(
+                                'bg-success/10 text-success border-success/20 ' +
+                                'bg-warning/10 text-warning border-warning/20 ' +
+                                'bg-danger/10 text-danger border-danger/20 ' +
+                                'bg-surface-border text-foreground-muted border'
+                            );
+
+                            const datesInfo = $('#cert-dates-info');
+                            if (user.certExpiryDate) {
+                                const issued = user.certIssuedDate ? formatDate(user.certIssuedDate) : "";
+                                datesInfo.text('Emissione: ' + issued + ' · Scadenza: ' + formatDate(user.certExpiryDate));
+                            } else {
+                                datesInfo.text('Nessun certificato registrato');
+                            }
+
+                            if (!user.hasCertificate) {
+                                badge.text("ASSENTE");
+                                badge.addClass("bg-surface-border text-foreground-muted");
+                            } else if (user.certStatus === 'VALID') {
+                                badge.text("VALIDO");
+                                badge.addClass("bg-success/10 text-success border border-success/20");
+                            } else if (user.certStatus === 'EXPIRING_SOON') {
+                                badge.text("IN SCADENZA");
+                                badge.addClass("bg-warning/10 text-warning border border-warning/20");
+                            } else {
+                                badge.text("SCADUTO");
+                                badge.addClass("bg-danger/10 text-danger border border-danger/20");
+                            }
+                        }
+                    });
+                }
+
+                function renderDocuments(user) {
+                    const list = $('#docs-list');
+                    const docs = [
+                        { label: 'Fronte documento', url: user.docFrontPath, icon: 'file-text' },
+                        { label: 'Retro documento', url: user.docBackPath, icon: 'files' }
+                    ].filter(function (doc) {
+                        return !!doc.url;
+                    });
+
+                    list.empty();
+
+                    if (docs.length === 0) {
+                        list.html('<p class="md:col-span-2 text-sm text-foreground-subtle text-center">Nessun documento caricato</p>');
+                        $('#manage-docs-btn').text('Carica');
+                        return;
+                    }
+
+                    $('#manage-docs-btn').text('Aggiorna');
+
+                    docs.forEach(function (doc) {
+                        list.append(`
+                            <a href="${doc.url}" target="_blank" rel="noopener"
+                                class="border border-surface-border rounded p-4 flex items-center gap-3 hover:bg-surface-active transition-colors">
+                                <span class="w-10 h-10 rounded bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                                    <i data-lucide="${doc.icon}" class="w-5 h-5"></i>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-medium text-foreground">${doc.label}</span>
+                                    <span class="block text-xs text-foreground-muted">Apri documento</span>
+                                </span>
+                            </a>
+                        `);
+                    });
+
+                    if (window.lucide) lucide.createIcons();
+                }
+
+                function loadData() {
+
+                    // Abbonamenti
+                    $.ajax({
+                        url: '/api/subscriptions/user/' + clientId,
+                        type: 'GET',
+                        success: function (subs) {
+                            const list = $('#sub-list');
+                            list.empty();
+
+                            if (subs.length === 0) {
+                                list.html(
+                                    '<p class="px-5 py-6 text-sm text-foreground-subtle text-center">Nessun abbonamento registrato</p>'
+                                );
+                                return;
+                            }
+
+                            subs.forEach(function (s) {
+                                const end = formatDate(s.endDate);
+                                const activeClass =
+                                    new Date(s.endDate) >= new Date()
+                                        ? 'text-success'
+                                        : 'text-danger';
+
+                                list.append(`
+                        <div class="px-5 py-3 flex items-center justify-between gap-3 group">
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-foreground">${s.subscriptionType.name}</p>
+                                <p class="text-xs text-foreground-muted">
+                                    Scade il
+                                    <span class="${activeClass} font-medium">${end}</span>
+                                </p>
+                            </div>
+                            <button type="button"
+                                class="delete-sub-btn shrink-0 p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors"
+                                data-id="${s.id}"
+                                title="Rimuovi abbonamento">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    `);
+                            });
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+
+                    // Pagamenti
+                    $.ajax({
+                        url: '/api/payments/user/' + clientId,
+                        type: 'GET',
+                        success: function (payments) {
+                            const list = $('#payment-list');
+                            list.empty();
+
+                            if (payments.length === 0) {
+                                list.html(
+                                    '<p class="px-5 py-6 text-sm text-foreground-subtle text-center">Nessun pagamento registrato</p>'
+                                );
+                                return;
+                            }
+
+                            payments.forEach(function (p) {
+                                const isExpense = p.type === 'EXPENSE';
+                                const amountVal = typeof p.amount === 'number' ? p.amount : parseFloat(p.amount || 0);
+                                const amount = (isExpense ? 'âˆ’ ' : '') + new Intl.NumberFormat('it-IT', {
+                                    style: 'currency',
+                                    currency: 'EUR'
+                                }).format(Math.abs(amountVal));
+                                const amountClass = isExpense ? 'text-danger' : 'text-accent';
+
+                                const date = formatDate(p.paymentDate);
+
+                                list.append(`
+                        <div class="px-5 py-3 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium ${amountClass}">${amount}</p>
+                                <p class="text-xs text-foreground-muted">
+                                    ${date} - ${p.method}${isExpense ? ' · Uscita' : ''}
+                                </p>
+                            </div>
+                            <div class="text-xs text-foreground-muted text-right">
+                                ${p.notes || ''}
+                            </div>
+                        </div>
+                    `);
+                            });
+                        }
+                    });
+                }
+
+                loadUser();
+                loadData();
+
+                $(document).on('click', '.delete-sub-btn', function () {
+                    const id = $(this).data('id');
+                    if (!confirm(
+                        'Rimuovere questo abbonamento dalla scheda cliente?\n\n' +
+                        'Gli incassi già registrati resteranno visibili nella sezione Incassi e nello storico pagamenti.'
+                    )) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '/api/subscriptions/' + id,
+                        type: 'DELETE',
+                        success: function () {
+                            loadData();
+                            loadUser();
+                        },
+                        error: function () {
+                            alert('Errore durante la rimozione dell\'abbonamento');
+                        }
+                    });
+                });
+
+                // =========================
+                // ABBONAMENTI
+                // =========================
+
+                let typesMap = {};
+
+                $('#new-sub-btn').click(function () {
+                    $.ajax({
+                        url: '/api/subscription-types',
+                        type: 'GET',
+                        success: function (types) {
+                            const select = $('#sub-type-id');
+
+                            select.empty();
+                            typesMap = {};
+
+                            types.forEach(function (t) {
+                                typesMap[t.id] = t;
+
+                                select.append(`
+                        <option value="${t.id}">
+                            ${t.name} (${t.defaultPrice}â‚¬)
+                        </option>
+                    `);
+                            });
+
+                            if (types.length > 0) {
+                                $('#sub-price').val(types[0].defaultPrice);
+                            }
+
+                            $('#sub-start-date')[0].valueAsDate = new Date();
+
+                            $('#sub-modal').removeClass('hidden');
+                        }
+                    });
+                });
+
+                $('#sub-type-id').change(function () {
+                    const id = $(this).val();
+
+                    if (typesMap[id]) {
+                        $('#sub-price').val(typesMap[id].defaultPrice);
+                    }
+                });
+
+                $('.close-sub-modal').click(function () {
+                    $('#sub-modal').addClass('hidden');
+                });
+
+                $('#sub-form').submit(function (e) {
+                    e.preventDefault();
+
+                    $('#submit-sub-btn')
+                        .prop('disabled', true)
+                        .text('Elaborazione...');
+
+                    const req = {
+                        userId: clientId,
+                        subscriptionTypeId: $('#sub-type-id').val(),
+                        startDate: $('#sub-start-date').val(),
+                        price: parseFloat($('#sub-price').val()),
+                        paymentMethod: $('#sub-payment-method').val(),
+                        notes: ''
+                    };
+
+                    $.ajax({
+                        url: '/api/subscriptions',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function () {
+                            $('#sub-modal').addClass('hidden');
+                            loadData();
+                        },
+                        error: function () {
+                            alert('Errore durante la creazione');
+                        },
+                        complete: function () {
+                            $('#submit-sub-btn')
+                                .prop('disabled', false)
+                                .text('Conferma ed Incassa');
+                        }
+                    });
+                });
+
+                // =========================
+                // NFC
+                // =========================
+
+                $('#assign-nfc-btn').click(function () {
+                    $.ajax({
+                        url: '/api/nfc/unassigned',
+                        type: 'GET',
+                        success: function (tags) {
+
+                            const select = $('#nfc-tag-uid');
+                            select.empty();
+
+                            if (tags.length === 0) {
+                                select.append(
+                                    '<option value="">Nessun tag rilevato</option>'
+                                );
+
+                                $('#submit-nfc-btn').prop('disabled', true);
+                            } else {
+
+                                tags.forEach(function (tag) {
+                                    select.append(`
+                            <option value="${tag.tagUid}">
+                                ${tag.tagUid}
+                            </option>
+                        `);
+                                });
+
+                                $('#submit-nfc-btn').prop('disabled', false);
+                            }
+
+                            $('#nfc-modal').removeClass('hidden');
+                        }
+                    });
+                });
+
+                $('.close-nfc-modal').click(function () {
+                    $('#nfc-modal').addClass('hidden');
+                });
+
+                $('#nfc-form').submit(function (e) {
+                    e.preventDefault();
+
+                    const tagUid = $('#nfc-tag-uid').val();
+
+                    if (!tagUid) {
+                        return;
+                    }
+
+                    $('#submit-nfc-btn')
+                        .prop('disabled', true)
+                        .text('Assegnazione...');
+
+                    $.ajax({
+                        url: '/api/nfc/assign',
+                        type: 'POST',
+                        data: {
+                            tagUid: tagUid,
+                            userId: clientId
+                        },
+                        success: function (tag) {
+                            $('#current-nfc-tag').text(tag.tagUid);
+                            $('#nfc-modal').addClass('hidden');
+                        },
+                        error: function () {
+                            alert('Errore durante assegnazione NFC');
+                        },
+                        complete: function () {
+                            $('#submit-nfc-btn')
+                                .prop('disabled', false)
+                                .text('Assegna Tag');
+                        }
+                    });
+                });
+
+                // =========================
+                // CERTIFICATO
+                // =========================
+
+                $('#manage-cert-btn').click(function () {
+                    $.get('/api/users/' + clientId, function (user) {
+                        $('#cert-issued-date').val(user.certIssuedDate || '');
+                        $('#cert-expiry-date').val(user.certExpiryDate || '');
+                        $('#cert-notes').val('');
+                        $('#cert-file').val('');
+                        $('#cert-modal').removeClass('hidden');
+                        if (window.lucide) lucide.createIcons();
+                    });
+                });
+
+                $('.close-cert-modal').click(function () {
+                    $('#cert-modal').addClass('hidden');
+                });
+
+                $('#cert-form').submit(function (e) {
+                    e.preventDefault();
+
+                    const file = $('#cert-file')[0].files[0];
+                    const issued = $('#cert-issued-date').val();
+                    const expiry = $('#cert-expiry-date').val();
+                    const notes = $('#cert-notes').val().trim();
+
+                    if (!file && !expiry) {
+                        alert('Indica la data di scadenza oppure carica un file.');
+                        return;
+                    }
+
+                    const fd = new FormData();
+                    if (file) fd.append('file', file);
+                    if (issued) fd.append('issuedDate', issued);
+                    if (expiry) fd.append('expiryDate', expiry);
+                    if (notes) fd.append('notes', notes);
+
+                    $('#submit-cert-btn').prop('disabled', true).text('Salvataggio...');
+
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/certificate',
+                        type: 'POST',
+                        data: fd,
+                        processData: false,
+                        contentType: false,
+                        success: function () {
+                            $('#cert-modal').addClass('hidden');
+                            loadUser();
+                        },
+                        error: function (xhr) {
+                            const msg = xhr.responseJSON && xhr.responseJSON.detail
+                                ? xhr.responseJSON.detail
+                                : 'Impossibile salvare il certificato';
+                            alert(msg);
+                        },
+                        complete: function () {
+                            $('#submit-cert-btn').prop('disabled', false).text('Salva');
+                        }
+                    });
+                });
+
+                // =========================
+                // DOCUMENTI
+                // =========================
+
+                $('#manage-docs-btn').click(function () {
+                    $('#doc-front-file').val('');
+                    $('#doc-back-file').val('');
+                    $('#docs-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                });
+
+                $('.close-docs-modal').click(function () {
+                    $('#docs-modal').addClass('hidden');
+                });
+
+                $('#docs-form').submit(function (e) {
+                    e.preventDefault();
+
+                    const front = $('#doc-front-file')[0].files[0];
+                    const back = $('#doc-back-file')[0].files[0];
+
+                    if (!front && !back) {
+                        alert('Seleziona almeno un documento da caricare.');
+                        return;
+                    }
+
+                    const fd = new FormData();
+                    if (front) fd.append('docFront', front);
+                    if (back) fd.append('docBack', back);
+
+                    $('#submit-docs-btn').prop('disabled', true).text('Salvataggio...');
+
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/documents',
+                        type: 'POST',
+                        data: fd,
+                        processData: false,
+                        contentType: false,
+                        success: function () {
+                            $('#docs-modal').addClass('hidden');
+                            loadUser();
+                        },
+                        error: function () {
+                            alert('Impossibile salvare i documenti');
+                        },
+                        complete: function () {
+                            $('#submit-docs-btn').prop('disabled', false).text('Salva');
+                        }
+                    });
+                });
+
+                // =========================
+                // MODIFICA CLIENTE
+                // =========================
+
+                $('#download-sheet-btn').click(function () {
+                    const btn = $(this);
+                    const originalHtml = btn.html();
+                    btn.prop('disabled', true);
+
+                    const token = localStorage.getItem('jwt_token');
+                    fetch('/api/users/' + clientId + '/sheet/pdf', {
+                        method: 'GET',
+                        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('PDF non generato');
+                            }
+                            const disposition = response.headers.get('Content-Disposition') || '';
+                            const match = disposition.match(/filename="?([^";]+)"?/);
+                            return response.blob().then(function (blob) {
+                                return { blob: blob, filename: match ? match[1] : 'scheda_cliente.pdf' };
+                            });
+                        })
+                        .then(function (result) {
+                            const url = window.URL.createObjectURL(result.blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = result.filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(url);
+                        })
+                        .catch(function () {
+                            alert('Errore durante il download della scheda PDF');
+                        })
+                        .finally(function () {
+                            btn.prop('disabled', false).html(originalHtml);
+                            if (window.lucide) lucide.createIcons();
+                        });
+                });
+
+                $('#edit-client-btn').click(function () {
+                    $('#edit-client-modal').removeClass('hidden');
+                });
+
+                $('.close-edit-modal').click(function () {
+                    $('#edit-client-modal').addClass('hidden');
+                });
+
+                $('#edit-client-form').submit(function (e) {
+                    e.preventDefault();
+
+                    $('#submit-edit-btn')
+                        .prop('disabled', true)
+                        .text('Salvataggio...');
+
+                    Promise.resolve()
+                        .then(function () { return refreshFiscalCode(); })
+                        .catch(function () { /* CF opzionale: procedi comunque */ })
+                        .finally(function () { submitClientEdit(); });
+                });
+
+                function submitClientEdit() {
+                    const req = {
+                        firstName: $('#edit-first-name').val(),
+                        lastName: $('#edit-last-name').val(),
+                        email: $('#edit-email').val(),
+                        phone: $('#edit-phone').val(),
+                        birthDate: $('#edit-birth-date').val() || null,
+                        birthPlace: $('#edit-birth-place').val(),
+                        birthProvince: $('#edit-birth-province').val() || null,
+                        sex: $('#edit-sex').val() || null,
+                        fiscalCode: ($('#edit-fiscal-code').val().trim().toUpperCase() || null),
+                        address: $('#edit-address').val(),
+                        notes: $('#edit-notes').val()
+                    };
+
+                    $.ajax({
+                        url: '/api/users/' + clientId,
+                        type: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function () {
+                            $('#edit-client-modal').addClass('hidden');
+                            loadUser();
+                        },
+                        error: function () {
+                            alert("Errore durante l'aggiornamento dei dati");
+                        },
+                        complete: function () {
+                            $('#submit-edit-btn')
+                                .prop('disabled', false)
+                                .text('Salva Modifiche');
+                        }
+                    });
+                }
+
+            });
+        </script>
+    </div>
+</body>
+
+</html>
+
+
+
+
+

@@ -1,0 +1,448 @@
+﻿<!DOCTYPE html>
+<html lang="it"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(
+        title='Invio Email',
+        hideNav=false,
+        content=~{::emails}
+      )}">
+
+<body>
+
+<div th:fragment="emails" class="space-y-6">
+
+    <!-- HEADER -->
+    <div>
+        <h1 class="text-xl font-semibold text-foreground">Comunicazioni Email</h1>
+        <p class="text-sm text-foreground-muted mt-0.5">
+            Invia messaggi personalizzati ai tuoi clienti o a indirizzi esterni.
+        </p>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- COMPOSER (Col-span 2) -->
+        <div class="card p-6 space-y-4 lg:col-span-2">
+            <h2 class="text-sm font-semibold text-foreground border-b border-surface-border pb-2.5">
+                Nuovo Messaggio
+            </h2>
+
+            <form id="email-compose-form" class="space-y-4">
+                
+                <!-- RECIPIENT SELECTOR -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Seleziona Cliente</label>
+                        <select id="recipient-client" class="input">
+                            <option value="">Nessun cliente selezionato</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Oppure Email Manuale</label>
+                        <input type="email" id="recipient-manual" class="input" placeholder="es. esempio@mail.com" />
+                    </div>
+                </div>
+
+                <!-- SUBJECT -->
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">Oggetto</label>
+                    <input type="text" id="email-subject" required class="input" placeholder="Inserisci l'oggetto dell'email" />
+                </div>
+
+                <!-- BODY -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-medium text-foreground-muted">Messaggio (HTML supportato)</label>
+                        <span class="text-[10px] text-accent font-medium">Usa {name} per inserire il nome del cliente</span>
+                    </div>
+                    <textarea id="email-body" required rows="10" class="input font-sans leading-relaxed" 
+                              placeholder="Scrivi qui il tuo messaggio... Potrai formattarlo in HTML, ad esempio usando tag come <b>grassetto</b>, <br> per andare a capo, o <strong>evidenziati</strong>."></textarea>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="pt-2 flex flex-wrap items-center justify-end gap-3">
+                    <button type="button" id="send-all-btn" class="btn-secondary flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        Invia a Tutti i Clienti
+                    </button>
+                    <button type="submit" id="send-email-btn" class="btn-primary flex items-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        Invia Email
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- TEMPLATES SIDEBAR -->
+        <div class="card p-6 space-y-4">
+            <h2 class="text-sm font-semibold text-foreground border-b border-surface-border pb-2.5">
+                Template Rapidi
+            </h2>
+            <p class="text-xs text-foreground-muted">
+                Clicca su un template per caricarlo istantaneamente nel compositore.
+            </p>
+
+            <div id="templates-sidebar-list" class="space-y-3 pt-2">
+                <!-- Dynamically populated or client fallback -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- BULK SEND CONFIRMATION MODAL -->
+    <div id="bulk-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 transition-opacity duration-150">
+        <div class="card w-full max-w-md shadow-card border border-surface-border bg-surface p-6 transition-opacity duration-150">
+            <div class="flex items-center gap-3 text-warning mb-4">
+                <div class="p-2 bg-warning/15 rounded-lg text-warning">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold text-foreground">Conferma Invio Massivo</h3>
+            </div>
+            
+            <p class="text-sm text-foreground-muted leading-relaxed mb-4">
+                Sei sicuro di voler inviare questa email a **tutti i clienti** della palestra aventi un indirizzo email valido?
+            </p>
+            
+            <div class="bg-surface-hover/40 p-3 rounded-lg border border-surface-border text-xs mb-4 space-y-2">
+                <div class="flex justify-between">
+                    <span class="text-foreground-muted">Destinatari stimati:</span>
+                    <span class="font-bold text-foreground" id="bulk-dest-count">Caricamento...</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-foreground-muted">Sostituzione segnaposto:</span>
+                    <span class="font-semibold text-accent">{name} -&gt; Nome Cliente</span>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-surface-border flex items-center justify-end gap-3">
+                <button type="button" class="btn-ghost" id="bulk-cancel-btn">Annulla</button>
+                <button type="button" class="btn-primary bg-warning border-warning hover:bg-warning/80 flex items-center gap-2 text-foreground" id="bulk-confirm-send-btn">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    Conferma e Invia
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- JS LOGIC -->
+    <script>
+        $(document).ready(function() {
+
+            // Pre-populate from URL query param (e.g. ?userId=xxx from dashboard)
+            const urlParams = new URLSearchParams(window.location.search);
+            const preselectedUserId = urlParams.get('userId');
+            if (preselectedUserId && preselectedUserId !== 'undefined' && preselectedUserId !== 'null') {
+                window._preselectedUserId = preselectedUserId;
+            }
+
+            // Populate recipient dropdown from API
+            $.ajax({
+                url: '/api/users?size=500&sort=lastName',
+                type: 'GET',
+                success: function(data) {
+                    const users = data.content || [];
+                    const select = $('#recipient-client');
+                    
+                    users.forEach(function(u) {
+                        const code = u.clientCode ? '#' + u.clientCode + ' - ' : '';
+                        const name = code + (u.lastName || '') + ' ' + (u.firstName || '');
+                        const email = u.email ? ` (${u.email})` : ' [Nessuna Email]';
+                        select.append(`<option value="${u.id}" data-email="${u.email || ''}">${name}${email}</option>`);
+                    });
+
+                    // Pre-select user from URL param if present
+                    if (window._preselectedUserId) {
+                        select.val(window._preselectedUserId).trigger('change');
+                    }
+                },
+                error: function() {
+                    showToast('Errore nel caricamento dell\'elenco clienti', 'danger');
+                }
+            });
+
+            // Mutual exclusion logic: Client Dropdown vs Manual Email
+            $('#recipient-client').change(function() {
+                if ($(this).val()) {
+                    $('#recipient-manual').val('').prop('disabled', true).addClass('opacity-50');
+                } else {
+                    $('#recipient-manual').prop('disabled', false).removeClass('opacity-50');
+                }
+            });
+
+            $('#recipient-manual').on('input', function() {
+                if ($(this).val().trim() !== '') {
+                    $('#recipient-client').val('').prop('disabled', true).addClass('opacity-50');
+                } else {
+                    $('#recipient-client').prop('disabled', false).removeClass('opacity-50');
+                }
+            });
+
+            // Fetch and Render rapid templates
+            function loadEmailTemplates() {
+                $.ajax({
+                    url: '/api/gym/settings/email-templates',
+                    type: 'GET',
+                    success: function(data) {
+                        const list = $('#templates-sidebar-list');
+                        list.empty();
+                        
+                        let templates = data || [];
+                        if (templates.length === 0) {
+                            // Fallback to default system templates
+                            templates = [
+                                {
+                                    id: 'default-1',
+                                    name: 'Scadenza Abbonamento',
+                                    category: 'Abbonamento',
+                                    icon: 'dumbbell',
+                                    colorClass: 'text-accent',
+                                    subject: 'Avviso abbonamento in scadenza - LegionAsd',
+                                    body: "Ciao {name},<br><br>Ti ricordiamo che il tuo abbonamento presso la nostra struttura <strong>LegionAsd</strong> è in scadenza.<br><br>Ti invitiamo a passare in reception al più presto per effettuare il rinnovo ed evitare l'interruzione dei servizi.<br><br>Un cordiale saluto,<br>Lo staff di LegionAsd"
+                                },
+                                {
+                                    id: 'default-2',
+                                    name: 'Rinnovo Certificato Medico',
+                                    category: 'Salute',
+                                    icon: 'activity',
+                                    colorClass: 'text-danger',
+                                    subject: 'Scadenza Certificato Medico obbligatorio - LegionAsd',
+                                    body: "Ciao {name},<br><br>Ti ricordiamo che il tuo <strong>certificato medico di idoneità all'attività sportiva</strong> è scaduto o scadrà a breve.<br><br>Ti preghiamo di consegnare la copia aggiornata alla reception.<br><br>A presto,<br>La Direzione di LegionAsd"
+                                },
+                                {
+                                    id: 'default-3',
+                                    name: 'Benvenuto Nuovo Iscritto',
+                                    category: 'Iscrizione',
+                                    icon: 'sparkles',
+                                    colorClass: 'text-success',
+                                    subject: 'Benvenuto in LegionAsd! Iniziamo insieme',
+                                    body: "Ciao {name},<br><br>Siamo davvero entusiasti di darti il benvenuto nella nostra famiglia!<br><br>La tua iscrizione è ora attiva. Il nostro staff è a tua completa disposizione.<br><br>Ci vediamo in palestra!<br><br>Il Team di LegionAsd"
+                                },
+                                {
+                                    id: 'default-4',
+                                    name: 'Chiusure Festività',
+                                    category: 'Avviso',
+                                    icon: 'calendar',
+                                    colorClass: 'text-foreground-muted',
+                                    subject: 'Avviso di Chiusura Straordinaria / Festività',
+                                    body: "Gentile cliente,<br><br>Ti comunichiamo che in occasione delle prossime festività, la nostra struttura subirà delle variazioni di orario:<br><br> <strong>Giorno Festivo</strong>: CHIUSO<br><br>Auguriamo a te e alla tua famiglia buone feste!<br><br>Lo Staff"
+                                }
+                            ];
+                        }
+                        
+                        templates.forEach(function(tmpl) {
+                            const btn = `
+                                <button type="button" class="load-template-btn w-full card p-3.5 border-surface-border/50 text-left hover:border-accent/40 hover:bg-surface-hover transition-colors duration-150 group"
+                                        data-subject="${tmpl.subject.replace(/"/g, '&quot;')}"
+                                        data-body="${tmpl.body.replace(/"/g, '&quot;')}">
+                                    <div class="flex items-center gap-2 mb-1 ${tmpl.colorClass || 'text-accent'}">
+                                        <i data-lucide="${tmpl.icon || 'dumbbell'}" class="w-4 h-4"></i>
+                                        <span class="text-xs font-semiboldr">${tmpl.category || 'Altro'}</span>
+                                    </div>
+                                    <p class="text-sm font-medium text-foreground group-hover:text-accent transition-colors">${tmpl.name}</p>
+                                </button>
+                            `;
+                            list.append(btn);
+                        });
+                        
+                        if (window.lucide) lucide.createIcons();
+                    },
+                    error: function() {
+                        showToast('Errore nel caricamento dei template rapidi', 'danger');
+                    }
+                });
+            }
+
+            // Load templates initially
+            loadEmailTemplates();
+
+            // Load templates click (Event delegation)
+            $(document).on('click', '.load-template-btn', function() {
+                const subject = $(this).attr('data-subject');
+                const body = $(this).attr('data-body');
+                
+                $('#email-subject').val(subject);
+                // Convert <br> tags back to newlines for textarea
+                const textareaBody = body.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, "");
+                $('#email-body').val(textareaBody);
+                
+                showToast('Template caricato nel compositore!', 'success');
+            });
+
+            // Single Email Form Submit Handler
+            $('#email-compose-form').submit(function(e) {
+                e.preventDefault();
+
+                const clientId = $('#recipient-client').val();
+                const manualEmail = $('#recipient-manual').val().trim();
+                const subject = $('#email-subject').val().trim();
+                const body = $('#email-body').val().trim();
+                
+                if (!clientId && !manualEmail) {
+                    showToast('Seleziona un cliente o digita un indirizzo email manuale.', 'warning');
+                    return;
+                }
+                
+                if (clientId) {
+                    const selectedOption = $('#recipient-client option:selected');
+                    if (!selectedOption.data('email')) {
+                        showToast('Il cliente selezionato non ha un indirizzo email salvato.', 'warning');
+                        return;
+                    }
+                }
+
+                $('#send-email-btn, #send-all-btn').prop('disabled', true);
+                $('#send-email-btn').html('<div class="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin"></div> Invio...');
+
+                const req = {
+                    userId: clientId && clientId.trim() !== '' ? clientId : null,
+                    email: clientId && clientId.trim() !== '' ? null : manualEmail,
+                    subject: subject,
+                    body: body.replace(/\n/g, '<br>')
+                };
+
+                $.ajax({
+                    url: '/api/emails/send',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(req),
+                    success: function() {
+                        showToast('Email inviata con successo!', 'success');
+                        $('#email-compose-form')[0].reset();
+                        $('#recipient-client').prop('disabled', false).removeClass('opacity-50');
+                        $('#recipient-manual').prop('disabled', false).removeClass('opacity-50');
+                    },
+                    error: function(xhr) {
+                        const errMsg = xhr.responseJSON ? xhr.responseJSON.message : 'Impossibile completare l\'invio';
+                        showToast('Errore: ' + errMsg, 'danger');
+                    },
+                    complete: function() {
+                        $('#send-email-btn, #send-all-btn').prop('disabled', false);
+                        $('#send-email-btn').html('<i data-lucide="send" class="w-4 h-4"></i> Invia Email');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            // --- BULK EMAIL SEND LOGIC ---
+
+            function openBulkModal() {
+                // Count how many select options have a valid email
+                const clientsWithEmail = $('#recipient-client option').filter(function() {
+                    return $(this).val() !== "" && $(this).data('email') !== "";
+                }).length;
+                
+                $('#bulk-dest-count').text(clientsWithEmail);
+                $('#bulk-confirm-modal').removeClass('hidden').addClass('flex');
+                setTimeout(() => {
+                }, 10);
+            }
+
+            function closeBulkModal() {
+                setTimeout(() => {
+                    $('#bulk-confirm-modal').removeClass('flex').addClass('hidden');
+                }, 150);
+            }
+
+            $('#send-all-btn').click(function() {
+                const subject = $('#email-subject').val().trim();
+                const body = $('#email-body').val().trim();
+
+                if (!subject || !body) {
+                    showToast('Completa Oggetto e Messaggio prima dell\'invio massivo.', 'warning');
+                    return;
+                }
+
+                openBulkModal();
+            });
+
+            $('#bulk-cancel-btn').click(closeBulkModal);
+
+            $('#bulk-confirm-modal').click(function(e) {
+                if (e.target === this) closeBulkModal();
+            });
+
+            // Perform Bulk Email sending
+            $('#bulk-confirm-send-btn').click(function() {
+                closeBulkModal();
+
+                const subject = $('#email-subject').val().trim();
+                const body = $('#email-body').val().trim();
+
+                $('#send-email-btn, #send-all-btn').prop('disabled', true);
+                $('#send-all-btn').html('<div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Invio Massivo...');
+
+                const req = {
+                    subject: subject,
+                    body: body.replace(/\n/g, '<br>')
+                };
+
+                $.ajax({
+                    url: '/api/emails/send-all',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(req),
+                    success: function(res) {
+                        if (res.totalFailed === 0) {
+                            showToast(`Email massiva inviata con successo a ${res.totalSent} clienti!`, 'success');
+                            $('#email-compose-form')[0].reset();
+                            $('#recipient-client').prop('disabled', false).removeClass('opacity-50');
+                            $('#recipient-manual').prop('disabled', false).removeClass('opacity-50');
+                        } else if (res.totalSent > 0) {
+                            showToast(`Invio parziale: inviate ${res.totalSent} email, ma ${res.totalFailed} invii sono falliti.`, 'warning');
+                            console.error("Bulk mail errors:", res.errors);
+                        } else {
+                            showToast(`Errore nell'invio massivo. Tutti i ${res.totalFailed} tentativi sono falliti.`, 'danger');
+                            console.error("Bulk mail errors:", res.errors);
+                        }
+                    },
+                    error: function(xhr) {
+                        const errMsg = xhr.responseJSON ? (xhr.responseJSON.message || xhr.responseJSON.errors) : 'Errore nell\'invio di massa';
+                        showToast('Errore di massa: ' + errMsg, 'danger');
+                    },
+                    complete: function() {
+                        $('#send-email-btn, #send-all-btn').prop('disabled', false);
+                        $('#send-all-btn').html('<i data-lucide="users" class="w-4 h-4"></i> Invia a Tutti i Clienti');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            // Toast helper function
+            function showToast(message, type = 'success') {
+                const toastId = 'toast-' + Date.now();
+                const bgClass = type === 'success' ? 'bg-success/90 border-success' : type === 'danger' ? 'bg-danger/90 border-danger' : 'bg-warning/90 border-warning';
+                const icon = type === 'success' ? 'check-circle' : type === 'danger' ? 'alert-triangle' : 'info';
+                
+                $('#toast-container').append(`
+                    <div id="${toastId}" class="card border px-4 py-3 flex items-center gap-3 text-sm text-foreground shadow-card pointer-events-auto transition-opacity duration-150 opacity-0 ${bgClass}">
+                        <i data-lucide="${icon}" class="w-4 h-4 shrink-0 text-foreground"></i>
+                        <div class="flex-1">${message}</div>
+                    </div>
+                `);
+                
+                if (window.lucide) lucide.createIcons();
+                
+                setTimeout(() => {
+                    $(`#${toastId}`).removeClass('opacity-0').addClass('opacity-100');
+                }, 10);
+                
+                setTimeout(() => {
+                    $(`#${toastId}`).removeClass('opacity-100').addClass('opacity-0');
+                    setTimeout(() => {
+                        $(`#${toastId}`).remove();
+                    }, 300);
+                }, 4000);
+            }
+
+        });
+    </script>
+
+</div>
+
+</body>
+</html>
+

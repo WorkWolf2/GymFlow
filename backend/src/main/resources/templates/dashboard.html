@@ -1,0 +1,406 @@
+﻿<!DOCTYPE html>
+<html lang="it"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(
+        title='Dashboard',
+        hideNav=false,
+        content=~{::dashboard}
+      )}">
+
+<body>
+
+<div th:fragment="dashboard" class="dashboard-content space-y-5">
+
+    <!-- HEADER -->
+    <div class="flex items-end justify-between gap-4">
+        <h1 class="text-xl font-semibold text-foreground">Dashboard</h1>
+        <p class="text-sm text-foreground-muted">Aggiornata automaticamente</p>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="card overflow-hidden">
+        <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-surface-border">
+
+        <div class="p-4">
+            <div>
+                <p class="text-sm text-foreground-muted mb-1">Clienti attivi</p>
+                <p id="stat-active-users" class="text-2xl font-semibold text-foreground">-</p>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <div>
+                <p class="text-sm text-foreground-muted mb-1">Accessi oggi</p>
+                <p id="stat-accesses-today" class="text-2xl font-semibold text-foreground">-</p>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <div>
+                <p class="text-sm text-foreground-muted mb-1">Incassi oggi</p>
+                <p id="stat-revenue-today" class="text-2xl font-semibold text-accent">-</p>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <div>
+                <p class="text-sm text-foreground-muted mb-1">Uscite oggi</p>
+                <p id="stat-expenses-today" class="text-2xl font-semibold text-danger">-</p>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="expiring-alerts" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
+
+        <button type="button" id="alert-subscriptions"
+             class="card p-4 border-warning/30 flex items-center gap-3 hidden text-left w-full cursor-pointer hover:bg-surface-hover transition-colors">
+
+            <div>
+                <p class="text-sm font-medium text-foreground">
+                    <span id="expiring-subs-count">0</span> abbonamenti in scadenza
+                </p>
+                <p class="text-xs text-foreground-muted">Nei prossimi 7 giorni</p>
+            </div>
+
+        </button>
+
+        <button type="button" id="alert-certs"
+             class="card p-4 border-danger/30 flex items-center gap-3 hidden text-left w-full cursor-pointer hover:bg-surface-hover transition-colors">
+
+            <div>
+                <p class="text-sm font-medium text-foreground">
+                    <span id="expiring-certs-count">0</span> certificati in scadenza
+                </p>
+                <p class="text-xs text-foreground-muted">Entro 30 giorni</p>
+            </div>
+
+        </button>
+
+    </div>
+
+    <!-- Popup elenco scadenze -->
+    <div id="expiring-detail-modal" class="modal-overlay hidden">
+        <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                <h2 id="expiring-modal-title" class="text-lg font-semibold text-foreground">In scadenza</h2>
+                <button type="button" id="close-expiring-modal"
+                    class="close-expiring-modal text-foreground-muted hover:text-foreground transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="expiring-modal-list" class="max-h-80 overflow-y-auto divide-y divide-surface-border">
+                <p class="px-6 py-8 text-sm text-foreground-subtle text-center">Caricamento...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECENT ACCESS -->
+    <div class="card overflow-hidden">
+
+        <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-2">
+            <h2 class="text-sm font-medium text-foreground">Accessi recenti</h2>
+            <span class="text-xs text-foreground-muted">NFC</span>
+        </div>
+
+        <div id="recent-accesses-list" class="divide-y divide-surface-border">
+
+            <p class="px-5 py-8 text-center text-sm text-foreground-subtle"
+               id="recent-accesses-empty">
+                In attesa di accessi NFC.
+            </p>
+
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            const expirationTemplates = {
+                sub: {
+                    subject: 'Avviso abbonamento in scadenza - LegionAsd',
+                    body: 'Ciao {name},<br><br>ti ricordiamo che il tuo abbonamento scadrà il <strong>{expiryDate}</strong>.<br><br>Passa in reception per il rinnovo.<br><br>Lo staff di LegionAsd'
+                },
+                cert: {
+                    subject: 'Scadenza certificato medico - LegionAsd',
+                    body: 'Ciao {name},<br><br>ti ricordiamo che il tuo certificato medico scadrà il <strong>{expiryDate}</strong>.<br><br>Consegna il certificato aggiornato in reception prima della scadenza.<br><br>Lo staff di LegionAsd'
+                }
+            };
+
+            function formatEuro(amount) {
+                if (amount == null) return "-";
+                return new Intl.NumberFormat('it-IT', {
+                    style: 'currency',
+                    currency: 'EUR'
+                }).format(amount);
+            }
+
+            function formatDateTime(dateString) {
+                if (!dateString) return "";
+                return new Date(dateString).toLocaleString('it-IT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            function loadExpirationTemplates() {
+                $.ajax({
+                    url: '/api/gym/settings/expiration-templates',
+                    type: 'GET',
+                    success: function(templates) {
+                        (templates || []).forEach(function(template) {
+                            if (template.id === 'subscription-expiration') {
+                                expirationTemplates.sub = template;
+                            }
+                            if (template.id === 'certificate-expiration') {
+                                expirationTemplates.cert = template;
+                            }
+                        });
+                    },
+                    error: function() {
+                        console.error('Errore caricamento template scadenze');
+                    }
+                });
+            }
+
+            function applyExpiryDate(text, dateLabel) {
+                return (text || '')
+                    .replaceAll('{expiryDate}', dateLabel)
+                    .replaceAll('{dataScadenza}', dateLabel)
+                    .replaceAll('{data_scadenza}', dateLabel)
+                    .replaceAll('{scadenza}', dateLabel);
+            }
+
+            function openExpiringModal(type) {
+                const isSubs = type === 'subscriptions';
+                const url = isSubs
+                    ? '/api/dashboard/expiring-subscriptions'
+                    : '/api/dashboard/expiring-certificates';
+                const title = isSubs
+                    ? 'Abbonamenti in scadenza'
+                    : 'Certificati in scadenza';
+
+                $('#expiring-modal-title').text(title);
+                $('#expiring-modal-list').html(
+                    '<p class="px-6 py-8 text-sm text-foreground-subtle text-center">Caricamento...</p>'
+                );
+                $('#expiring-detail-modal').removeClass('hidden');
+                if (window.lucide) lucide.createIcons();
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    success: function(items) {
+                        const list = $('#expiring-modal-list');
+                        list.empty();
+
+                        if (!items || items.length === 0) {
+                            list.html(
+                                '<p class="px-6 py-8 text-sm text-foreground-subtle text-center">Nessun elemento in scadenza</p>'
+                            );
+                            return;
+                        }
+
+                        items.forEach(function(item) {
+                            const dateLabel = window.formatDate
+                                ? formatDate(item.expiryDate)
+                                : item.expiryDate;
+                            const detail = item.detail
+                                ? `<p class="text-xs text-foreground-muted">${item.detail}</p>`
+                                : '';
+
+                            list.append(`
+                                <div class="flex items-center justify-between px-6 py-3 hover:bg-surface-hover transition-colors">
+                                    <a href="/clients/${item.userId}" class="flex-1 min-w-0 pr-4">
+                                        <p class="text-sm font-medium text-foreground">${item.userFullName}</p>
+                                        ${detail}
+                                        <p class="text-xs text-foreground-subtle mt-0.5">Scade il ${dateLabel}</p>
+                                    </a>
+                                    <button class="send-expire-mail-btn text-accent hover:text-accent-hover p-2 rounded hover:bg-surface-active transition-colors duration-150 shrink-0" 
+                                            data-id="${item.userId}" 
+                                            data-name="${item.userFullName}" 
+                                            data-date="${dateLabel}"
+                                            data-type="${isSubs ? 'sub' : 'cert'}"
+                                            title="Invia Mail di Sollecito">
+                                        <i data-lucide="mail" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            `);
+                        });
+                        if (window.lucide) lucide.createIcons();
+                    },
+                    error: function() {
+                        $('#expiring-modal-list').html(
+                            '<p class="px-6 py-8 text-sm text-danger text-center">Errore durante il caricamento</p>'
+                        );
+                    }
+                });
+            }
+
+            function closeExpiringModal() {
+                $('#expiring-detail-modal').addClass('hidden');
+            }
+
+            $('#alert-subscriptions').click(function() {
+                if (!$(this).hasClass('hidden')) {
+                    openExpiringModal('subscriptions');
+                }
+            });
+
+            $('#alert-certs').click(function() {
+                if (!$(this).hasClass('hidden')) {
+                    openExpiringModal('certificates');
+                }
+            });
+
+            $('.close-expiring-modal, #close-expiring-modal').click(closeExpiringModal);
+
+            $('#expiring-detail-modal').click(function(e) {
+                if (e.target === this) {
+                    closeExpiringModal();
+                }
+            });
+
+            function loadDashboardSummary() {
+                $.ajax({
+                    url: '/api/dashboard/summary',
+                    type: 'GET',
+                    success: function(data) {
+                        $('#stat-active-users').text(data.activeUsers ?? 0);
+                        $('#stat-accesses-today').text(data.accessesToday ?? 0);
+                        $('#stat-revenue-today').text(formatEuro(data.todayRevenue ?? 0));
+                        $('#stat-expenses-today').text(formatEuro(data.todayExpenses ?? 0));
+
+                        const expSubs = data.expiringSubscriptions || 0;
+                        const expCerts = data.expiringCerts || 0;
+
+                        if (expSubs > 0 || expCerts > 0) {
+                            $('#expiring-alerts').removeClass('hidden');
+
+                            if (expSubs > 0) {
+                                $('#alert-subscriptions').removeClass('hidden');
+                                $('#expiring-subs-count').text(expSubs);
+                            }
+
+                            if (expCerts > 0) {
+                                $('#alert-certs').removeClass('hidden');
+                                $('#expiring-certs-count').text(expCerts);
+                            }
+                        }
+                    },
+                    error: function() {
+                        console.error('Errore caricamento riepilogo dashboard');
+                    }
+                });
+            }
+
+            function loadRecentEvents() {
+                $.ajax({
+                    url: '/api/accesses?size=10',
+                    type: 'GET',
+                    success: function(data) {
+                        const events = data.content || [];
+                        const list = $('#recent-accesses-list');
+
+                        if (events.length > 0) {
+                            $('#recent-accesses-empty').remove();
+                            list.empty();
+
+                            events.forEach(event => {
+                                const granted = event.granted;
+                                const statusColor = granted ? "bg-success" : "bg-danger";
+                                const textColor = granted ? "text-success" : "text-danger";
+                                const statusText = granted ? "Concesso" : "Negato";
+                                const accessCode = event.clientCode && String(event.nfcTagUid) === String(event.clientCode) ? 'ID #' + event.clientCode : (event.nfcTagUid ? 'NFC ' + event.nfcTagUid : '');
+                                const userLabel = event.clientCode ? '#' + event.clientCode + ' - ' + (event.userFullName || 'Sconosciuto') : (event.userFullName || 'Sconosciuto');
+
+                                list.append(`
+                                    <div class="px-5 py-3 flex items-center gap-3">
+                                        <div class="w-2 h-2 rounded-full ${statusColor}"></div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-foreground truncate">
+                                                ${userLabel}
+                                            </p>
+                                            <p class="text-xs text-foreground-muted">
+                                                ${accessCode}
+                                            </p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-xs font-medium ${textColor}">${statusText}</p>
+                                            <p class="text-xs text-foreground-subtle">
+                                                ${formatDateTime(event.accessTime)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                        }
+                    },
+                    error: function() {
+                        console.error('Errore caricamento accessi recenti');
+                    }
+                });
+            }
+
+            $(document).on('click', '.send-expire-mail-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const btn = $(this);
+                const userId = btn.data('id');
+                const userName = btn.data('name');
+                const dateLabel = btn.data('date');
+                const isSub = btn.data('type') === 'sub';
+                
+                btn.prop('disabled', true).html('<div class="w-4 h-4 border-2 border-accent border-t-transparent rounded-sm animate-spin"></div>');
+                
+                const template = isSub ? expirationTemplates.sub : expirationTemplates.cert;
+                const subject = applyExpiryDate(template.subject, dateLabel);
+                const body = applyExpiryDate(template.body, dateLabel);
+                const req = {
+                    userId: userId,
+                    subject: subject,
+                    body: body,
+                    expiryDate: dateLabel
+                };
+                
+                $.ajax({
+                    url: '/api/emails/send',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(req),
+                    success: function() {
+                        btn.html('<i data-lucide="check-circle" class="w-4 h-4 text-success"></i>');
+                        if (window.lucide) lucide.createIcons();
+                        setTimeout(function() {
+                            btn.prop('disabled', false).html('<i data-lucide="mail" class="w-4 h-4"></i>');
+                            if (window.lucide) lucide.createIcons();
+                        }, 4000);
+                    },
+                    error: function(xhr) {
+                        alert('Errore durante l\'invio della mail. Assicurati che l\'utente abbia un indirizzo email valido e che il servizio SMTP sia configurato.');
+                        btn.prop('disabled', false).html('<i data-lucide="mail" class="w-4 h-4"></i>');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            window.LegionAsdRefreshDashboard = function() {
+                loadDashboardSummary();
+                loadRecentEvents();
+            };
+            window.LegionAsdRefreshExpirationTemplates = loadExpirationTemplates;
+
+            loadExpirationTemplates();
+            loadDashboardSummary();
+            loadRecentEvents();
+        });
+    </script>
+
+</div>
+
+</body>
+</html>
+

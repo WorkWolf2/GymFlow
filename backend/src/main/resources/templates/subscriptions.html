@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Abbonamenti', hideNav=false, content=~{::div.subscriptions-content})}">
+<body>
+    <div class="subscriptions-content space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-semibold text-foreground">Piani di Abbonamento</h1>
+                <p class="text-sm text-foreground-muted mt-0.5">Configura i piani disponibili per i clienti</p>
+            </div>
+            <button id="new-sub-btn" class="btn-primary flex items-center gap-2">
+                <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
+                Nuovo Piano
+            </button>
+        </div>
+
+        <div class="card overflow-hidden">
+            <div class="flex items-center gap-4 px-5 py-2.5 border-b border-surface-border bg-background-tertiary">
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Nome Piano</div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Prezzo</div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Validita (Giorni)</div>
+                <div class="w-16 shrink-0"></div>
+            </div>
+            <div id="subscriptions-list" class="divide-y divide-surface-border">
+                <p class="px-5 py-8 text-center text-sm text-foreground-subtle">Caricamento in corso...</p>
+            </div>
+        </div>
+
+        <div id="subscription-modal" class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Nuovo Piano Abbonamento</h2>
+                    <button class="close-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="subscription-form" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Nome Piano</label>
+                        <input type="text" id="sub-name" required class="input" placeholder="es. Mensile Base" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo (EUR)</label>
+                        <input type="number" step="0.01" min="0" id="sub-price" required class="input" placeholder="es. 49.99" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Validita (Giorni)</label>
+                        <input type="number" id="sub-days" min="1" required class="input" placeholder="es. 30" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tipo</label>
+                        <select id="sub-type" class="input" required>
+                            <option value="ABBONAMENTO">Abbonamento</option>
+                            <option value="ASSICURAZIONE">Assicurazione</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-sub-btn" class="btn-primary">Crea Piano</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                function loadSubscriptionTypes() {
+                    $.ajax({
+                        url: '/api/subscription-types',
+                        type: 'GET',
+                        success: function(data) {
+                            const list = $('#subscriptions-list');
+                            list.empty();
+                            if (data.length === 0) {
+                                list.html('<p class="px-5 py-8 text-center text-sm text-foreground-subtle">Nessun piano trovato.</p>');
+                                return;
+                            }
+                            data.forEach(function(sub) {
+                                const price = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(sub.defaultPrice || 0);
+                                list.append(`
+                                    <div class="flex items-center gap-4 px-5 py-3 border-b border-surface-border hover:bg-surface-hover transition-colors">
+                                        <div class="flex-1 text-sm font-medium text-foreground">${sub.name}</div>
+                                        <div class="flex-1 text-sm text-accent">${price}</div>
+                                        <div class="flex-1 text-sm text-foreground-muted">${sub.validityDays || '-'} giorni</div>
+                                        <div class="w-16 shrink-0 text-right">
+                                            <button class="delete-btn text-danger hover:text-red-400 p-1 rounded hover:bg-danger-bg transition-colors" data-id="${sub.id}">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                            lucide.createIcons();
+                        }
+                    });
+                }
+
+                loadSubscriptionTypes();
+
+                $('#new-sub-btn').click(function() {
+                    $('#subscription-modal').removeClass('hidden');
+                });
+
+                $('.close-modal').click(function() {
+                    $('#subscription-modal').addClass('hidden');
+                    $('#subscription-form')[0].reset();
+                });
+
+                $('#subscription-form').submit(function(e) {
+                    e.preventDefault();
+                    $('#submit-sub-btn').prop('disabled', true).text('Salvataggio...');
+
+                    const req = {
+                        name: $('#sub-name').val(),
+                        defaultPrice: parseFloat($('#sub-price').val()),
+                        validityDays: parseInt($('#sub-days').val(), 10),
+                        type: $('#sub-type').val(),
+                        active: true
+                    };
+
+                    $.ajax({
+                        url: '/api/subscription-types',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function() {
+                            $('.close-modal').click();
+                            loadSubscriptionTypes();
+                        },
+                        error: function() {
+                            alert("Errore durante il salvataggio.");
+                        },
+                        complete: function() {
+                            $('#submit-sub-btn').prop('disabled', false).text('Crea Piano');
+                        }
+                    });
+                });
+
+                $(document).on('click', '.delete-btn', function() {
+                    if (confirm("Sei sicuro di voler eliminare questo piano?")) {
+                        const id = $(this).data('id');
+                        $.ajax({
+                            url: '/api/subscription-types/' + id,
+                            type: 'DELETE',
+                            success: loadSubscriptionTypes
+                        });
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

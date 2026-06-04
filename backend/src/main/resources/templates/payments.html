@@ -1,0 +1,447 @@
+﻿<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Incassi', hideNav=false, content=~{::div.payments-content})}">
+<body>
+    <div class="payments-content space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h1 class="text-xl font-semibold text-foreground">Incassi e Uscite</h1>
+                <p class="text-sm text-foreground-muted mt-0.5">Gestione pagamenti, incassi e spese</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2 bg-surface border border-surface-border rounded-lg px-3 py-2 shadow-sm">
+                    <i data-lucide="calendar" class="w-4 h-4 text-foreground-muted"></i>
+                    <input type="date" id="filter-date" class="bg-transparent text-sm border-none outline-none focus:ring-0 text-foreground p-0 cursor-pointer" title="Seleziona giorno" />
+                    <button id="clear-filter-btn" class="ml-1 text-foreground-muted hover:text-foreground hidden" title="Mostra tutti">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <button id="open-export-modal-btn" class="btn-ghost flex items-center gap-2 border border-surface-border text-foreground hover:bg-surface-hover">
+                    <i data-lucide="file-text" class="w-[15px] h-[15px]"></i>
+                    Esporta PDF
+                </button>
+                <button id="new-expense-btn" class="btn-ghost flex items-center gap-2 border border-danger/30 text-danger hover:bg-danger-bg">
+                    <i data-lucide="minus-circle" class="w-[15px] h-[15px]"></i>
+                    Nuova Uscita
+                </button>
+                <button id="new-payment-btn" class="btn-primary flex items-center gap-2">
+                    <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
+                    Nuovo Incasso
+                </button>
+            </div>
+        </div>
+
+        <div class="card p-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-medium text-foreground-muted mr-1">Tipo</span>
+                <button type="button" class="type-filter-btn btn-ghost bg-surface-active text-foreground" data-type="ALL">Tutti</button>
+                <button type="button" class="type-filter-btn btn-ghost" data-type="INCOME">Incassi</button>
+                <button type="button" class="type-filter-btn btn-ghost" data-type="EXPENSE">Uscite</button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-medium text-foreground-muted mr-1">Metodo</span>
+                <button type="button" class="method-filter-btn btn-ghost bg-surface-active text-foreground" data-method="ALL">Tutti</button>
+                <button type="button" class="method-filter-btn btn-ghost" data-method="CASH">Contanti</button>
+                <button type="button" class="method-filter-btn btn-ghost" data-method="CARD">Carta</button>
+                <button type="button" class="method-filter-btn btn-ghost" data-method="TRANSFER">Bonifico</button>
+            </div>
+            <div class="flex flex-wrap gap-6 text-sm text-foreground-muted pt-1 border-t border-surface-border">
+                <span>Incassi: <strong id="total-income" class="text-success ml-1">â‚¬ 0,00</strong></span>
+                <span>Uscite: <strong id="total-expense" class="text-danger ml-1">â‚¬ 0,00</strong></span>
+                <span>Totale netto: <strong id="filtered-total" class="text-accent ml-1">â‚¬ 0,00</strong></span>
+            </div>
+        </div>
+
+        <div class="card overflow-hidden">
+            <div class="flex items-center gap-4 px-5 py-2.5 border-b border-surface-border bg-background-tertiary">
+                <div class="w-24 shrink-0 text-xs font-medium text-foreground-muted">Data</div>
+                <div class="w-20 shrink-0 text-xs font-medium text-foreground-muted">Tipo</div>
+                <div class="flex-1 min-w-0 text-xs font-medium text-foreground-muted">Cliente</div>
+                <div class="w-28 shrink-0 text-xs font-medium text-foreground-muted">Importo</div>
+                <div class="w-24 shrink-0 text-xs font-medium text-foreground-muted">Metodo</div>
+                <div class="flex-1 min-w-0 text-xs font-medium text-foreground-muted">Note</div>
+                <div class="w-12 shrink-0"></div>
+            </div>
+            <div id="payments-list" class="divide-y divide-surface-border">
+                <p class="px-5 py-8 text-center text-sm text-foreground-subtle">Caricamento in corso...</p>
+            </div>
+        </div>
+
+        <!-- Modal Esporta PDF -->
+        <div id="export-pdf-modal" class="modal-overlay hidden">
+            <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Scarica Report PDF</h2>
+                    <button type="button" class="close-export-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="export-pdf-form" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Da Data</label>
+                            <input type="date" id="export-from-date" required class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">A Data</label>
+                            <input type="date" id="export-to-date" required class="input" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tipo Transazione</label>
+                        <select id="export-type" class="input">
+                            <option value="ALL">Tutti (Incassi e Uscite)</option>
+                            <option value="INCOME">Solo Incassi</option>
+                            <option value="EXPENSE">Solo Uscite</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di Pagamento</label>
+                        <select id="export-method" class="input">
+                            <option value="ALL">Tutti</option>
+                            <option value="CASH">Contanti</option>
+                            <option value="CARD">Carta / Bancomat</option>
+                            <option value="TRANSFER">Bonifico</option>
+                        </select>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-export-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-export-btn" class="btn-primary flex items-center gap-2">
+                            <i data-lucide="download" class="w-[15px] h-[15px]"></i>
+                            Scarica PDF
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="payment-modal" class="modal-overlay hidden">
+            <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 id="payment-modal-title" class="text-lg font-semibold text-foreground">Nuovo Incasso</h2>
+                    <button type="button" class="close-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="payment-form" class="p-6 space-y-4">
+                    <input type="hidden" id="payment-type" value="INCOME" />
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data</label>
+                        <input type="date" id="payment-date" required class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Importo (â‚¬)</label>
+                        <input type="number" step="0.01" min="0.01" id="payment-amount" required class="input" placeholder="es. 50.00" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Cliente (opzionale)</label>
+                        <select id="payment-user" class="input">
+                            <option value="">Nessun cliente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo</label>
+                        <select id="payment-method" required class="input">
+                            <option value="CASH">Contanti</option>
+                            <option value="CARD">Carta / Bancomat</option>
+                            <option value="TRANSFER">Bonifico</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note (opzionale)</label>
+                        <input type="text" id="payment-notes" class="input" placeholder="es. Quota mensile, affitto, forniture..." />
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-payment-btn" class="btn-primary">Salva</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                const todayStr = new Date().toISOString().split('T')[0];
+                $('#filter-date').val(todayStr);
+                $('#clear-filter-btn').removeClass('hidden');
+                let selectedMethod = 'ALL';
+                let selectedType = 'ALL';
+                let clientsLoaded = false;
+
+                document.getElementById('payment-date').valueAsDate = new Date();
+
+                function formatEuro(amount) {
+                    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
+                }
+
+                function signedAmount(p) {
+                    const amount = typeof p.amount === 'number' ? p.amount : parseFloat(p.amount || 0);
+                    return p.type === 'EXPENSE' ? -Math.abs(amount) : Math.abs(amount);
+                }
+
+                function loadClients() {
+                    if (clientsLoaded) return;
+                    $.get('/api/users?size=500&sort=lastName', function(data) {
+                        const users = data.content || [];
+                        const select = $('#payment-user');
+                        users.forEach(function(u) {
+                            select.append(`<option value="${u.id}">#${u.clientCode || '-'} - ${u.fullName}</option>`);
+                        });
+                        clientsLoaded = true;
+                    });
+                }
+
+                function openPaymentModal(type) {
+                    loadClients();
+                    $('#payment-type').val(type);
+                    const isExpense = type === 'EXPENSE';
+                    $('#payment-modal-title').text(isExpense ? 'Nuova Uscita' : 'Nuovo Incasso');
+                    $('#submit-payment-btn')
+                        .text(isExpense ? 'Salva Uscita' : 'Salva Incasso')
+                        .toggleClass('btn-primary', !isExpense)
+                        .toggleClass('btn-ghost border border-danger/30 text-danger hover:bg-danger-bg', isExpense);
+                    $('#payment-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                }
+
+                function loadPayments() {
+                    const filterDate = $('#filter-date').val();
+                    let url = '/api/payments?size=100';
+
+                    if (filterDate) {
+                        url = '/api/payments/range?from=' + filterDate + '&to=' + filterDate;
+                        $('#clear-filter-btn').removeClass('hidden');
+                    } else {
+                        $('#clear-filter-btn').addClass('hidden');
+                    }
+
+                    $.ajax({
+                        url: url,
+                        type: 'GET',
+                        success: function(data) {
+                            const list = $('#payments-list');
+                            list.empty();
+
+                            const paymentsArray = Array.isArray(data) ? data : (data.content || []);
+
+                            let filtered = paymentsArray;
+                            if (selectedType !== 'ALL') {
+                                filtered = filtered.filter(p => p.type === selectedType);
+                            }
+                            if (selectedMethod !== 'ALL') {
+                                filtered = filtered.filter(p => p.method === selectedMethod);
+                            }
+
+                            let totalIncome = 0;
+                            let totalExpense = 0;
+                            filtered.forEach(function(p) {
+                                const signed = signedAmount(p);
+                                if (p.type === 'EXPENSE') {
+                                    totalExpense += Math.abs(signed);
+                                } else {
+                                    totalIncome += Math.abs(signed);
+                                }
+                            });
+
+                            $('#total-income').text(formatEuro(totalIncome));
+                            $('#total-expense').text(formatEuro(totalExpense));
+                            $('#filtered-total').text(formatEuro(totalIncome - totalExpense));
+
+                            if (filtered.length === 0) {
+                                list.html('<p class="px-5 py-8 text-center text-sm text-foreground-subtle">Nessuna transazione trovata.</p>');
+                                return;
+                            }
+
+                            filtered.forEach(function(p) {
+                                const methodStr = p.method === 'CASH' ? 'Contanti' : p.method === 'CARD' ? 'Carta' : 'Bonifico';
+                                const signed = signedAmount(p);
+                                const amountClass = p.type === 'EXPENSE' ? 'text-danger' : 'text-accent';
+                                const amountText = (p.type === 'EXPENSE' ? 'âˆ’ ' : '') + formatEuro(Math.abs(typeof p.amount === 'number' ? p.amount : parseFloat(p.amount || 0)));
+                                const typeLabel = p.type === 'EXPENSE'
+                                    ? '<span class="badge badge-danger">Uscita</span>'
+                                    : '<span class="badge badge-success">Incasso</span>';
+                                const clientName = p.userFullName;
+                                const date = formatDate(p.paymentDate);
+                                const notes = p.notes;
+
+                                list.append(`
+                                    <div class="flex items-center gap-4 px-5 py-3 hover:bg-surface-hover transition-colors">
+                                        <div class="w-24 shrink-0 text-sm text-foreground">${date}</div>
+                                        <div class="w-20 shrink-0">${typeLabel}</div>
+                                        <div class="flex-1 min-w-0 text-sm text-foreground truncate">${clientName || "N/A"}</div>
+                                        <div class="w-28 shrink-0 text-sm font-medium ${amountClass}">${amountText}</div>
+                                        <div class="w-24 shrink-0 text-sm text-foreground-muted">${methodStr}</div>
+                                        <div class="flex-1 min-w-0 text-sm text-foreground-muted truncate">${notes || "Nessuna nota"}</div>
+                                        <div class="w-12 shrink-0 text-right">
+                                            <button class="disable-btn text-danger hover:text-red-400 p-1 rounded hover:bg-danger-bg transition-colors" data-id="${p.id}" title="Elimina">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                }
+
+                loadPayments();
+
+                $('#filter-date').change(loadPayments);
+                $('#clear-filter-btn').click(function() {
+                    $('#filter-date').val('');
+                    loadPayments();
+                });
+
+                $('.method-filter-btn').click(function() {
+                    selectedMethod = $(this).data('method');
+                    $('.method-filter-btn').removeClass('bg-surface-active text-foreground').addClass('text-foreground-muted');
+                    $(this).addClass('bg-surface-active text-foreground').removeClass('text-foreground-muted');
+                    loadPayments();
+                });
+
+                $('.type-filter-btn').click(function() {
+                    selectedType = $(this).data('type');
+                    $('.type-filter-btn').removeClass('bg-surface-active text-foreground').addClass('text-foreground-muted');
+                    $(this).addClass('bg-surface-active text-foreground').removeClass('text-foreground-muted');
+                    loadPayments();
+                });
+
+                $('#open-export-modal-btn').click(function() {
+                    const now = new Date();
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                    document.getElementById('export-from-date').valueAsDate = firstDay;
+                    document.getElementById('export-to-date').valueAsDate = now;
+                    $('#export-type').val('ALL');
+                    $('#export-method').val('ALL');
+                    $('#export-pdf-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                });
+
+                $('.close-export-modal').click(function() {
+                    $('#export-pdf-modal').addClass('hidden');
+                });
+
+                $('#export-pdf-form').submit(function(e) {
+                    e.preventDefault();
+                    const btn = $('#submit-export-btn');
+                    const originalText = btn.html();
+                    btn.prop('disabled', true).text('Generazione...');
+
+                    const from = $('#export-from-date').val();
+                    const to = $('#export-to-date').val();
+                    const type = $('#export-type').val();
+                    const method = $('#export-method').val();
+                    
+                    let url = '/api/payments/report/pdf?from=' + from + '&to=' + to;
+                    if (type !== 'ALL') {
+                        url += '&type=' + type;
+                    }
+                    if (method !== 'ALL') {
+                        url += '&method=' + method;
+                    }
+                    
+                    const token = localStorage.getItem('jwt_token');
+                    fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Errore nella generazione del PDF');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const downloadUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = `report_incassi_${from}_${to}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(downloadUrl);
+                        $('#export-pdf-modal').addClass('hidden');
+                    })
+                    .catch(error => {
+                        alert('Errore durante il download del PDF');
+                        console.error('Error downloading PDF:', error);
+                    })
+                    .finally(() => {
+                        btn.prop('disabled', false).html(originalText);
+                    });
+                });
+
+                $('#new-payment-btn').click(function() {
+                    openPaymentModal('INCOME');
+                });
+
+                $('#new-expense-btn').click(function() {
+                    openPaymentModal('EXPENSE');
+                });
+
+                $('.close-modal').click(function() {
+                    $('#payment-modal').addClass('hidden');
+                    $('#payment-form')[0].reset();
+                    $('#payment-user').val('');
+                    document.getElementById('payment-date').valueAsDate = new Date();
+                });
+
+                $('#payment-form').submit(function(e) {
+                    e.preventDefault();
+                    const paymentType = $('#payment-type').val();
+                    const isExpense = paymentType === 'EXPENSE';
+                    $('#submit-payment-btn').prop('disabled', true).text('Salvataggio...');
+
+                    const userId = $('#payment-user').val();
+                    const req = {
+                        amount: parseFloat($('#payment-amount').val()),
+                        method: $('#payment-method').val(),
+                        type: paymentType,
+                        paymentDate: $('#payment-date').val(),
+                        notes: $('#payment-notes').val() || null
+                    };
+                    if (userId) {
+                        req.userId = userId;
+                    }
+
+                    $.ajax({
+                        url: '/api/payments',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function() {
+                            $('.close-modal').click();
+                            loadPayments();
+                        },
+                        error: function(xhr) {
+                            const msg = xhr.responseJSON && xhr.responseJSON.detail
+                                ? xhr.responseJSON.detail
+                                : 'Errore durante il salvataggio.';
+                            alert(msg);
+                        },
+                        complete: function() {
+                            $('#submit-payment-btn')
+                                .prop('disabled', false)
+                                .text(isExpense ? 'Salva Uscita' : 'Salva Incasso');
+                        }
+                    });
+                });
+
+                $(document).on('click', '.disable-btn', function() {
+                    if (confirm('Eliminare questa transazione? Verrà rimossa dai conteggi.')) {
+                        const id = $(this).data('id');
+                        $.ajax({
+                            url: '/api/payments/' + id,
+                            type: 'DELETE',
+                            success: loadPayments
+                        });
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Impostazioni', hideNav=false, content=~{::div.settings-content})}">
+<body>
+<div class="settings-content space-y-6 max-w-4xl mx-auto p-6">
+
+    <div class="flex items-center justify-between border-b border-surface-border pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-foreground">Impostazioni Palestra</h1>
+            <p class="text-sm text-foreground-muted mt-1">Configura l'hardware NFC, le credenziali SMTP, i template email e i backup del database.</p>
+        </div>
+    </div>
+
+    <div class="card p-6 space-y-4">
+        <div class="flex items-center gap-3 border-b border-surface-border pb-3">
+            <div class="p-2 bg-accent/10 text-accent rounded-lg">
+                <i data-lucide="cpu" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h2 class="text-base font-semibold text-foreground">Hardware NFC Gateway</h2>
+                <p class="text-xs text-foreground-muted">Abilita e indirizza il gateway NFC per l'accesso ai tornelli.</p>
+            </div>
+        </div>
+
+        <form id="nfc-form" class="space-y-4 pt-1">
+            <div class="flex items-center">
+                <label class="flex items-center cursor-pointer select-none">
+                    <input type="checkbox" id="nfc-enabled" class="checkbox" />
+                    <span class="ml-2 text-sm text-foreground">Abilita Gateway NFC</span>
+                </label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1" for="nfc-ip">IP Gateway</label>
+                    <input type="text" id="nfc-ip" class="input" placeholder="0.0.0.0" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1" for="nfc-port">Porta Gateway</label>
+                    <input type="number" min="1" max="65535" id="nfc-port" class="input" placeholder="2167" required />
+                </div>
+            </div>
+            <div class="pt-2 flex items-center justify-end gap-3 border-t border-surface-border">
+                <button type="button" class="btn-ghost" id="nfc-reset-btn">Ripristina</button>
+                <button type="submit" class="btn-primary flex items-center gap-2" id="nfc-save-btn">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Salva NFC
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-6 space-y-4">
+        <div class="flex items-center gap-3 border-b border-surface-border pb-3">
+            <div class="p-2 bg-accent/10 text-accent rounded-lg">
+                <i data-lucide="mail" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h2 class="text-base font-semibold text-foreground">Configurazione SMTP Email</h2>
+                <p class="text-xs text-foreground-muted">Personalizza le credenziali SMTP per l'invio delle email. Se non configurato, verrà utilizzato il server SMTP globale.</p>
+            </div>
+        </div>
+
+        <form id="smtp-form" class="space-y-4 pt-1">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-foreground-muted mb-1" for="smtp-host">Host SMTP</label>
+                    <input type="text" id="smtp-host" class="input" placeholder="es. smtp.gmail.com" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1" for="smtp-port">Porta SMTP</label>
+                    <input type="number" min="1" max="65535" id="smtp-port" class="input" placeholder="es. 587" required />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1" for="smtp-username">Username (Email)</label>
+                    <input type="email" id="smtp-username" class="input" placeholder="es. palestra@gmail.com" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1" for="smtp-password">Password / App Password</label>
+                    <input type="password" id="smtp-password" class="input" placeholder="••••••••" />
+                </div>
+            </div>
+            <div class="flex items-center">
+                <label class="flex items-center cursor-pointer select-none">
+                    <input type="checkbox" id="smtp-starttls" class="checkbox" checked />
+                    <span class="ml-2 text-sm text-foreground">Abilita STARTTLS</span>
+                </label>
+            </div>
+            <div class="pt-2 flex items-center justify-between border-t border-surface-border">
+                <button type="button" class="btn-secondary flex items-center gap-2" id="smtp-test-btn">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" id="test-spinner"></i>
+                    Testa Connessione
+                </button>
+                <button type="submit" class="btn-primary flex items-center gap-2" id="smtp-save-btn">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Salva SMTP
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-border pb-3">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-accent/10 text-accent rounded-lg">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-semibold text-foreground">Modelli Email Personalizzati</h2>
+                    <p class="text-xs text-foreground-muted">Crea e gestisci i template rapidi da usare per l'invio ai tuoi iscritti.</p>
+                </div>
+            </div>
+            <button type="button" class="btn-primary flex items-center gap-2 text-xs py-1.5 px-3" id="add-template-btn">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                Nuovo Template
+            </button>
+        </div>
+
+        <div id="templates-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1"></div>
+        <div id="no-templates-msg" class="hidden text-center py-8 text-foreground-muted text-sm bg-surface-hover/20 rounded border border-dashed border-surface-border">
+            Nessun template personalizzato presente. Verranno utilizzati i template predefiniti di sistema.
+        </div>
+    </div>
+
+    <div class="card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-border pb-3">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-accent/10 text-accent rounded-lg">
+                    <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-semibold text-foreground">Modelli Avvisi Scadenza</h2>
+                    <p class="text-xs text-foreground-muted">Modifica i due messaggi usati dalla dashboard per abbonamenti e certificati in scadenza.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="expiration-templates-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1"></div>
+        <div id="no-expiration-templates-msg" class="hidden text-center py-8 text-foreground-muted text-sm bg-surface-hover/20 rounded border border-dashed border-surface-border">
+            Caricamento template di scadenza...
+        </div>
+    </div>
+
+    <div class="card p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-border pb-3">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-accent/10 text-accent rounded-lg">
+                    <i data-lucide="database" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-semibold text-foreground">Backup Database</h2>
+                    <p class="text-xs text-foreground-muted">Crea un backup manuale del database e scaricalo sul tuo computer.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="backup-status" class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            <div class="bg-surface-hover/30 rounded-lg p-3">
+                <p class="text-[10px] font-medium text-foreground-muted uppercase tracking-wide">Stato</p>
+                <p id="backup-enabled" class="text-sm font-semibold text-foreground mt-1">—</p>
+            </div>
+            <div class="bg-surface-hover/30 rounded-lg p-3">
+                <p class="text-[10px] font-medium text-foreground-muted uppercase tracking-wide">Backup Salvati</p>
+                <p id="backup-count" class="text-sm font-semibold text-foreground mt-1">—</p>
+            </div>
+            <div class="bg-surface-hover/30 rounded-lg p-3">
+                <p class="text-[10px] font-medium text-foreground-muted uppercase tracking-wide">Ultimo Backup</p>
+                <p id="backup-last" class="text-sm font-semibold text-foreground mt-1">—</p>
+            </div>
+        </div>
+
+        <div id="backup-list-container" class="hidden">
+            <p class="text-xs font-medium text-foreground-muted mb-2">Backup esistenti:</p>
+            <div id="backup-list" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between border-t border-surface-border">
+            <button type="button" class="btn-ghost flex items-center gap-2 text-xs" id="backup-refresh-btn">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                Aggiorna stato
+            </button>
+            <button type="button" class="btn-primary flex items-center gap-2" id="backup-download-btn">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Crea e Scarica Backup
+            </button>
+        </div>
+    </div>
+
+    <div id="template-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4 bg-black/60 transition-opacity duration-150">
+        <div class="card w-full max-w-lg shadow-card border border-surface-border bg-surface p-6 transition-opacity duration-150">
+            <div class="flex items-center justify-between border-b border-surface-border pb-3 mb-4">
+                <h3 class="text-lg font-bold text-foreground" id="modal-title">Nuovo Template</h3>
+                <button type="button" class="text-foreground-muted hover:text-foreground p-1 transition-colors" id="close-modal-btn">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="template-form" class="space-y-4">
+                <input type="hidden" id="tmpl-id" />
+                <input type="hidden" id="tmpl-type" value="standard" />
+
+                <div>
+                    <label class="block text-xs font-semibold text-foreground-muted mb-1" for="tmpl-name">Nome Template</label>
+                    <input type="text" id="tmpl-name" class="input" placeholder="es. Sollecito Rinnovo" required />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-foreground-muted mb-1" for="tmpl-category">Categoria</label>
+                        <select id="tmpl-category" class="input" required>
+                            <option value="Abbonamento">Abbonamento</option>
+                            <option value="Salute">Salute</option>
+                            <option value="Iscrizione">Iscrizione</option>
+                            <option value="Avviso">Avviso</option>
+                            <option value="Altro">Altro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-foreground-muted mb-1" for="tmpl-color">Colore Tag</label>
+                        <select id="tmpl-color" class="input" required>
+                            <option value="text-accent">Azzurro (Accent)</option>
+                            <option value="text-danger">Rosso (Danger)</option>
+                            <option value="text-success">Verde (Success)</option>
+                            <option value="text-warning">Giallo (Warning)</option>
+                            <option value="text-foreground-muted">Grigio (Muted)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-foreground-muted mb-1" for="tmpl-icon">Icona Lucide</label>
+                    <select id="tmpl-icon" class="input" required>
+                        <option value="dumbbell">Dumbbell (Manubrio)</option>
+                        <option value="activity">Activity (Salute)</option>
+                        <option value="sparkles">Sparkles (Benvenuto)</option>
+                        <option value="calendar">Calendar (Calendario)</option>
+                        <option value="bell">Bell (Campanella)</option>
+                        <option value="mail">Mail (Posta)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-foreground-muted mb-1" for="tmpl-subject">Oggetto Email</label>
+                    <input type="text" id="tmpl-subject" class="input" placeholder="Oggetto dell'email" required />
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-foreground-muted" for="tmpl-body">Corpo Messaggio (HTML supportato)</label>
+                        <span class="text-[10px] text-accent font-medium">Usa {name} e {expiryDate}</span>
+                    </div>
+                    <textarea id="tmpl-body" rows="6" class="input font-sans leading-relaxed text-sm" placeholder="Scrivi qui il messaggio..." required></textarea>
+                </div>
+
+                <div class="pt-3 border-t border-surface-border flex items-center justify-end gap-3">
+                    <button type="button" class="btn-ghost" id="cancel-modal-btn">Annulla</button>
+                    <button type="submit" class="btn-primary flex items-center gap-2" id="save-modal-btn">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                        Salva Template
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <script th:inline="javascript">
+        $(document).ready(function() {
+            // Configurazione Globale CSRF per AJAX (Spring Security Protection)
+            const token = $("meta[name='_csrf']").attr("content");
+            const header = $("meta[name='_csrf_header']").attr("content");
+            if (token && header) {
+                $(document).ajaxSend(function(e, xhr, options) {
+                    xhr.setRequestHeader(header, token);
+                });
+            }
+
+            // Memoria locale dei template caricate dal DB
+            let emailTemplates = [];
+            let expirationTemplates = [];
+
+            // Caricamento Iniziale Completo delle Impostazioni
+            function loadAllSettings() {
+                // Lettura NFC
+                $.ajax({
+                    url: '/api/gym/settings',
+                    type: 'GET',
+                    success: function(data) {
+                        $('#nfc-enabled').prop('checked', data.nfcEnabled || false);
+                        $('#nfc-ip').val(data.nfcIp || '0.0.0.0');
+                        $('#nfc-port').val(data.nfcPort || 2167);
+                    },
+                    error: function() { showToast('Errore nel caricamento impostazioni NFC', 'danger'); }
+                });
+
+                // Lettura SMTP
+                $.ajax({
+                    url: '/api/gym/settings/smtp',
+                    type: 'GET',
+                    success: function(data) {
+                        $('#smtp-host').val(data.smtpHost || '');
+                        $('#smtp-port').val(data.smtpPort || 587);
+                        $('#smtp-username').val(data.smtpUsername || '');
+                        $('#smtp-password').val(data.smtpPassword || '');
+                        $('#smtp-starttls').prop('checked', data.smtpStarttls !== false);
+                    },
+                    error: function() { showToast('Errore nel caricamento impostazioni SMTP', 'danger'); }
+                });
+
+                // Lettura Email Templates Standard
+                $.ajax({
+                    url: '/api/gym/settings/email-templates',
+                    type: 'GET',
+                    success: function(data) {
+                        emailTemplates = data || [];
+                        renderTemplates();
+                    },
+                    error: function() { showToast('Errore nel caricamento dei template email', 'danger'); }
+                });
+
+                // Lettura Expiration Templates (Nuovo endpoint implementato)
+                $.ajax({
+                    url: '/api/gym/settings/expiration-templates',
+                    type: 'GET',
+                    success: function(data) {
+                        expirationTemplates = data || [];
+                        renderExpirationTemplates();
+                    },
+                    error: function() { showToast('Errore nel caricamento dei template scadenza', 'danger'); }
+                });
+            }
+
+            // Rendering grafico Modelli Standard
+            function renderTemplates() {
+                const container = $('#templates-container');
+                container.empty();
+
+                if (!emailTemplates || emailTemplates.length === 0) {
+                    $('#no-templates-msg').removeClass('hidden');
+                    return;
+                }
+                $('#no-templates-msg').addClass('hidden');
+
+                emailTemplates.forEach(function(tmpl) {
+                    if (!tmpl) return;
+                    const card = generateTemplateCard(tmpl, 'edit-tmpl-btn', 'delete-tmpl-btn');
+                    container.append(card);
+                });
+                if (window.lucide) lucide.createIcons();
+            }
+
+            // Rendering grafico Modelli Scadenze
+            function renderExpirationTemplates() {
+                const container = $('#expiration-templates-container');
+                container.empty();
+
+                if (!expirationTemplates || expirationTemplates.length === 0) {
+                    $('#no-expiration-templates-msg').removeClass('hidden');
+                    return;
+                }
+                $('#no-expiration-templates-msg').addClass('hidden');
+
+                expirationTemplates.forEach(function(tmpl) {
+                    if (!tmpl) return;
+                    const card = generateTemplateCard(tmpl, 'edit-exp-tmpl-btn', null);
+                    container.append(card);
+                });
+                if (window.lucide) lucide.createIcons();
+            }
+
+            // Helper HTML Builder per le Card dei Template
+            function generateTemplateCard(tmpl, editClass, deleteClass) {
+                const tmplId = tmpl.id || '';
+                const tmplName = tmpl.name || 'Senza nome';
+                const tmplCategory = tmpl.category || 'Altro';
+                const tmplColor = tmpl.colorClass || 'text-accent';
+                const tmplIcon = tmpl.icon || 'dumbbell';
+                const tmplSubject = tmpl.subject || '';
+                const tmplBody = tmpl.body ? tmpl.body.replace(/<br\s*\/?>/gi, ' ').replace(/<\/?[^>]+(>|$)/g, "") : '';
+
+                const deleteButton = deleteClass ? `
+                            <button type="button" class="btn-ghost ${deleteClass} text-danger hover:bg-danger/10 py-1 px-2.5 text-xs flex items-center gap-1.5" data-id="${tmplId}">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Elimina
+                            </button>
+                ` : '';
+
+                return `
+                    <div class="card p-4 border-surface-border/50 flex flex-col justify-between hover:border-accent/40 transition-colors duration-150">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2 ${tmplColor}">
+                                <i data-lucide="${tmplIcon}" class="w-4 h-4"></i>
+                                <span class="text-[10px] font-boldr">${tmplCategory}</span>
+                            </div>
+                            <h3 class="text-sm font-bold text-foreground mb-1">${tmplName}</h3>
+                            <p class="text-xs text-foreground-muted font-medium truncate mb-2">Oggetto: ${tmplSubject}</p>
+                            <p class="text-xs text-foreground-muted line-clamp-2 leading-relaxed bg-surface-hover/30 p-2 rounded">${tmplBody}</p>
+                        </div>
+                        <div class="flex items-center justify-end gap-2 mt-4 pt-2 border-t border-surface-border/40">
+                            <button type="button" class="btn-secondary ${editClass} py-1 px-2.5 text-xs flex items-center gap-1.5" data-id="${tmplId}">
+                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>Modifica
+                            </button>
+                            ${deleteButton}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Funzioni di Salvataggio AJAX verso il Backend
+            function saveTemplates() {
+                $.ajax({
+                    url: '/api/gym/settings/email-templates',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(emailTemplates),
+                    success: function(response) {
+                        emailTemplates = response || [];
+                        showToast('Template email aggiornati con successo', 'success');
+                        renderTemplates();
+                    },
+                    error: function() { showToast('Errore durante il salvataggio dei template email', 'danger'); }
+                });
+            }
+
+            function saveExpirationTemplates() {
+                $.ajax({
+                    url: '/api/gym/settings/expiration-templates',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(expirationTemplates),
+                    success: function(response) {
+                        expirationTemplates = response || [];
+                        showToast('Template scadenze aggiornati con successo', 'success');
+                        renderExpirationTemplates();
+                    },
+                    error: function() { showToast('Errore durante il salvataggio dei template scadenze', 'danger'); }
+                });
+            }
+
+            // Submit Form Hardware NFC
+            $('#nfc-form').submit(function(e) {
+                e.preventDefault();
+                const payload = {
+                    nfcEnabled: $('#nfc-enabled').is(':checked'),
+                    nfcIp: $('#nfc-ip').val(),
+                    nfcPort: parseInt($('#nfc-port').val(), 10)
+                };
+
+                $('#nfc-save-btn').prop('disabled', true).html('<div class="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin"></div> Salvataggio...');
+
+                $.ajax({
+                    url: '/api/gym/settings',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function() {
+                        showToast('Impostazioni NFC salvate!', 'success');
+                        loadAllSettings();
+                    },
+                    error: function() { showToast('Errore nel salvataggio NFC', 'danger'); },
+                    complete: function() {
+                        $('#nfc-save-btn').prop('disabled', false).html('<i data-lucide="save" class="w-4 h-4"></i> Salva NFC');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            $('#nfc-reset-btn').click(loadAllSettings);
+
+            // Submit Form Credenziali SMTP
+            $('#smtp-form').submit(function(e) {
+                e.preventDefault();
+                const payload = {
+                    smtpHost: $('#smtp-host').val(),
+                    smtpPort: parseInt($('#smtp-port').val(), 10),
+                    smtpUsername: $('#smtp-username').val(),
+                    smtpPassword: $('#smtp-password').val(),
+                    smtpStarttls: $('#smtp-starttls').is(':checked')
+                };
+
+                $('#smtp-save-btn').prop('disabled', true).html('<div class="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin"></div> Salvataggio...');
+
+                $.ajax({
+                    url: '/api/gym/settings/smtp',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function() {
+                        showToast('Configurazione SMTP salvata!', 'success');
+                        loadAllSettings();
+                    },
+                    error: function() { showToast('Errore nel salvataggio SMTP', 'danger'); },
+                    complete: function() {
+                        $('#smtp-save-btn').prop('disabled', false).html('<i data-lucide="save" class="w-4 h-4"></i> Salva SMTP');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            // Connessione di Test SMTP
+            $('#smtp-test-btn').click(function() {
+                const payload = {
+                    smtpHost: $('#smtp-host').val(),
+                    smtpPort: parseInt($('#smtp-port').val(), 10) || 587,
+                    smtpUsername: $('#smtp-username').val(),
+                    smtpPassword: $('#smtp-password').val(),
+                    smtpStarttls: $('#smtp-starttls').is(':checked')
+                };
+
+                if (!payload.smtpHost || !payload.smtpUsername) {
+                    showToast('Completa Host e Username per effettuare il test', 'warning');
+                    return;
+                }
+
+                $('#smtp-test-btn').prop('disabled', true).html('<div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div> Connessione...');
+
+                $.ajax({
+                    url: '/api/gym/settings/smtp/test',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function(response) {
+                        showToast(response.message || 'SMTP connesso correttamente!', 'success');
+                    },
+                    error: function(xhr) {
+                        const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Impossibile connettersi al server SMTP.';
+                        showToast(msg, 'danger');
+                    },
+                    complete: function() {
+                        $('#smtp-test-btn').prop('disabled', false).html('<i data-lucide="refresh-cw" class="w-4 h-4"></i> Testa Connessione');
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            // Gestione dei flussi logici del MODAL UNICO
+            function openModal(title, tmpl = null) {
+                $('#modal-title').text(title);
+                if ($('#template-form')[0]) $('#template-form')[0].reset();
+                const isExpiration = tmpl && (tmpl.id === 'subscription-expiration' || tmpl.id === 'certificate-expiration');
+
+                // Transizione fluida d'apertura (fix dei vecchi glitch di visualizzazione a scatto)
+                $('#template-modal').removeClass('hidden').addClass('flex opacity-0');
+                setTimeout(() => {
+                    $('#template-modal').addClass('opacity-100');
+                }, 10);
+
+                if (tmpl) {
+                    $('#tmpl-id').val(tmpl.id || '');
+                    $('#tmpl-name').val(tmpl.name || '');
+                    $('#tmpl-category').val(tmpl.category || 'Altro');
+                    $('#tmpl-color').val(tmpl.colorClass || 'text-accent');
+                    $('#tmpl-icon').val(tmpl.icon || 'dumbbell');
+                    $('#tmpl-subject').val(tmpl.subject || '');
+                    $('#tmpl-body').val(tmpl.body ? tmpl.body.replace(/<br\s*\/?>/gi, '\n') : '');
+                } else {
+                    $('#tmpl-id').val('');
+                }
+
+                $('#tmpl-name, #tmpl-category, #tmpl-color, #tmpl-icon').prop('disabled', isExpiration);
+            }
+
+            function closeModal() {
+                $('#template-modal').removeClass('opacity-100').addClass('opacity-0');
+                setTimeout(() => {
+                    $('#template-modal').removeClass('flex').addClass('hidden');
+                }, 150);
+            }
+
+            // Click Apertura Modal per Nuovi Inserimenti
+            $('#add-template-btn').click(function() {
+                openModal('Nuovo Template Email');
+                $('#tmpl-type').val('standard');
+            });
+
+            $('#close-modal-btn, #cancel-modal-btn').click(closeModal);
+            $('#template-modal').click(function(e) { if (e.target === this) closeModal(); });
+
+            // Gestione Click Modifica ed Eliminazione (Delegati dinamicamente tramite jQuery)
+            $(document).on('click', '.edit-tmpl-btn', function() {
+                const id = $(this).data('id');
+                const tmpl = emailTemplates.find(t => String(t.id) === String(id));
+                if (tmpl) {
+                    openModal('Modifica Template Email', tmpl);
+                    $('#tmpl-type').val('standard');
+                }
+            });
+
+            $(document).on('click', '.edit-exp-tmpl-btn', function() {
+                const id = $(this).data('id');
+                const tmpl = expirationTemplates.find(t => String(t.id) === String(id));
+                if (tmpl) {
+                    openModal('Modifica Template Scadenza', tmpl);
+                    $('#tmpl-type').val('expiration');
+                }
+            });
+
+            $(document).on('click', '.delete-tmpl-btn', function() {
+                const id = $(this).data('id');
+                if (confirm('Sei sicuro di voler eliminare questo template email?')) {
+                    emailTemplates = emailTemplates.filter(t => String(t.id) !== String(id));
+                    saveTemplates();
+                }
+            });
+
+            // Invio Dati del Modello (Orchestratore e smistatore in base al tipo impostato)
+            $('#template-form').submit(function(e) {
+                e.preventDefault();
+
+                const id = $('#tmpl-id').val();
+                const type = $('#tmpl-type').val();
+
+                if (type === 'expiration') {
+                    const idx = expirationTemplates.findIndex(t => String(t.id) === String(id));
+                    const currentTemplate = idx !== -1 ? expirationTemplates[idx] : {};
+                    const body = ($('#tmpl-body').val() || '').trim().replace(/\n/g, '<br>');
+
+                    if (!hasExpiryPlaceholder(body)) {
+                        showToast('Il template deve contenere {expiryDate} per indicare la data di scadenza', 'warning');
+                        return;
+                    }
+
+                    const tmplData = {
+                        ...currentTemplate,
+                        id: id,
+                        subject: ($('#tmpl-subject').val() || '').trim(),
+                        body: body
+                    };
+
+                    if (id) {
+                        if (idx !== -1) expirationTemplates[idx] = tmplData;
+                    }
+                    closeModal();
+                    saveExpirationTemplates();
+                } else {
+                    const tmplData = {
+                        id: id || 'tmpl-' + Date.now(),
+                        name: ($('#tmpl-name').val() || '').trim(),
+                        category: $('#tmpl-category').val(),
+                        colorClass: $('#tmpl-color').val(),
+                        icon: $('#tmpl-icon').val(),
+                        subject: ($('#tmpl-subject').val() || '').trim(),
+                        body: ($('#tmpl-body').val() || '').trim().replace(/\n/g, '<br>')
+                    };
+
+                    if (id) {
+                        const idx = emailTemplates.findIndex(t => String(t.id) === String(id));
+                        if (idx !== -1) emailTemplates[idx] = tmplData;
+                    } else {
+                        emailTemplates.push(tmplData);
+                    }
+                    closeModal();
+                    saveTemplates();
+                }
+            });
+
+            function hasExpiryPlaceholder(body) {
+                return body.includes('{expiryDate}')
+                    || body.includes('{dataScadenza}')
+                    || body.includes('{data_scadenza}')
+                    || body.includes('{scadenza}');
+            }
+
+            // Gestore UI Notifiche ad effetto Toast
+            function showToast(message, type = 'success') {
+                const toastId = 'toast-' + Date.now();
+                const bgClass = type === 'success' ? 'bg-success/90 border-success' : type === 'danger' ? 'bg-danger/90 border-danger' : 'bg-warning/90 border-warning';
+                const icon = type === 'success' ? 'check-circle' : type === 'danger' ? 'alert-triangle' : 'info';
+
+                $('#toast-container').append(`
+                    <div id="${toastId}" class="card border px-4 py-3 flex items-center gap-3 text-sm text-foreground shadow-card pointer-events-auto transition-opacity duration-150 opacity-0 ${bgClass}">
+                        <i data-lucide="${icon}" class="w-4 h-4 shrink-0 text-foreground"></i>
+                        <div class="flex-1">${message}</div>
+                    </div>
+                `);
+
+                if (window.lucide) lucide.createIcons();
+
+                setTimeout(() => {
+                    $(`#${toastId}`).removeClass('opacity-0').addClass('opacity-100');
+                }, 10);
+
+                setTimeout(() => {
+                    $(`#${toastId}`).removeClass('opacity-100').addClass('opacity-0');
+                    setTimeout(() => { $(`#${toastId}`).remove(); }, 300);
+                }, 4000);
+            }
+
+            // === Sezione Backup Database ===
+            function loadBackupStatus() {
+                $.ajax({
+                    url: '/api/backup/status',
+                    type: 'GET',
+                    success: function(data) {
+                        $('#backup-enabled').text(data.enabled ? 'Attivo' : 'Disattivato')
+                            .removeClass('text-success text-danger')
+                            .addClass(data.enabled ? 'text-success' : 'text-danger');
+                        $('#backup-count').text((data.count || 0) + ' / ' + (data.maxFiles || 10));
+
+                        const backups = data.backups || [];
+                        if (backups.length > 0) {
+                            const lastDate = new Date(backups[0].lastModified);
+                            $('#backup-last').text(lastDate.toLocaleString('it-IT'));
+
+                            $('#backup-list').empty();
+                            backups.forEach(function(b) {
+                                const date = new Date(b.lastModified).toLocaleString('it-IT');
+                                const sizeMB = (b.size / (1024 * 1024)).toFixed(2);
+                                $('#backup-list').append(`
+                                    <div class="flex items-center justify-between bg-surface-hover/20 rounded px-3 py-2">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <i data-lucide="file-archive" class="w-3.5 h-3.5 text-foreground-muted shrink-0"></i>
+                                            <span class="text-xs text-foreground font-mono truncate">${b.name}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3 shrink-0">
+                                            <span class="text-[10px] text-foreground-muted">${sizeMB} MB</span>
+                                            <span class="text-[10px] text-foreground-subtle">${date}</span>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                            if (window.lucide) lucide.createIcons();
+                            $('#backup-list-container').removeClass('hidden');
+                        } else {
+                            $('#backup-last').text('Nessuno');
+                            $('#backup-list-container').addClass('hidden');
+                        }
+                    },
+                    error: function() {
+                        $('#backup-enabled').text('Errore').addClass('text-danger');
+                    }
+                });
+            }
+
+            $('#backup-download-btn').click(function() {
+                const btn = $(this);
+                btn.prop('disabled', true).html('<div class="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin"></div> Creazione backup...');
+
+                const token = localStorage.getItem('jwt_token');
+                fetch('/api/backup/create', {
+                    method: 'POST',
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Backup fallito');
+                    const disposition = response.headers.get('Content-Disposition');
+                    let filename = 'backup.db';
+                    if (disposition && disposition.indexOf('filename=') !== -1) {
+                        filename = disposition.split('filename=')[1].replace(/"/g, '').trim();
+                    }
+                    return response.blob().then(function(blob) { return { blob: blob, filename: filename }; });
+                })
+                .then(function(result) {
+                    const url = window.URL.createObjectURL(result.blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    showToast('Backup creato e scaricato con successo!', 'success');
+                    loadBackupStatus();
+                })
+                .catch(function(err) {
+                    showToast('Errore durante la creazione del backup: ' + err.message, 'danger');
+                })
+                .finally(function() {
+                    btn.prop('disabled', false).html('<i data-lucide="download" class="w-4 h-4"></i> Crea e Scarica Backup');
+                    if (window.lucide) lucide.createIcons();
+                });
+            });
+
+            $('#backup-refresh-btn').click(function() {
+                loadBackupStatus();
+            });
+
+            // Avvio al caricamento della pagina
+            loadAllSettings();
+            loadBackupStatus();
+        });
+    </script>
+</div>
+</body>
+</html>

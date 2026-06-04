@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Accessi', hideNav=false, content=~{::div.accesses-content})}">
+<body>
+    <div class="accesses-content space-y-4">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <h1 class="text-xl font-semibold text-foreground">Registro Accessi</h1>
+                <p class="text-sm text-foreground-muted mt-0.5">Storico degli ingressi in palestra</p>
+            </div>
+            <button type="button" id="open-door-btn" class="btn-primary flex items-center gap-2">
+                <i data-lucide="door-open" class="w-[15px] h-[15px]"></i>
+                Apri porta
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="card p-4">
+                <p class="text-xs text-foreground-muted">Accessi oggi</p>
+                <p id="stat-accesses" class="text-2xl font-bold text-foreground mt-1">0</p>
+            </div>
+            <div class="card p-4">
+                <p class="text-xs text-foreground-muted">Negati oggi</p>
+                <p id="stat-denied" class="text-2xl font-bold text-danger mt-1">0</p>
+            </div>
+        </div>
+
+        <div class="card p-4">
+            <form id="manual-access-form" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">ID cliente o tag NFC</label>
+                    <input type="text" id="manual-access-id" class="input font-mono" placeholder="Es. 123 oppure 04AB1234" required />
+                </div>
+                <button type="submit" id="manual-access-btn" class="btn-primary flex items-center justify-center gap-2">
+                    <i data-lucide="badge-check" class="w-[15px] h-[15px]"></i>
+                    Convalida entrata
+                </button>
+            </form>
+        </div>
+        <div class="card overflow-hidden">
+            <div class="flex items-center gap-4 px-5 py-2.5 border-b border-surface-border bg-background-tertiary">
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Cliente</div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Codice accesso</div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Dispositivo</div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Esito</div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Ora</div>
+            </div>
+            <div id="accesses-list" class="divide-y divide-surface-border">
+                <p class="px-5 py-8 text-center text-sm text-foreground-subtle">Caricamento in corso...</p>
+            </div>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                function denialText(reason) {
+                    const labels = {
+                        TAG_UNKNOWN: 'Tag sconosciuto',
+                        NO_USER: 'Tag non assegnato',
+                        USER_INACTIVE: 'Utente inattivo',
+                        NO_ACTIVE_SUBSCRIPTION: 'Abbonamento assente',
+                        NO_ACTIVE_INSURANCE: 'Assicurazione assente',
+                        CERT_EXPIRED: 'Certificato scaduto',
+                        CERT_MISSING: 'Certificato assente'
+                    };
+                    return labels[reason] || reason || 'Negato';
+                }
+
+                function loadStats() {
+                    $.ajax({
+                        url: '/api/accesses/stats',
+                        type: 'GET',
+                        success: function(data) {
+                            $('#stat-accesses').text(data.accessesToday || 0);
+                            $('#stat-denied').text(data.deniedToday || 0);
+                            $('#stat-present').text(data.usersPresent || 0);
+                        }
+                    });
+                }
+
+                function loadAccesses() {
+                    $.ajax({
+                        url: '/api/accesses?size=50',
+                        type: 'GET',
+                        success: function(data) {
+                            const rows = data.content || [];
+                            const list = $('#accesses-list');
+                            list.empty();
+
+                            if (rows.length === 0) {
+                                list.html('<p class="px-5 py-8 text-center text-sm text-foreground-subtle">Nessun accesso registrato.</p>');
+                                return;
+                            }
+
+                            rows.forEach(function(access) {
+                                const granted = access.granted;
+                                const status = granted
+                                    ? '<span class="badge-success">Concesso</span>'
+                                    : `<span class="badge-danger">${denialText(access.denialReason)}</span>`;
+                                const when = access.accessTime ? new Date(access.accessTime).toLocaleString('it-IT') : '-';
+                                const accessCode = access.clientCode && String(access.nfcTagUid) === String(access.clientCode) ? 'ID #' + access.clientCode : (access.nfcTagUid ? 'NFC ' + access.nfcTagUid : '-');
+                                const userLabel = access.clientCode ? '#' + access.clientCode + ' - ' + (access.userFullName || 'Sconosciuto') : (access.userFullName || 'Sconosciuto');
+
+                                list.append(`
+                                    <div class="flex items-center gap-4 px-5 py-3 border-b border-surface-border hover:bg-surface-hover transition-colors">
+                                        <div class="flex-1 text-sm text-foreground">${userLabel}</div>
+                                        <div class="flex-1 text-sm text-foreground-muted font-mono">${accessCode}</div>
+                                        <div class="flex-1 text-sm text-foreground-muted">${access.deviceId || access.deviceIp || '-'}</div>
+                                        <div class="flex-1 text-sm">${status}</div>
+                                        <div class="flex-1 text-sm text-foreground-muted">${when}</div>
+                                    </div>
+                                `);
+                            });
+                        }
+                    });
+                }
+
+                function refresh() {
+                    loadStats();
+                    loadAccesses();
+                }
+
+                $('#open-door-btn').click(function() {
+                    const btn = $(this);
+                    btn.prop('disabled', true).text('Apertura...');
+                    $.ajax({
+                        url: '/api/accesses/open-door',
+                        type: 'POST',
+                        success: function(data) {
+                            showToast(data.sent ? 'Comando apertura inviato.' : 'Nessun gateway collegato.', data.sent ? 'success' : 'warning');
+                        },
+                        error: function() {
+                            showToast('Impossibile aprire la porta.', 'error');
+                        },
+                        complete: function() {
+                            btn.prop('disabled', false).html('<i data-lucide="door-open" class="w-[15px] h-[15px]"></i> Apri porta');
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                });
+
+                $('#manual-access-form').submit(function(e) {
+                    e.preventDefault();
+                    const accessId = $('#manual-access-id').val().trim();
+                    if (!accessId) return;
+
+                    $('#manual-access-btn').prop('disabled', true).text('Convalida...');
+                    $.ajax({
+                        url: '/api/accesses/validate',
+                        type: 'POST',
+                        data: { accessId: accessId },
+                        success: function(access) {
+                            $('#manual-access-id').val('');
+                            showToast(access.granted ? 'Entrata convalidata.' : 'Entrata negata.', access.granted ? 'success' : 'warning');
+                            refresh();
+                        },
+                        error: function(xhr) {
+                            const msg = xhr.responseJSON && xhr.responseJSON.detail ? xhr.responseJSON.detail : 'Impossibile convalidare l entrata.';
+                            showToast(msg, 'error');
+                        },
+                        complete: function() {
+                            $('#manual-access-btn').prop('disabled', false).html('<i data-lucide="badge-check" class="w-[15px] h-[15px]"></i> Convalida entrata');
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                });
+
+                window.LegionAsdRefreshAccesses = refresh;
+                refresh();
+            });
+        </script>
+    </div>
+</body>
+</html>
+
+
+
+

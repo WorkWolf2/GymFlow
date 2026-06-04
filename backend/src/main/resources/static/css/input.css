@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #111112;
+    --surface: #1b1b1d;
+    --border: #303033;
+    --accent: #e8c84a;
+    --text: #eeeeef;
+    --text-muted: #a2a2a6;
+  }
+
+  * {
+    border-color: #2a2a35;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a35;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a48;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-surface-border rounded shadow-card;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-accent-foreground font-medium px-4 py-2 rounded 
+           hover:bg-accent-hover transition-colors duration-150 text-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-surface border border-surface-border text-foreground font-medium px-4 py-2 rounded
+           hover:bg-surface-hover transition-colors duration-150 text-sm;
+  }
+
+  .btn-ghost {
+    @apply text-foreground-muted hover:text-foreground hover:bg-surface-hover 
+           px-3 py-1.5 rounded transition-colors duration-150 text-sm;
+  }
+
+  .input {
+    @apply bg-surface border border-surface-border rounded px-3 py-2 text-sm
+           text-foreground placeholder:text-foreground-subtle
+           focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent
+           transition-colors duration-150 w-full;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-success-bg text-success;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-bg text-warning;
+  }
+
+  .badge-danger {
+    @apply badge bg-danger-bg text-danger;
+  }
+
+  .badge-muted {
+    @apply badge bg-surface-active text-foreground-muted;
+  }
+
+  .table-row-hover {
+    @apply hover:bg-surface-hover transition-colors duration-100 cursor-pointer;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: rgb(15 15 17 / 0.8);
+  }
+
+  .modal-overlay.hidden {
+    display: none;
+  }
+}

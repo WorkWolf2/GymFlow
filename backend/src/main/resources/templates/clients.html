@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Clienti', hideNav=false, content=~{::div.clients-content})}">
+<body>
+    <div class="clients-content space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-semibold text-foreground">Clienti</h1>
+                <p class="text-sm text-foreground-muted mt-0.5" id="total-clients-text">
+                    Caricamento...
+                </p>
+            </div>
+            <a href="/clients/new" class="btn-primary flex items-center gap-2">
+                <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
+                Nuovo cliente
+            </a>
+        </div>
+
+        <!-- Search -->
+        <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle w-[14px] h-[14px]"></i>
+            <input type="text" id="search-input" class="input pl-8 max-w-xs" placeholder="Cerca per ID, nome, email, telefono...">
+        </div>
+
+        <!-- Table -->
+        <div class="card overflow-visible">
+            <!-- Header -->
+            <div class="flex items-center gap-4 px-5 py-2.5 border-b border-surface-border bg-background-tertiary">
+                <div class="w-8 shrink-0"></div>
+                <div class="flex-1 text-xs font-medium text-foreground-muted">Cliente</div>
+                <div class="hidden md:block text-xs font-medium text-foreground-muted">Stato</div>
+                <div class="w-16 shrink-0"></div>
+            </div>
+
+            <!-- Rows -->
+            <div id="clients-list" class="divide-y divide-surface-border">
+                <!-- Skeleton loader -->
+                <div id="loading-skeleton">
+                    <div class="flex items-center gap-4 px-5 py-3 border-b border-surface-border">
+                        <div class="w-8 h-8 rounded-full bg-surface-active animate-pulse"></div>
+                        <div class="flex-1 space-y-1.5">
+                            <div class="h-3 bg-surface-active rounded animate-pulse w-40"></div>
+                            <div class="h-2.5 bg-surface-active rounded animate-pulse w-24"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination-controls" class="flex items-center justify-between hidden">
+            <p class="text-xs text-foreground-muted" id="page-info"></p>
+            <div class="flex items-center gap-2">
+                <button id="prev-page" class="btn-ghost disabled:opacity-40">Precedente</button>
+                <button id="next-page" class="btn-ghost disabled:opacity-40">Successiva</button>
+            </div>
+        </div>
+
+        <script>
+            $(document).ready(function() {
+                let currentPage = 0;
+                let currentSearch = "";
+                let totalPages = 0;
+
+                function loadClients() {
+                    const list = $('#clients-list');
+                    list.html($('#loading-skeleton').html()); // Show loading
+
+                    $.ajax({
+                        url: `/api/users?page=${currentPage}&size=10&search=${encodeURIComponent(currentSearch)}`,
+                        type: 'GET',
+                        success: function(data) {
+                            list.empty();
+
+                            console.log(data)
+                            $('#total-clients-text').text(`${data.page.totalElements} clienti totali`);
+                            
+                            totalPages = data.page.totalPages;
+                            
+                            if (data.content.length === 0) {
+                                list.html(`<p class="px-5 py-10 text-center text-sm text-foreground-subtle">${currentSearch ? "Nessun risultato" : "Nessun cliente ancora"}</p>`);
+                            } else {
+                                data.content.forEach(function(user) {
+                                    // Build row HTML
+                                    const avatar = user.avatarPath 
+                                        ? `<img src="${user.avatarPath}" alt="" class="w-8 h-8 rounded-full object-cover" />`
+                                        : `<span class="text-xs font-medium text-foreground-muted">${user.firstName[0]}${user.lastName[0]}</span>`;
+                                    
+                                    const subStatus = user.hasActiveSubscription
+                                        ? `<span class="badge-success">Abbonato</span>`
+                                        : `<span class="badge-danger">Scaduto</span>`;
+                                    
+                                    // Using a simple logic for CertBadge
+                                    let certBadge = '';
+                                    if (user.certStatus === 'VALID') certBadge = '<span class="badge-success">Cert. Valido</span>';
+                                    else if (user.certStatus === 'EXPIRING_SOON') certBadge = '<span class="badge-warning">Cert. Scadenza</span>';
+                                    else certBadge = '<span class="badge-danger">Cert. Scaduto</span>';
+
+                                    let nfcBadge = user.nfcTagUid ? `<span class="badge badge-muted font-mono text-xs">NFC ${user.nfcTagUid}</span>` : `<span class="badge badge-muted font-mono text-xs">ID ${user.clientCode || '-'}</span>`;
+
+                                    const html = `
+                                        <div class="flex items-center gap-4 px-5 py-3 border-b border-surface-border hover:bg-surface-hover transition-colors relative group">
+                                            <div class="w-8 h-8 rounded-full bg-surface-active flex items-center justify-center shrink-0">
+                                                ${avatar}
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-foreground truncate">${user.fullName}</p>
+                                                <p class="text-xs text-foreground-muted truncate">${user.email || user.phone || "Nessun recapito"}</p>
+                                            </div>
+                                            <div class="hidden md:flex items-center gap-2 shrink-0">
+                                                ${certBadge}
+                                                ${subStatus}
+                                                ${nfcBadge}
+                                            </div>
+                                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <a href="/clients/${user.id}" class="p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors">
+                                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                                </a>
+                                                <div class="relative dropdown-container">
+                                                    <button class="p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors dropdown-toggle">
+                                                        <i data-lucide="more-horizontal" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                    <div class="dropdown-menu absolute right-0 top-full mt-1 w-40 bg-surface border border-surface-border rounded shadow-card z-20 py-1 hidden">
+                                                        <a href="/clients/${user.id}" class="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted hover:text-foreground hover:bg-surface-hover">
+                                                            Dettaglio
+                                                        </a>
+                                                        <button class="delete-btn flex items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-danger-bg w-full text-left" data-id="${user.id}">
+                                                            <i data-lucide="user-x" class="w-[13px] h-[13px]"></i> Disattiva
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    list.append(html);
+                                });
+                                lucide.createIcons();
+                            }
+
+                            // Update Pagination
+                            if (totalPages > 1) {
+                                $('#pagination-controls').removeClass('hidden');
+                                $('#page-info').text(`Pagina ${currentPage + 1} di ${totalPages}`);
+                                $('#prev-page').prop('disabled', currentPage === 0);
+                                $('#next-page').prop('disabled', currentPage >= totalPages - 1);
+                            } else {
+                                $('#pagination-controls').addClass('hidden');
+                            }
+                        }
+                    });
+                }
+
+                // Initial Load
+                window.LegionAsdRefreshClients = loadClients;
+                loadClients();
+
+                // Search Event
+                let searchTimeout;
+                $('#search-input').on('input', function() {
+                    currentSearch = $(this).val();
+                    currentPage = 0;
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(loadClients, 300);
+                });
+
+                // Pagination Events
+                $('#prev-page').click(function() {
+                    if (currentPage > 0) {
+                        currentPage--;
+                        loadClients();
+                    }
+                });
+
+                $('#next-page').click(function() {
+                    if (currentPage < totalPages - 1) {
+                        currentPage++;
+                        loadClients();
+                    }
+                });
+
+                // Dropdown logic
+                $(document).on('click', '.dropdown-toggle', function(e) {
+                    e.stopPropagation();
+                    $('.dropdown-menu').addClass('hidden'); // close others
+                    $(this).siblings('.dropdown-menu').removeClass('hidden');
+                });
+
+                $(document).on('click', function() {
+                    $('.dropdown-menu').addClass('hidden');
+                });
+
+                // Delete logic
+                $(document).on('click', '.delete-btn', function() {
+                    const id = $(this).data('id');
+                    if (confirm("Disattivare questo cliente?")) {
+                        $.ajax({
+                            url: `/api/users/${id}`,
+                            type: 'DELETE',
+                            success: function() {
+                                loadClients();
+                            }
+                        });
+                    }
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
+
+
