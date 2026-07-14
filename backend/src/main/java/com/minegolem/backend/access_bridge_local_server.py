@@ -3,10 +3,11 @@
 Bridge locale GymFlow per lettore NFC/ER750.
 
 Flusso:
-1. Il PC locale riceve una scansione NFC via HTTP o TCP.
+1. Il PC locale riceve una scansione NFC dal lettore sulla porta EVENT_SERVER_PORT.
 2. Il PC locale chiede alla VPS se il tag puo' entrare.
 3. La VPS risponde OPEN o DENY.
-4. Solo se la risposta e' OPEN, questo script apre la porta sull'ER750.
+4. Solo se la risposta e' OPEN, questo script invia il comando di apertura a
+   DOOR_READER_HOST:DOOR_READER_PORT.
 
 Modifica i valori nella sezione CONFIGURAZIONE, senza usare file .env.
 """
@@ -34,26 +35,27 @@ VPS_URL = "https://app.tuodominio.it"
 # Deve essere uguale ad access.bridge.api-key configurata nel backend sulla VPS.
 BRIDGE_KEY = "INSERISCI_QUI_LA_CHIAVE_DEL_BRIDGE"
 
-# Server HTTP locale usato per ricevere scansioni da programmi/lettori locali.
+# Server HTTP locale opzionale, utile per test manuali con POST /scan.
 LOCAL_HTTP_HOST = "127.0.0.1"
 LOCAL_HTTP_PORT = 8787
 
 # Nome dispositivo mostrato nei log accessi.
 DEFAULT_DEVICE_ID = socket.gethostname()
 
-# Lettore/centralina ER750 da comandare per aprire la porta.
-ER750_HOST = "169.254.40.235"
-ER750_PORT = 2167
+# Event server: qui il lettore si collega/invia la carta letta.
+EVENT_SERVER_ENABLED = True
+EVENT_SERVER_HOST = "0.0.0.0"
+EVENT_SERVER_PORT = 2169
+EVENT_READ_TIMEOUT_SECONDS = 0.5
+
+# Comando apertura: IP e porta del lettore/centralina da comandare.
+DOOR_READER_HOST = "169.254.40.235"
+DOOR_READER_PORT = 2167
 
 # Timeout connessioni.
 REQUEST_TIMEOUT_SECONDS = 8
-ER750_CONNECT_TIMEOUT_SECONDS = 2
-ER750_READ_TIMEOUT_SECONDS = 1.5
-
-# Listener TCP opzionale per lettori che inviano righe di testo.
-READER_TCP_ENABLED = False
-READER_TCP_HOST = "0.0.0.0"
-READER_TCP_PORT = 2169
+DOOR_CONNECT_TIMEOUT_SECONDS = 2
+DOOR_READ_TIMEOUT_SECONDS = 1.5
 
 
 def normalize_tag(value: str) -> str:
@@ -66,6 +68,14 @@ def extract_tag(raw: str) -> str:
     if keyed:
         return normalize_tag(keyed.group(1))
     return normalize_tag(text)
+
+
+def extract_tag_from_bytes(raw: bytes) -> str:
+    text = raw.decode("utf-8", errors="ignore").strip()
+    tag = extract_tag(text)
+    if tag:
+        return tag
+    return normalize_tag(raw.hex())
 
 
 def post_to_vps(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]:
@@ -120,10 +130,10 @@ def build_er750_open_packet(seconds: int) -> bytes:
 def open_er750_door(seconds: int) -> None:
     packet = build_er750_open_packet(seconds)
     with socket.create_connection(
-        (ER750_HOST, ER750_PORT),
-        timeout=ER750_CONNECT_TIMEOUT_SECONDS,
+        (DOOR_READER_HOST, DOOR_READER_PORT),
+        timeout=DOOR_CONNECT_TIMEOUT_SECONDS,
     ) as sock:
-        sock.settimeout(ER750_READ_TIMEOUT_SECONDS)
+        sock.settimeout(DOOR_READ_TIMEOUT_SECONDS)
         sock.sendall(packet)
 
         try:
@@ -190,49 +200,63 @@ class BridgeHttpHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def handle_reader_client(conn: socket.socket, address: tuple[str, int]) -> None:
+def handle_event_client(conn: socket.socket, address: tuple[str, int]) -> None:
     with conn:
         buffer = b""
+        conn.settimeout(EVENT_READ_TIMEOUT_SECONDS)
         while True:
-            chunk = conn.recv(1024)
-            if not chunk:
-                return
+            try:
+                chunk = conn.recv(1024)
+                if not chunk:
+                    if buffer:
+                        response = process_event_frame(buffer, address)
+                        conn.sendall(response.encode("utf-8"))
+                    return
+            except socket.timeout:
+                if buffer:
+                    response = process_event_frame(buffer, address)
+                    conn.sendall(response.encode("utf-8"))
+                    buffer = b""
+                continue
+
             buffer += chunk
 
             while b"\n" in buffer:
                 line, buffer = buffer.split(b"\n", 1)
-                raw = line.decode("utf-8", errors="replace").strip()
-                tag_uid = extract_tag(raw)
-
-                try:
-                    result = process_scan(tag_uid, DEFAULT_DEVICE_ID, address[0])
-                    response = f"{result.get('command', 'DENY')}:{result.get('message', '')}\n"
-                except Exception as exc:
-                    response = f"DENY:{exc}\n"
-
+                response = process_event_frame(line, address)
                 conn.sendall(response.encode("utf-8"))
 
 
-def start_reader_tcp_server() -> None:
+def process_event_frame(frame: bytes, address: tuple[str, int]) -> str:
+    tag_uid = extract_tag_from_bytes(frame)
+    try:
+        result = process_scan(tag_uid, DEFAULT_DEVICE_ID, address[0])
+        return f"{result.get('command', 'DENY')}:{result.get('message', '')}\n"
+    except Exception as exc:
+        return f"DENY:{exc}\n"
+
+
+def start_event_server() -> None:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((READER_TCP_HOST, READER_TCP_PORT))
+    server.bind((EVENT_SERVER_HOST, EVENT_SERVER_PORT))
     server.listen(20)
-    print(f"Reader TCP attivo su {READER_TCP_HOST}:{READER_TCP_PORT}")
+    print(f"Event server attivo su {EVENT_SERVER_HOST}:{EVENT_SERVER_PORT}")
 
     while True:
         conn, address = server.accept()
-        threading.Thread(target=handle_reader_client, args=(conn, address), daemon=True).start()
+        threading.Thread(target=handle_event_client, args=(conn, address), daemon=True).start()
 
 
 def main() -> None:
-    if READER_TCP_ENABLED:
-        threading.Thread(target=start_reader_tcp_server, daemon=True).start()
+    if EVENT_SERVER_ENABLED:
+        threading.Thread(target=start_event_server, daemon=True).start()
 
     httpd = ThreadingHTTPServer((LOCAL_HTTP_HOST, LOCAL_HTTP_PORT), BridgeHttpHandler)
     print(f"GymFlow bridge locale attivo su http://{LOCAL_HTTP_HOST}:{LOCAL_HTTP_PORT}")
     print(f"VPS: {VPS_URL}")
-    print(f"ER750: {ER750_HOST}:{ER750_PORT}")
+    print(f"Event server: {EVENT_SERVER_HOST}:{EVENT_SERVER_PORT}")
+    print(f"Comando apertura: {DOOR_READER_HOST}:{DOOR_READER_PORT}")
     httpd.serve_forever()
 
 
