@@ -4,6 +4,7 @@ import com.minegolem.backend.dto.request.EmailSendRequest;
 import com.minegolem.backend.dto.request.BulkEmailRequest;
 import com.minegolem.backend.dto.response.BulkEmailResponse;
 import com.minegolem.backend.service.EmailService;
+import com.minegolem.backend.service.EmailNotificationService;
 import com.minegolem.backend.domain.entity.User;
 import com.minegolem.backend.repository.UserRepository;
 import com.minegolem.backend.security.StaffUserDetails;
@@ -26,6 +27,7 @@ import java.util.UUID;
 public class EmailController {
 
     private final EmailService emailService;
+    private final EmailNotificationService emailNotificationService;
     private final UserRepository userRepository;
     private final RealtimeEventService realtimeEventService;
 
@@ -60,6 +62,16 @@ public class EmailController {
             
         emailService.sendEmail(userDetails.getGymId(), recipientEmail, customizedSubject, customizedBody);
         realtimeEventService.publish(userDetails.getGymId(), "EMAIL", "SENT", request.userId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/welcome/{userId}")
+    @PreAuthorize("hasAuthority('USER_WRITE')")
+    public ResponseEntity<Void> sendWelcomeEmail(
+            @AuthenticationPrincipal StaffUserDetails userDetails,
+            @PathVariable UUID userId) {
+        emailNotificationService.sendWelcomeEmail(userDetails.getGymId(), userId);
+        realtimeEventService.publish(userDetails.getGymId(), "EMAIL", "WELCOME_SENT", userId);
         return ResponseEntity.ok().build();
     }
 

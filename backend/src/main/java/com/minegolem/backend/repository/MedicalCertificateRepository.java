@@ -40,6 +40,26 @@ public interface MedicalCertificateRepository extends JpaRepository<MedicalCerti
         JOIN FETCH mc.user u
         WHERE u.gym.id = :gymId
           AND u.deletedAt IS NULL
+          AND u.active = true
+          AND u.email IS NOT NULL
+          AND u.email <> ''
+          AND mc.deletedAt IS NULL
+          AND mc.expiryDate = :expiryDate
+          AND NOT EXISTS (
+              SELECT newer.id FROM MedicalCertificate newer
+              WHERE newer.user.id = u.id
+                AND newer.deletedAt IS NULL
+                AND newer.expiryDate > mc.expiryDate
+          )
+        """)
+    List<MedicalCertificate> findLatestExpiringForAutomaticEmail(@Param("gymId") UUID gymId,
+                                                                  @Param("expiryDate") LocalDate expiryDate);
+
+    @Query("""
+        SELECT mc FROM MedicalCertificate mc
+        JOIN FETCH mc.user u
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
           AND mc.deletedAt IS NULL
           AND mc.expiryDate BETWEEN :from AND :to
         ORDER BY mc.expiryDate ASC, u.lastName ASC, u.firstName ASC

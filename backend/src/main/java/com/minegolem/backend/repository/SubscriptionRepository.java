@@ -54,6 +54,31 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
                                         @Param("from") LocalDate from,
                                         @Param("to") LocalDate to);
 
+    @Query("""
+        SELECT s FROM Subscription s
+        JOIN FETCH s.user u
+        JOIN FETCH s.subscriptionType st
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
+          AND u.active = true
+          AND s.deletedAt IS NULL
+          AND st.type = :type
+          AND s.endDate = :expiryDate
+          AND u.email IS NOT NULL
+          AND u.email <> ''
+          AND NOT EXISTS (
+              SELECT renewed.id FROM Subscription renewed
+              WHERE renewed.user.id = u.id
+                AND renewed.id <> s.id
+                AND renewed.deletedAt IS NULL
+                AND renewed.subscriptionType.type = :type
+                AND renewed.endDate > s.endDate
+          )
+        """)
+    List<Subscription> findExpiringForAutomaticEmail(@Param("gymId") UUID gymId,
+                                                     @Param("type") SubscriptionTypeEnum type,
+                                                     @Param("expiryDate") LocalDate expiryDate);
+
     long countByUserGymIdAndDeletedAtIsNullAndEndDateGreaterThanEqual(UUID gymId, LocalDate today);
 
     @Query("""

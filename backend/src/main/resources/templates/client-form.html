@@ -213,22 +213,56 @@
                                     $.ajax({ url: `/api/users/${userId}/certificate`, type: 'POST', data: formData, processData: false, contentType: false })
                                 );
                             }
-
-                            // Wait for all uploads to finish, then redirect
+                            // Wait for all uploads to finish, then ask whether to send the welcome email.
                             Promise.all(uploadPromises)
                                 .then(() => {
-                                    window.location = `/clients/${userId}`;
+                                    askWelcomeEmail(user);
                                 })
                                 .catch(err => {
                                     console.error('Error during file uploads', err);
-                                    alert('Il cliente è stato creato, ma si è verificato un errore nel caricamento dei file.');
-                                    window.location = `/clients/${userId}`;
+                                    alert('Il cliente e stato creato, ma si e verificato un errore nel caricamento dei file.');
+                                    askWelcomeEmail(user);
                                 });
                         },
                         error: function(err) {
                             console.error('Error creating user', err);
                             alert('Errore durante la creazione del cliente.');
                             btn.prop('disabled', false).text('Salva Cliente');
+                        }
+                    });
+                }
+
+                function askWelcomeEmail(user) {
+                    if (!user || !user.id) {
+                        window.location = '/clients';
+                        return;
+                    }
+
+                    if (!user.email) {
+                        alert('Cliente creato correttamente. Nessuna email inviata: il cliente non ha un indirizzo email.');
+                        window.location = `/clients/${user.id}`;
+                        return;
+                    }
+
+                    const shouldSend = confirm(`Cliente creato correttamente. Vuoi inviare la mail di benvenuto a ${user.email}?`);
+                    if (!shouldSend) {
+                        window.location = `/clients/${user.id}`;
+                        return;
+                    }
+
+                    $.ajax({
+                        url: `/api/emails/welcome/${user.id}`,
+                        type: 'POST',
+                        success: function() {
+                            alert('Mail di benvenuto inviata correttamente.');
+                            window.location = `/clients/${user.id}`;
+                        },
+                        error: function(xhr) {
+                            const message = xhr.responseJSON && xhr.responseJSON.message
+                                ? xhr.responseJSON.message
+                                : 'Non e stato possibile inviare la mail di benvenuto.';
+                            alert(message);
+                            window.location = `/clients/${user.id}`;
                         }
                     });
                 }

@@ -1,40 +1,21 @@
 #!/usr/bin/env python3
 """
-Server locale per ponte accessi GymFlow.
+Bridge locale GymFlow per lettore NFC/ER750.
 
 Flusso:
-1. Il lettore/programma locale invia un tag a questo server.
-2. Questo server chiama la VPS: POST /api/access-bridge/validate.
-3. La VPS decide, registra l'accesso e risponde OPEN oppure DENY.
-4. Questo server esegue il comando locale di apertura porta solo se riceve OPEN.
+1. Il PC locale riceve una scansione NFC via HTTP o TCP.
+2. Il PC locale chiede alla VPS se il tag puo' entrare.
+3. La VPS risponde OPEN o DENY.
+4. Solo se la risposta e' OPEN, questo script apre la porta sull'ER750.
 
-Variabili ambiente principali:
-  GYMFLOW_VPS_URL=https://app.tuodominio.it
-  GYMFLOW_BRIDGE_KEY=chiave_uguale_a_ACCESS_BRIDGE_API_KEY_sul_vps
-  LOCAL_HTTP_HOST=127.0.0.1
-  LOCAL_HTTP_PORT=8787
-
-Opzioni apertura porta, scegline una:
-  DOOR_OPEN_URL=http://127.0.0.1:5000/open
-  DOOR_COMMAND=C:\\path\\to\\open-door.exe
-  DOOR_TCP_HOST=192.168.1.50
-  DOOR_TCP_PORT=2169
-  DOOR_TCP_OPEN_PAYLOAD=OPEN
-
-Opzionale listener TCP per lettore locale:
-  READER_TCP_ENABLED=false
-  READER_TCP_HOST=0.0.0.0
-  READER_TCP_PORT=2169
+Modifica i valori nella sezione CONFIGURAZIONE, senza usare file .env.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
-import shlex
 import socket
-import subprocess
 import threading
 import time
 import urllib.error
@@ -43,23 +24,36 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 
-VPS_URL = os.getenv("GYMFLOW_VPS_URL", "https://app.tuodominio.it").rstrip("/")
-BRIDGE_KEY = os.getenv("GYMFLOW_BRIDGE_KEY", "")
-LOCAL_HTTP_HOST = os.getenv("LOCAL_HTTP_HOST", "127.0.0.1")
-LOCAL_HTTP_PORT = int(os.getenv("LOCAL_HTTP_PORT", "8787"))
-DEFAULT_DEVICE_ID = os.getenv("DEVICE_ID", socket.gethostname())
-REQUEST_TIMEOUT_SECONDS = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "8"))
+# =========================
+# CONFIGURAZIONE
+# =========================
 
-DOOR_OPEN_URL = os.getenv("DOOR_OPEN_URL", "").strip()
-DOOR_OPEN_URL_METHOD = os.getenv("DOOR_OPEN_URL_METHOD", "POST").upper()
-DOOR_COMMAND = os.getenv("DOOR_COMMAND", "").strip()
-DOOR_TCP_HOST = os.getenv("DOOR_TCP_HOST", "").strip()
-DOOR_TCP_PORT = int(os.getenv("DOOR_TCP_PORT", "2169"))
-DOOR_TCP_OPEN_PAYLOAD = os.getenv("DOOR_TCP_OPEN_PAYLOAD", "OPEN").encode("utf-8")
+# URL pubblico del backend sulla VPS, senza slash finale.
+VPS_URL = "https://app.tuodominio.it"
 
-READER_TCP_ENABLED = os.getenv("READER_TCP_ENABLED", "false").lower() == "true"
-READER_TCP_HOST = os.getenv("READER_TCP_HOST", "0.0.0.0")
-READER_TCP_PORT = int(os.getenv("READER_TCP_PORT", "2169"))
+# Deve essere uguale ad access.bridge.api-key configurata nel backend sulla VPS.
+BRIDGE_KEY = "INSERISCI_QUI_LA_CHIAVE_DEL_BRIDGE"
+
+# Server HTTP locale usato per ricevere scansioni da programmi/lettori locali.
+LOCAL_HTTP_HOST = "127.0.0.1"
+LOCAL_HTTP_PORT = 8787
+
+# Nome dispositivo mostrato nei log accessi.
+DEFAULT_DEVICE_ID = socket.gethostname()
+
+# Lettore/centralina ER750 da comandare per aprire la porta.
+ER750_HOST = "169.254.40.235"
+ER750_PORT = 2167
+
+# Timeout connessioni.
+REQUEST_TIMEOUT_SECONDS = 8
+ER750_CONNECT_TIMEOUT_SECONDS = 2
+ER750_READ_TIMEOUT_SECONDS = 1.5
+
+# Listener TCP opzionale per lettori che inviano righe di testo.
+READER_TCP_ENABLED = False
+READER_TCP_HOST = "0.0.0.0"
+READER_TCP_PORT = 2169
 
 
 def normalize_tag(value: str) -> str:
@@ -76,7 +70,7 @@ def extract_tag(raw: str) -> str:
 
 def post_to_vps(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]:
     if not BRIDGE_KEY:
-        raise RuntimeError("GYMFLOW_BRIDGE_KEY non configurata")
+        raise RuntimeError("BRIDGE_KEY non configurata nella sezione CONFIGURAZIONE")
 
     payload = json.dumps({
         "tagUid": tag_uid,
@@ -104,33 +98,40 @@ def post_to_vps(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]:
         raise RuntimeError(f"VPS non raggiungibile: {exc.reason}") from exc
 
 
-def open_door(relay_seconds: int | None = None) -> None:
-    if DOOR_OPEN_URL:
-        data = json.dumps({"seconds": relay_seconds or 3}).encode("utf-8")
-        request = urllib.request.Request(
-            DOOR_OPEN_URL,
-            data=data if DOOR_OPEN_URL_METHOD != "GET" else None,
-            method=DOOR_OPEN_URL_METHOD,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            response.read()
-        return
+def crc16(data: bytes, start: int = 1) -> int:
+    crc = 0xFFFF
+    for byte in data[start:]:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 1:
+                crc = (crc >> 1) ^ 0xA001
+            else:
+                crc >>= 1
+    return crc & 0xFFFF
 
-    if DOOR_COMMAND:
-        args = shlex.split(DOOR_COMMAND, posix=os.name != "nt")
-        subprocess.run(args, check=True, timeout=10)
-        return
 
-    if DOOR_TCP_HOST:
-        payload = DOOR_TCP_OPEN_PAYLOAD
-        if not payload.endswith(b"\n"):
-            payload += b"\n"
-        with socket.create_connection((DOOR_TCP_HOST, DOOR_TCP_PORT), timeout=5) as sock:
-            sock.sendall(payload)
-        return
+def build_er750_open_packet(seconds: int) -> bytes:
+    seconds = max(1, min(int(seconds), 255))
+    command = bytes([0x01, 0x00, 0x11, 0x02, 0x00, seconds])
+    checksum = crc16(command, 1)
+    return command + bytes([(checksum >> 8) & 0xFF, checksum & 0xFF])
 
-    print("OPEN ricevuto ma nessun comando porta configurato")
+
+def open_er750_door(seconds: int) -> None:
+    packet = build_er750_open_packet(seconds)
+    with socket.create_connection(
+        (ER750_HOST, ER750_PORT),
+        timeout=ER750_CONNECT_TIMEOUT_SECONDS,
+    ) as sock:
+        sock.settimeout(ER750_READ_TIMEOUT_SECONDS)
+        sock.sendall(packet)
+
+        try:
+            response = sock.recv(64)
+            if response:
+                print(f"ER750 response: {response.hex().upper()}")
+        except socket.timeout:
+            print("Comando apertura inviato a ER750, nessuna risposta prima del timeout")
 
 
 def process_scan(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]:
@@ -139,10 +140,17 @@ def process_scan(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]
         return {"granted": False, "command": "DENY", "message": "Tag vuoto o non valido"}
 
     result = post_to_vps(tag_uid, device_id, device_ip)
-    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} tag={tag_uid} command={result.get('command')} message={result.get('message')}")
+    command = result.get("command", "DENY")
+    granted = result.get("granted") is True
+    relay_seconds = result.get("relaySeconds") or 3
 
-    if result.get("command") == "OPEN" and result.get("granted") is True:
-        open_door(result.get("relaySeconds"))
+    print(
+        f"{time.strftime('%Y-%m-%d %H:%M:%S')} "
+        f"tag={tag_uid} device={device_id} command={command} message={result.get('message', '')}"
+    )
+
+    if granted and command == "OPEN":
+        open_er750_door(relay_seconds)
 
     return result
 
@@ -190,15 +198,18 @@ def handle_reader_client(conn: socket.socket, address: tuple[str, int]) -> None:
             if not chunk:
                 return
             buffer += chunk
+
             while b"\n" in buffer:
                 line, buffer = buffer.split(b"\n", 1)
                 raw = line.decode("utf-8", errors="replace").strip()
                 tag_uid = extract_tag(raw)
+
                 try:
                     result = process_scan(tag_uid, DEFAULT_DEVICE_ID, address[0])
                     response = f"{result.get('command', 'DENY')}:{result.get('message', '')}\n"
                 except Exception as exc:
                     response = f"DENY:{exc}\n"
+
                 conn.sendall(response.encode("utf-8"))
 
 
@@ -208,6 +219,7 @@ def start_reader_tcp_server() -> None:
     server.bind((READER_TCP_HOST, READER_TCP_PORT))
     server.listen(20)
     print(f"Reader TCP attivo su {READER_TCP_HOST}:{READER_TCP_PORT}")
+
     while True:
         conn, address = server.accept()
         threading.Thread(target=handle_reader_client, args=(conn, address), daemon=True).start()
@@ -220,6 +232,7 @@ def main() -> None:
     httpd = ThreadingHTTPServer((LOCAL_HTTP_HOST, LOCAL_HTTP_PORT), BridgeHttpHandler)
     print(f"GymFlow bridge locale attivo su http://{LOCAL_HTTP_HOST}:{LOCAL_HTTP_PORT}")
     print(f"VPS: {VPS_URL}")
+    print(f"ER750: {ER750_HOST}:{ER750_PORT}")
     httpd.serve_forever()
 
 
