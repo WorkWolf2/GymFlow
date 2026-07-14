@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Report', hideNav=false, content=~{::div.reports-content})}">
+<body>
+<div class="reports-content space-y-5">
+    <div>
+        <h1 class="text-xl font-semibold text-foreground">Report</h1>
+        <p class="text-sm text-foreground-muted mt-0.5">Esporta in PDF i dati utili della palestra</p>
+    </div>
+
+    <div class="card p-5 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tipo di report</label>
+                <select id="report-type" class="input">
+                    <optgroup label="Abbonamenti">
+                        <option value="SUBSCRIPTIONS_EXPIRED">Abbonamenti scaduti nel periodo</option>
+                        <option value="SUBSCRIPTIONS_STARTED">Abbonamenti attivati nel periodo</option>
+                    </optgroup>
+                    <optgroup label="Certificati medici">
+                        <option value="CERTIFICATES_EXPIRING">Certificati con scadenza nel periodo</option>
+                        <option value="CERTIFICATES_VALID">Clienti con certificato valido</option>
+                        <option value="CERTIFICATES_MISSING">Clienti senza certificato valido</option>
+                    </optgroup>
+                    <optgroup label="Anagrafiche e accessi">
+                        <option value="CLIENTS">Elenco completo clienti</option>
+                        <option value="ACCESSES">Registro accessi nel periodo</option>
+                    </optgroup>
+                    <optgroup label="Voucher">
+                        <option value="VOUCHERS">Elenco voucher clienti</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div id="period-fields" class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">Dal</label>
+                    <input type="date" id="report-from" class="input" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-foreground-muted mb-1.5">Al</label>
+                    <input type="date" id="report-to" class="input" required>
+                </div>
+            </div>
+        </div>
+        <div id="report-description" class="flex gap-2 rounded-lg border border-surface-border bg-background-tertiary p-3 text-sm text-foreground-muted">
+            <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5 text-accent"></i>
+            <span></span>
+        </div>
+        <div class="flex justify-end">
+            <button id="download-report" class="btn-primary flex items-center gap-2">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                Scarica PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card p-4"><i data-lucide="calendar-clock" class="w-5 h-5 text-accent mb-3"></i><h2 class="text-sm font-medium text-foreground">Scadenze</h2><p class="text-xs text-foreground-muted mt-1">Controlla abbonamenti e certificati in qualsiasi intervallo.</p></div>
+        <div class="card p-4"><i data-lucide="shield-check" class="w-5 h-5 text-success mb-3"></i><h2 class="text-sm font-medium text-foreground">Conformità</h2><p class="text-xs text-foreground-muted mt-1">Individua subito chi ha o non ha un certificato valido.</p></div>
+        <div class="card p-4"><i data-lucide="door-open" class="w-5 h-5 text-foreground-muted mb-3"></i><h2 class="text-sm font-medium text-foreground">Operatività</h2><p class="text-xs text-foreground-muted mt-1">Esporta clienti e registro degli accessi in modo ordinato.</p></div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            const descriptions = {
+                SUBSCRIPTIONS_EXPIRED: 'Include gli abbonamenti la cui data di scadenza cade nel periodo selezionato.',
+                SUBSCRIPTIONS_STARTED: 'Include gli abbonamenti iniziati nel periodo selezionato.',
+                CERTIFICATES_EXPIRING: 'Include i certificati la cui data di scadenza cade nel periodo selezionato.',
+                CERTIFICATES_VALID: 'Elenca un certificato valido, il più recente, per ciascun cliente.',
+                CERTIFICATES_MISSING: 'Elenca i clienti che oggi non hanno alcun certificato valido, inclusi quelli con certificato scaduto.',
+                CLIENTS: 'Esporta l’anagrafica essenziale di tutti i clienti non eliminati.',
+                ACCESSES: 'Esporta tutti gli accessi consentiti e negati avvenuti nel periodo selezionato.',
+                VOUCHERS: 'Esporta tutti i voucher associati ai clienti con nome, codice, costo e validità.'
+            };
+            const withoutPeriod = ['CERTIFICATES_VALID', 'CERTIFICATES_MISSING', 'CLIENTS', 'VOUCHERS'];
+
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            document.getElementById('report-from').valueAsDate = firstDay;
+            document.getElementById('report-to').valueAsDate = now;
+
+            function updateForm() {
+                const type = $('#report-type').val();
+                const needsPeriod = !withoutPeriod.includes(type);
+                $('#period-fields').toggleClass('hidden', !needsPeriod);
+                $('#report-from, #report-to').prop('required', needsPeriod);
+                $('#report-description span').text(descriptions[type]);
+            }
+
+            $('#report-type').on('change', updateForm);
+            updateForm();
+
+            $('#download-report').click(async function() {
+                const type = $('#report-type').val();
+                const needsPeriod = !withoutPeriod.includes(type);
+                const from = $('#report-from').val();
+                const to = $('#report-to').val();
+                if (needsPeriod && (!from || !to)) return alert('Seleziona entrambe le date.');
+                if (needsPeriod && from > to) return alert('La data iniziale non può superare quella finale.');
+
+                let url = '/api/reports/pdf?type=' + encodeURIComponent(type);
+                if (needsPeriod) url += '&from=' + from + '&to=' + to;
+                const button = $(this);
+                const original = button.html();
+                button.prop('disabled', true).text('Generazione...');
+                try {
+                    const response = await fetch(url, {headers: {'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')}});
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const blob = await response.blob();
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = 'report_' + type.toLowerCase() + '.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    URL.revokeObjectURL(downloadUrl);
+                } catch (error) {
+                    console.error(error);
+                    alert('Non è stato possibile generare il report.');
+                } finally {
+                    button.prop('disabled', false).html(original);
+                    lucide.createIcons();
+                }
+            });
+        });
+    </script>
+</div>
+</body>
+</html>

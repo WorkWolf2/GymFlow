@@ -31,6 +31,7 @@ $(document).ready(function() {
         return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
+    prepareNfcAudio();
     setupNfcRealtime();
 });
 
@@ -164,16 +165,16 @@ function currentGymId() {
 
 function ensureNfcUi() {
     if ($('#nfc-toast-container').length === 0) {
-        $('body').append('<div id="nfc-toast-container" class="fixed bottom-4 right-4 z-[9999] space-y-2 w-80"></div>');
+        $('body').append('<div id="nfc-toast-container" class="space-y-3" style="position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:10000;width:min(560px,calc(100vw - 32px));pointer-events:none"></div>');
     }
 
     if ($('#global-nfc-assign-modal').length === 0) {
         $('body').append(`
             <div id="global-nfc-assign-modal" class="modal-overlay hidden" style="z-index: 9998">
-                <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="card w-full max-w-md overflow-hidden animate-slide-up">
                     <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
                         <h2 class="text-lg font-semibold text-foreground">Assegna Tag NFC</h2>
-                        <button id="global-nfc-close" class="text-foreground-muted hover:text-foreground transition-colors">
+                        <button id="global-nfc-close" class="icon-button">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -223,28 +224,63 @@ function ensureNfcUi() {
 }
 
 function showNfcToast(event) {
-    playNfcSound(event.granted);
-
     const reason = denialText(event.denialReason);
     const title = event.granted ? 'Accesso consentito' : 'Accesso negato';
-    const colorClass = event.granted ? 'border-success/40' : 'border-danger/40';
-    const tag = event.clientCode && String(event.tagUid) === String(event.clientCode) ? 'ID #' + event.clientCode : (event.tagUid ? 'NFC ' + event.tagUid : '-');
-    const name = event.clientCode && event.userName ? '#' + event.clientCode + ' - ' + event.userName : (event.userName || 'Tag non assegnato');
+    const colorClass = event.granted ? 'border-success' : 'border-danger';
+    const statusClass = event.granted ? 'text-success' : 'text-danger';
+    const icon = event.granted ? 'circle-check-big' : 'circle-x';
+    const accent = event.granted ? 'rgba(34,197,94,.14)' : 'rgba(239,68,68,.14)';
+    const tagValue = event.clientCode && String(event.tagUid) === String(event.clientCode) ? 'ID #' + event.clientCode : (event.tagUid ? 'NFC ' + event.tagUid : '-');
+    const nameValue = event.clientCode && event.userName ? '#' + event.clientCode + ' - ' + event.userName : (event.userName || 'Tag non assegnato');
+    const tag = escapeNfcText(tagValue);
+    const name = escapeNfcText(nameValue);
+    const reasonLabel = escapeNfcText(reason);
 
     const toast = $(`
-        <div class="bg-surface border ${colorClass} shadow-card rounded-lg px-4 py-3 animate-slide-up">
-            <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-foreground">${title}</p>
-                    <p class="text-xs text-foreground-muted truncate">${name}</p>
-                    <p class="text-xs text-foreground-subtle font-mono mt-1">${tag}${event.granted ? '' : ' - ' + reason}</p>
+        <div class="nfc-access-popup bg-surface border-l-4 ${colorClass} rounded-xl px-5 py-5"
+             style="pointer-events:auto;opacity:0;transform:translateY(-18px) scale(.97);transition:opacity .18s cubic-bezier(0.2,0,0,1),transform .18s cubic-bezier(0.2,0,0,1);box-shadow:0 0 0 1px rgba(255,255,255,.1),0 18px 50px rgba(0,0,0,.35)">
+            <div class="flex items-center gap-4">
+                <div class="${statusClass} shrink-0 flex items-center justify-center rounded-full" style="width:56px;height:56px;background:${accent}">
+                    <i data-lucide="${icon}" style="width:32px;height:32px"></i>
                 </div>
+                <div class="min-w-0 flex-1">
+                    <p class="${statusClass} font-bold uppercase tracking-wide text-balance" style="font-size:20px;line-height:1.2">${title}</p>
+                    <p class="text-foreground font-semibold truncate mt-1" style="font-size:16px">${name}</p>
+                    <p class="text-foreground-muted font-mono mt-1" style="font-size:13px">${tag}${event.granted ? '' : ' - ' + reasonLabel}</p>
+                </div>
+                <button type="button" class="nfc-popup-close icon-button" aria-label="Chiudi avviso">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
         </div>
     `);
 
-    $('#nfc-toast-container').append(toast);
-    setTimeout(() => toast.fadeOut(250, () => toast.remove()), 4500);
+    const container = $('#nfc-toast-container');
+    container.prepend(toast);
+    container.children().slice(3).remove();
+    if (window.lucide) lucide.createIcons();
+
+    toast.find('.nfc-popup-close').on('click', () => dismissNfcToast(toast));
+
+    // Popup e suono partono nello stesso frame visivo.
+    window.requestAnimationFrame(() => {
+        toast.css({ opacity: 1, transform: 'translateY(0) scale(1)' });
+        playNfcSound(event.granted);
+    });
+
+    const timeout = window.setTimeout(() => dismissNfcToast(toast), 6000);
+    toast.data('dismiss-timeout', timeout);
+}
+
+function dismissNfcToast(toast) {
+    if (!toast || !toast.length || !toast.closest('body').length) return;
+    window.clearTimeout(toast.data('dismiss-timeout'));
+    toast.css({ opacity: 0, transform: 'translateY(-12px) scale(.98)' });
+    window.setTimeout(() => toast.remove(), 160);
+}
+
+function escapeNfcText(value) {
+    return $('<div>').text(value == null ? '' : String(value)).html();
 }
 
 function openNfcAssignModal(tagUid) {
@@ -284,39 +320,80 @@ function denialText(reason) {
     return labels[reason] || reason || 'Negato';
 }
 
+function prepareNfcAudio() {
+    const unlock = function() {
+        const ctx = getNfcAudioContext();
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    };
+    document.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    document.addEventListener('keydown', unlock, { once: true });
+}
+
+function getNfcAudioContext() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    if (!window.LegionAsdNfcAudioContext || window.LegionAsdNfcAudioContext.state === 'closed') {
+        window.LegionAsdNfcAudioContext = new AudioContext();
+    }
+    return window.LegionAsdNfcAudioContext;
+}
+
 function playNfcSound(granted) {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        const ctx = getNfcAudioContext();
+        if (!ctx) return;
 
-        if (granted) {
-            // Suono "tin" (campanello)
-            osc.type = 'sine';
-            osc.frequency.value = 1500;
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.8);
+        const schedule = function() {
+            const start = ctx.currentTime + 0.01;
+            const master = ctx.createGain();
+            const compressor = ctx.createDynamicsCompressor();
+            master.gain.setValueAtTime(granted ? 0.75 : 0.62, start);
+            compressor.threshold.value = -12;
+            compressor.knee.value = 16;
+            compressor.ratio.value = 8;
+            master.connect(compressor);
+            compressor.connect(ctx.destination);
+
+            if (granted) {
+                // Due note chiare e ravvicinate: conferma positiva ben riconoscibile.
+                [[880, 0], [1320, 0.16]].forEach(([frequency, offset]) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    const noteStart = start + offset;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(frequency, noteStart);
+                    gain.gain.setValueAtTime(0.001, noteStart);
+                    gain.gain.exponentialRampToValueAtTime(0.9, noteStart + 0.018);
+                    gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.34);
+                    osc.connect(gain);
+                    gain.connect(master);
+                    osc.start(noteStart);
+                    osc.stop(noteStart + 0.36);
+                });
+            } else {
+                // Tre impulsi bassi: accesso negato più urgente e distinto.
+                [0, 0.22, 0.44].forEach(offset => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    const pulseStart = start + offset;
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(260, pulseStart);
+                    osc.frequency.linearRampToValueAtTime(190, pulseStart + 0.16);
+                    gain.gain.setValueAtTime(0.001, pulseStart);
+                    gain.gain.linearRampToValueAtTime(0.72, pulseStart + 0.012);
+                    gain.gain.exponentialRampToValueAtTime(0.001, pulseStart + 0.18);
+                    osc.connect(gain);
+                    gain.connect(master);
+                    osc.start(pulseStart);
+                    osc.stop(pulseStart + 0.19);
+                });
+            }
+        };
+
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(schedule).catch(() => {});
         } else {
-            // Suono "allarme"
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(400, ctx.currentTime);
-            osc.frequency.setValueAtTime(600, ctx.currentTime + 0.2);
-            osc.frequency.setValueAtTime(400, ctx.currentTime + 0.4);
-            osc.frequency.setValueAtTime(600, ctx.currentTime + 0.6);
-            
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-            
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.8);
+            schedule();
         }
     } catch (e) {
         console.debug('Audio NFC non disponibile', e);

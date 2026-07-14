@@ -331,6 +331,7 @@ public class ClientSheetPdfService {
             case CASH -> "Contanti";
             case CARD -> "Carta";
             case TRANSFER -> "Bonifico";
+            case VOUCHER -> "Voucher";
         };
     }
 

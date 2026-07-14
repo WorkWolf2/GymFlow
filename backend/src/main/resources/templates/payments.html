@@ -45,6 +45,7 @@
                 <button type="button" class="method-filter-btn btn-ghost" data-method="CASH">Contanti</button>
                 <button type="button" class="method-filter-btn btn-ghost" data-method="CARD">Carta</button>
                 <button type="button" class="method-filter-btn btn-ghost" data-method="TRANSFER">Bonifico</button>
+                <button type="button" class="method-filter-btn btn-ghost" data-method="VOUCHER">Voucher</button>
             </div>
             <div class="flex flex-wrap gap-6 text-sm text-foreground-muted pt-1 border-t border-surface-border">
                 <span>Incassi: <strong id="total-income" class="text-success ml-1">â‚¬ 0,00</strong></span>
@@ -103,6 +104,7 @@
                             <option value="CASH">Contanti</option>
                             <option value="CARD">Carta / Bancomat</option>
                             <option value="TRANSFER">Bonifico</option>
+                            <option value="VOUCHER">Voucher</option>
                         </select>
                     </div>
                     <div class="pt-4 flex items-center justify-end gap-3">
@@ -131,8 +133,16 @@
                         <input type="date" id="payment-date" required class="input" />
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Importo (â‚¬)</label>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Importo lordo (€)</label>
                         <input type="number" step="0.01" min="0.01" id="payment-amount" required class="input" placeholder="es. 50.00" />
+                    </div>
+                    <div id="payment-discount-row">
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Sconto (€)</label>
+                        <input type="number" step="0.01" min="0" id="payment-discount" class="input" placeholder="es. 5.00" />
+                    </div>
+                    <div id="payment-net-row" class="flex items-center justify-between rounded border border-surface-border bg-background-tertiary px-3 py-2 text-sm">
+                        <span class="text-foreground-muted">Totale incassato</span>
+                        <strong id="payment-net-preview" class="text-accent">€ 0,00</strong>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Cliente (opzionale)</label>
@@ -146,6 +156,7 @@
                             <option value="CASH">Contanti</option>
                             <option value="CARD">Carta / Bancomat</option>
                             <option value="TRANSFER">Bonifico</option>
+                            <option value="VOUCHER">Voucher</option>
                         </select>
                     </div>
                     <div>
@@ -180,6 +191,24 @@
                     return p.type === 'EXPENSE' ? -Math.abs(amount) : Math.abs(amount);
                 }
 
+                function paymentGross() {
+                    return parseFloat($('#payment-amount').val() || 0);
+                }
+
+                function paymentDiscount() {
+                    const gross = paymentGross();
+                    const discount = parseFloat($('#payment-discount').val() || 0);
+                    return Math.min(Math.max(discount, 0), Math.max(gross, 0));
+                }
+
+                function paymentNet() {
+                    return Math.max(paymentGross() - paymentDiscount(), 0);
+                }
+
+                function updatePaymentNetPreview() {
+                    $('#payment-net-preview').text(formatEuro(paymentNet()));
+                }
+
                 function loadClients() {
                     if (clientsLoaded) return;
                     $.get('/api/users?size=500&sort=lastName', function(data) {
@@ -197,6 +226,9 @@
                     $('#payment-type').val(type);
                     const isExpense = type === 'EXPENSE';
                     $('#payment-modal-title').text(isExpense ? 'Nuova Uscita' : 'Nuovo Incasso');
+                    $('#payment-discount-row, #payment-net-row').toggleClass('hidden', isExpense);
+                    $('#payment-discount').val('');
+                    updatePaymentNetPreview();
                     $('#submit-payment-btn')
                         .text(isExpense ? 'Salva Uscita' : 'Salva Incasso')
                         .toggleClass('btn-primary', !isExpense)
@@ -254,10 +286,11 @@
                             }
 
                             filtered.forEach(function(p) {
-                                const methodStr = p.method === 'CASH' ? 'Contanti' : p.method === 'CARD' ? 'Carta' : 'Bonifico';
+                                const methodStr = p.method === 'CASH' ? 'Contanti' : p.method === 'CARD' ? 'Carta' : p.method === 'TRANSFER' ? 'Bonifico' : 'Voucher';
                                 const signed = signedAmount(p);
                                 const amountClass = p.type === 'EXPENSE' ? 'text-danger' : 'text-accent';
                                 const amountText = (p.type === 'EXPENSE' ? 'âˆ’ ' : '') + formatEuro(Math.abs(typeof p.amount === 'number' ? p.amount : parseFloat(p.amount || 0)));
+                                const discount = typeof p.discountAmount === 'number' ? p.discountAmount : parseFloat(p.discountAmount || 0);
                                 const typeLabel = p.type === 'EXPENSE'
                                     ? '<span class="badge badge-danger">Uscita</span>'
                                     : '<span class="badge badge-success">Incasso</span>';
@@ -270,7 +303,7 @@
                                         <div class="w-24 shrink-0 text-sm text-foreground">${date}</div>
                                         <div class="w-20 shrink-0">${typeLabel}</div>
                                         <div class="flex-1 min-w-0 text-sm text-foreground truncate">${clientName || "N/A"}</div>
-                                        <div class="w-28 shrink-0 text-sm font-medium ${amountClass}">${amountText}</div>
+                                        <div class="w-28 shrink-0 text-sm font-medium ${amountClass}">${amountText}${discount > 0 ? '<div class="text-xs text-foreground-muted font-normal">Sconto ' + formatEuro(discount) + '</div>' : ''}</div>
                                         <div class="w-24 shrink-0 text-sm text-foreground-muted">${methodStr}</div>
                                         <div class="flex-1 min-w-0 text-sm text-foreground-muted truncate">${notes || "Nessuna nota"}</div>
                                         <div class="w-12 shrink-0 text-right">
@@ -386,7 +419,10 @@
                     $('#payment-form')[0].reset();
                     $('#payment-user').val('');
                     document.getElementById('payment-date').valueAsDate = new Date();
+                    updatePaymentNetPreview();
                 });
+
+                $('#payment-amount, #payment-discount').on('input', updatePaymentNetPreview);
 
                 $('#payment-form').submit(function(e) {
                     e.preventDefault();
@@ -395,8 +431,12 @@
                     $('#submit-payment-btn').prop('disabled', true).text('Salvataggio...');
 
                     const userId = $('#payment-user').val();
+                    const grossAmount = parseFloat($('#payment-amount').val());
+                    const discountAmount = isExpense ? 0 : paymentDiscount();
                     const req = {
-                        amount: parseFloat($('#payment-amount').val()),
+                        amount: isExpense ? grossAmount : paymentNet(),
+                        grossAmount: grossAmount,
+                        discountAmount: discountAmount,
                         method: $('#payment-method').val(),
                         type: paymentType,
                         paymentDate: $('#payment-date').val(),

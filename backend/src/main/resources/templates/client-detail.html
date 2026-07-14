@@ -92,6 +92,16 @@
             </div>
         </div>
 
+        <div class="card overflow-hidden mb-5">
+            <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between gap-3">
+                <h2 class="font-medium text-foreground">Voucher</h2>
+                <button id="new-voucher-btn" class="text-accent hover:text-accent-hover text-sm font-medium">Aggiungi</button>
+            </div>
+            <div id="voucher-list" class="divide-y divide-surface-border">
+                <p class="px-5 py-6 text-sm text-foreground-subtle text-center">Nessun voucher registrato</p>
+            </div>
+        </div>
+
         <!-- New Subscription Modal for User -->
         <div id="sub-modal"
             class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
@@ -113,11 +123,18 @@
                         <input type="date" id="sub-start-date" required class="input" />
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo Finale (â‚¬)</label>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo di listino (€)</label>
                         <input type="number" step="0.01" min="0" id="sub-price" required class="input" />
-                        <p class="text-[10px] text-foreground-subtle mt-1">L'incasso verrà registrato in data odierna in
-                            automatico.</p>
                     </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Sconto (€)</label>
+                        <input type="number" step="0.01" min="0" id="sub-discount" class="input" placeholder="es. 5,00" />
+                    </div>
+                    <div class="flex items-center justify-between rounded border border-surface-border bg-background-tertiary px-3 py-2 text-sm">
+                        <span class="text-foreground-muted">Totale da incassare</span>
+                        <strong id="sub-net-preview" class="text-accent">€ 0,00</strong>
+                    </div>
+                    <p class="text-[10px] text-foreground-subtle">L'incasso, comprensivo dello sconto, verrà registrato automaticamente in data odierna.</p>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di
                             Pagamento</label>
@@ -125,11 +142,52 @@
                             <option value="CASH">Contanti</option>
                             <option value="CARD">Carta / Bancomat</option>
                             <option value="TRANSFER">Bonifico</option>
+                            <option value="VOUCHER">Voucher</option>
                         </select>
                     </div>
                     <div class="pt-4 flex items-center justify-end gap-3">
                         <button type="button" class="close-sub-modal btn-ghost">Annulla</button>
                         <button type="submit" id="submit-sub-btn" class="btn-primary">Conferma ed Incassa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="expired-sub-confirm-modal" class="modal-overlay hidden">
+            <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Abbonamento scaduto trovato</h2>
+                    <button type="button" class="expired-sub-choice text-foreground-muted hover:text-foreground transition-colors" data-use-old-date="false">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-foreground-muted" id="expired-sub-confirm-message"></p>
+                    <div class="pt-2 flex items-center justify-end gap-3">
+                        <button type="button" class="expired-sub-choice btn-ghost" data-use-old-date="false">No</button>
+                        <button type="button" class="expired-sub-choice btn-primary" data-use-old-date="true">Sì</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="voucher-modal" class="modal-overlay hidden">
+            <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <h2 class="text-lg font-semibold text-foreground">Aggiungi Voucher</h2>
+                    <button type="button" class="close-voucher-modal text-foreground-muted hover:text-foreground"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <form id="voucher-form" class="p-6 space-y-4">
+                    <div><label class="block text-xs font-medium text-foreground-muted mb-1.5">Nome (opzionale)</label><input type="text" id="voucher-name" class="input"></div>
+                    <div><label class="block text-xs font-medium text-foreground-muted mb-1.5">Codice (opzionale)</label><input type="text" id="voucher-code" class="input"></div>
+                    <div><label class="block text-xs font-medium text-foreground-muted mb-1.5">Costo (€) (opzionale)</label><input type="number" step="0.01" min="0" id="voucher-cost" class="input"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-medium text-foreground-muted mb-1.5">Inizio (opzionale)</label><input type="date" id="voucher-start" class="input"></div>
+                        <div><label class="block text-xs font-medium text-foreground-muted mb-1.5">Fine (opzionale)</label><input type="date" id="voucher-end" class="input"></div>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-voucher-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-voucher-btn" class="btn-primary">Salva</button>
                     </div>
                 </form>
             </div>
@@ -309,6 +367,7 @@
 
             $(document).ready(function () {
                 let provincesLoaded = FiscalCode.loadProvinceSelect('#edit-birth-province');
+                let currentSubscriptions = [];
 
                 const refreshFiscalCode = FiscalCode.bindAutofill('#edit-fiscal-code', {
                     firstName: '#edit-first-name',
@@ -428,6 +487,7 @@
                         url: '/api/subscriptions/user/' + clientId,
                         type: 'GET',
                         success: function (subs) {
+                            currentSubscriptions = subs || [];
                             const list = $('#sub-list');
                             list.empty();
 
@@ -509,6 +569,110 @@
                             });
                         }
                     });
+
+                    $.get('/api/users/' + clientId + '/vouchers', function (vouchers) {
+                        const list = $('#voucher-list').empty();
+                        if (!vouchers.length) {
+                            list.html('<p class="px-5 py-6 text-sm text-foreground-subtle text-center">Nessun voucher registrato</p>');
+                            return;
+                        }
+                        vouchers.forEach(function (v) {
+                            const cost = v.cost == null ? '—' : new Intl.NumberFormat('it-IT', {style: 'currency', currency: 'EUR'}).format(v.cost);
+                            const dates = (v.startDate ? formatDate(v.startDate) : '—') + ' → ' + (v.endDate ? formatDate(v.endDate) : '—');
+                            list.append(`<div class="px-5 py-3 flex items-center justify-between gap-3">
+                                <div class="min-w-0"><p class="text-sm font-medium text-foreground">${v.name || 'Voucher senza nome'}</p>
+                                <p class="text-xs text-foreground-muted">Codice: ${v.code || '—'} · ${cost} · ${dates}</p></div>
+                                <button type="button" class="delete-voucher-btn p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger" data-id="${v.id}" title="Elimina voucher"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>`);
+                        });
+                        if (window.lucide) lucide.createIcons();
+                    });
+                }
+
+                function parseLocalDate(date) {
+                    if (!date) return null;
+                    const parts = date.split('-').map(Number);
+                    return new Date(parts[0], parts[1] - 1, parts[2]);
+                }
+
+                function latestExpiredSubscription() {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    return currentSubscriptions
+                        .filter(function (s) {
+                            const endDate = parseLocalDate(s.endDate);
+                            return endDate && endDate < today;
+                        })
+                        .sort(function (a, b) {
+                            return parseLocalDate(b.endDate) - parseLocalDate(a.endDate);
+                        })[0] || null;
+                }
+
+                function playWindowsLikePopupSound() {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return;
+
+                    const ctx = new AudioContext();
+                    const now = ctx.currentTime;
+                    const gain = ctx.createGain();
+                    gain.connect(ctx.destination);
+                    gain.gain.setValueAtTime(0.0001, now);
+                    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+                    [880, 660].forEach(function (frequency, index) {
+                        const oscillator = ctx.createOscillator();
+                        oscillator.type = 'sine';
+                        oscillator.frequency.setValueAtTime(frequency, now + (index * 0.12));
+                        oscillator.connect(gain);
+                        oscillator.start(now + (index * 0.12));
+                        oscillator.stop(now + 0.22 + (index * 0.12));
+                    });
+                }
+
+                function askUseExpiredSubscriptionDate(expiredSubscription) {
+                    return new Promise(function (resolve) {
+                        const oldEnd = formatDate(expiredSubscription.endDate);
+                        const name = expiredSubscription.subscriptionType && expiredSubscription.subscriptionType.name
+                            ? expiredSubscription.subscriptionType.name
+                            : 'precedente';
+
+                        $('#expired-sub-confirm-message').text(
+                            'Questo cliente aveva l\'abbonamento "' + name + '" scaduto il ' + oldEnd +
+                            '. Vuoi impostare come data di partenza del nuovo abbonamento la data di fine del vecchio abbonamento (' + oldEnd + ')?'
+                        );
+
+                        $('#expired-sub-confirm-modal').removeClass('hidden');
+                        playWindowsLikePopupSound();
+                        if (window.lucide) lucide.createIcons();
+
+                        $('.expired-sub-choice').off('click.expiredSub').on('click.expiredSub', function () {
+                            $('#expired-sub-confirm-modal').addClass('hidden');
+                            resolve($(this).data('use-old-date') === true);
+                        });
+                    });
+                }
+
+                function createSubscription(req) {
+                    return $.ajax({
+                        url: '/api/subscriptions',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function () {
+                            $('#sub-modal').addClass('hidden');
+                            loadData();
+                        },
+                        error: function () {
+                            alert('Errore durante la creazione');
+                        },
+                        complete: function () {
+                            $('#submit-sub-btn')
+                                .prop('disabled', false)
+                                .text('Conferma ed Incassa');
+                        }
+                    });
                 }
 
                 loadUser();
@@ -542,6 +706,23 @@
 
                 let typesMap = {};
 
+                function subscriptionGross() {
+                    return Math.max(parseFloat($('#sub-price').val() || 0), 0);
+                }
+
+                function subscriptionDiscount() {
+                    const gross = subscriptionGross();
+                    const discount = Math.max(parseFloat($('#sub-discount').val() || 0), 0);
+                    return Math.min(discount, gross);
+                }
+
+                function updateSubscriptionNet() {
+                    const net = subscriptionGross() - subscriptionDiscount();
+                    $('#sub-net-preview').text(new Intl.NumberFormat('it-IT', {
+                        style: 'currency', currency: 'EUR'
+                    }).format(net));
+                }
+
                 $('#new-sub-btn').click(function () {
                     $.ajax({
                         url: '/api/subscription-types',
@@ -557,13 +738,15 @@
 
                                 select.append(`
                         <option value="${t.id}">
-                            ${t.name} (${t.defaultPrice}â‚¬)
+                            ${t.name} (${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0)})
                         </option>
                     `);
                             });
 
                             if (types.length > 0) {
                                 $('#sub-price').val(types[0].defaultPrice);
+                                $('#sub-discount').val('');
+                                updateSubscriptionNet();
                             }
 
                             $('#sub-start-date')[0].valueAsDate = new Date();
@@ -578,14 +761,19 @@
 
                     if (typesMap[id]) {
                         $('#sub-price').val(typesMap[id].defaultPrice);
+                        $('#sub-discount').val('');
+                        updateSubscriptionNet();
                     }
                 });
 
                 $('.close-sub-modal').click(function () {
                     $('#sub-modal').addClass('hidden');
+                    $('#sub-discount').val('');
                 });
 
-                $('#sub-form').submit(function (e) {
+                $('#sub-price, #sub-discount').on('input', updateSubscriptionNet);
+
+                $('#sub-form').submit(async function (e) {
                     e.preventDefault();
 
                     $('#submit-sub-btn')
@@ -597,28 +785,21 @@
                         subscriptionTypeId: $('#sub-type-id').val(),
                         startDate: $('#sub-start-date').val(),
                         price: parseFloat($('#sub-price').val()),
+                        discountAmount: subscriptionDiscount(),
                         paymentMethod: $('#sub-payment-method').val(),
                         notes: ''
                     };
 
-                    $.ajax({
-                        url: '/api/subscriptions',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(req),
-                        success: function () {
-                            $('#sub-modal').addClass('hidden');
-                            loadData();
-                        },
-                        error: function () {
-                            alert('Errore durante la creazione');
-                        },
-                        complete: function () {
-                            $('#submit-sub-btn')
-                                .prop('disabled', false)
-                                .text('Conferma ed Incassa');
+                    const expiredSubscription = latestExpiredSubscription();
+                    if (expiredSubscription && expiredSubscription.endDate !== req.startDate) {
+                        const useOldDate = await askUseExpiredSubscriptionDate(expiredSubscription);
+                        if (useOldDate) {
+                            req.startDate = expiredSubscription.endDate;
+                            $('#sub-start-date').val(expiredSubscription.endDate);
                         }
-                    });
+                    }
+
+                    createSubscription(req);
                 });
 
                 // =========================
@@ -700,6 +881,32 @@
                 // =========================
                 // CERTIFICATO
                 // =========================
+
+                $('#new-voucher-btn').click(function () {
+                    $('#voucher-form')[0].reset();
+                    $('#voucher-modal').removeClass('hidden');
+                });
+                $('.close-voucher-modal').click(function () { $('#voucher-modal').addClass('hidden'); });
+                $('#voucher-form').submit(function (e) {
+                    e.preventDefault();
+                    const start = $('#voucher-start').val();
+                    const end = $('#voucher-end').val();
+                    if (start && end && start > end) return alert('La data iniziale non può superare la data finale.');
+                    $('#submit-voucher-btn').prop('disabled', true).text('Salvataggio...');
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/vouchers', type: 'POST', contentType: 'application/json',
+                        data: JSON.stringify({name: $('#voucher-name').val() || null, code: $('#voucher-code').val() || null,
+                            cost: $('#voucher-cost').val() || null, startDate: start || null, endDate: end || null}),
+                        success: function () { $('#voucher-modal').addClass('hidden'); loadData(); },
+                        error: function (xhr) { alert(xhr.responseJSON?.detail || 'Impossibile salvare il voucher'); },
+                        complete: function () { $('#submit-voucher-btn').prop('disabled', false).text('Salva'); }
+                    });
+                });
+                $(document).on('click', '.delete-voucher-btn', function () {
+                    if (!confirm('Eliminare questo voucher?')) return;
+                    $.ajax({url: '/api/vouchers/' + $(this).data('id'), type: 'DELETE', success: loadData,
+                        error: function () { alert('Impossibile eliminare il voucher'); }});
+                });
 
                 $('#manage-cert-btn').click(function () {
                     $.get('/api/users/' + clientId, function (user) {

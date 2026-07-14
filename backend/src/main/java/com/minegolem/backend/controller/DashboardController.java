@@ -5,8 +5,10 @@ import com.minegolem.backend.domain.entity.MedicalCertificate;
 import com.minegolem.backend.domain.entity.Subscription;
 import com.minegolem.backend.domain.entity.User;
 import com.minegolem.backend.dto.response.ExpiringItemResponse;
+import com.minegolem.backend.dto.response.AdvancedAnalyticsResponse;
 import com.minegolem.backend.repository.*;
 import com.minegolem.backend.security.StaffUserDetails;
+import com.minegolem.backend.service.AdvancedAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,6 +33,12 @@ public class DashboardController {
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentRepository paymentRepository;
     private final MedicalCertificateRepository medicalCertificateRepository;
+    private final AdvancedAnalyticsService advancedAnalyticsService;
+
+    @GetMapping("/analytics")
+    public ResponseEntity<AdvancedAnalyticsResponse> analytics(@AuthenticationPrincipal StaffUserDetails user) {
+        return ResponseEntity.ok(advancedAnalyticsService.calculate(user.getGymId(), LocalDate.now()));
+    }
 
     @GetMapping("/summary")
     public ResponseEntity<DashboardSummary> summary(@AuthenticationPrincipal StaffUserDetails user) {

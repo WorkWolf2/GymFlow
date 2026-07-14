@@ -2,10 +2,10 @@
 <html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Clienti', hideNav=false, content=~{::div.clients-content})}">
 <body>
     <div class="clients-content space-y-4">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between stagger-item">
             <div>
                 <h1 class="text-xl font-semibold text-foreground">Clienti</h1>
-                <p class="text-sm text-foreground-muted mt-0.5" id="total-clients-text">
+                <p class="text-sm text-foreground-muted mt-0.5 tabular-nums" id="total-clients-text">
                     Caricamento...
                 </p>
             </div>
@@ -16,13 +16,13 @@
         </div>
 
         <!-- Search -->
-        <div class="relative">
+        <div class="relative stagger-item">
             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-subtle w-[14px] h-[14px]"></i>
             <input type="text" id="search-input" class="input pl-8 max-w-xs" placeholder="Cerca per ID, nome, email, telefono...">
         </div>
 
         <!-- Table -->
-        <div class="card overflow-visible">
+        <div class="card overflow-visible stagger-item">
             <!-- Header -->
             <div class="flex items-center gap-4 px-5 py-2.5 border-b border-surface-border bg-background-tertiary">
                 <div class="w-8 shrink-0"></div>
@@ -48,7 +48,7 @@
 
         <!-- Pagination -->
         <div id="pagination-controls" class="flex items-center justify-between hidden">
-            <p class="text-xs text-foreground-muted" id="page-info"></p>
+            <p class="text-xs text-foreground-muted tabular-nums" id="page-info"></p>
             <div class="flex items-center gap-2">
                 <button id="prev-page" class="btn-ghost disabled:opacity-40">Precedente</button>
                 <button id="next-page" class="btn-ghost disabled:opacity-40">Successiva</button>
@@ -112,14 +112,14 @@
                                                 ${nfcBadge}
                                             </div>
                                             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <a href="/clients/${user.id}" class="p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors">
+                                                <a href="/clients/${user.id}" class="icon-button" title="Dettaglio">
                                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                                 </a>
                                                 <div class="relative dropdown-container">
-                                                    <button class="p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors dropdown-toggle">
+                                                    <button class="icon-button dropdown-toggle" title="Azioni">
                                                         <i data-lucide="more-horizontal" class="w-3.5 h-3.5"></i>
                                                     </button>
-                                                    <div class="dropdown-menu absolute right-0 top-full mt-1 w-40 bg-surface border border-surface-border rounded shadow-card z-20 py-1 hidden">
+                                                    <div class="dropdown-menu absolute right-0 top-full mt-1 w-40 bg-surface rounded shadow-card z-20 py-1 hidden">
                                                         <a href="/clients/${user.id}" class="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted hover:text-foreground hover:bg-surface-hover">
                                                             Dettaglio
                                                         </a>

@@ -13,6 +13,8 @@ public record PaymentRequest(
     UUID userId,
     UUID subscriptionId,
     @NotNull @DecimalMin("0.01") BigDecimal amount,
+    @DecimalMin("0.00") BigDecimal grossAmount,
+    @DecimalMin("0.00") BigDecimal discountAmount,
     @NotNull PaymentMethod method,
     PaymentType type,
     @NotNull LocalDate paymentDate,

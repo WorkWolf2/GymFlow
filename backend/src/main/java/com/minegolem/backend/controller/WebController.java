@@ -70,6 +70,12 @@ public class WebController {
         return "emails";
     }
 
+    @GetMapping("/reports")
+    public String reports(Model model) {
+        model.addAttribute("title", "Report");
+        return "reports";
+    }
+
     @GetMapping("/settings")
     public String settings(Model model) {
         model.addAttribute("title", "Impostazioni");

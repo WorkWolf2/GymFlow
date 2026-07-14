@@ -49,8 +49,42 @@
             </div>
         </div>
 
+        <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
         <script>
             $(document).ready(function() {
+                function showToast(message, type = 'success') {
+                    const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+                    const isError = type === 'error' || type === 'danger';
+                    const bgClass = type === 'success'
+                        ? 'bg-success/90 border-success'
+                        : isError
+                            ? 'bg-danger/90 border-danger'
+                            : 'bg-warning/90 border-warning';
+                    const icon = type === 'success' ? 'check-circle' : isError ? 'alert-triangle' : 'info';
+                    const toast = $('<div>', {
+                        id: toastId,
+                        class: `card border px-4 py-3 flex items-center gap-3 text-sm text-foreground shadow-card pointer-events-auto transition-opacity duration-150 opacity-0 ${bgClass}`
+                    });
+
+                    toast.append($('<i>', {
+                        'data-lucide': icon,
+                        class: 'w-4 h-4 shrink-0 text-foreground'
+                    }));
+                    toast.append($('<div>', { class: 'flex-1' }).text(message));
+                    $('#toast-container').append(toast);
+
+                    if (window.lucide) lucide.createIcons();
+
+                    setTimeout(function() {
+                        toast.removeClass('opacity-0').addClass('opacity-100');
+                    }, 10);
+                    setTimeout(function() {
+                        toast.removeClass('opacity-100').addClass('opacity-0');
+                        setTimeout(function() { toast.remove(); }, 300);
+                    }, 4000);
+                }
+
                 function denialText(reason) {
                     const labels = {
                         TAG_UNKNOWN: 'Tag sconosciuto',

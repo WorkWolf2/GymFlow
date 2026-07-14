@@ -62,11 +62,28 @@ public class PaymentService {
         }
 
         StaffUser staffUser = staffUserRepository.findById(currentStaffId()).orElse(null);
+        BigDecimal grossAmount = req.grossAmount() != null ? req.grossAmount() : req.amount();
+        BigDecimal discountAmount = req.discountAmount() != null ? req.discountAmount() : BigDecimal.ZERO;
+        if (discountAmount.compareTo(BigDecimal.ZERO) < 0) {
+            discountAmount = BigDecimal.ZERO;
+        }
+        if (grossAmount.compareTo(BigDecimal.ZERO) < 0) {
+            grossAmount = BigDecimal.ZERO;
+        }
+        if (discountAmount.compareTo(grossAmount) > 0) {
+            discountAmount = grossAmount;
+        }
+        BigDecimal netAmount = grossAmount.subtract(discountAmount);
+        if (netAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            netAmount = req.amount();
+        }
 
         Payment payment = Payment.builder()
             .gym(gym)
             .user(user)
-            .amount(req.amount())
+            .amount(netAmount)
+            .grossAmount(grossAmount)
+            .discountAmount(discountAmount)
             .method(req.method())
             .type(req.type() != null ? req.type() : PaymentType.INCOME)
             .paymentDate(req.paymentDate())
@@ -102,8 +119,10 @@ public class PaymentService {
             PaymentMethod.CARD);
         BigDecimal transfer = paymentRepository.sumByGymAndDate(gymId, date,
             PaymentMethod.TRANSFER);
-        BigDecimal total = cash.add(card).add(transfer);
-        return new DailyStats(date, total, cash, card, transfer);
+        BigDecimal voucher = paymentRepository.sumByGymAndDate(gymId, date,
+            PaymentMethod.VOUCHER);
+        BigDecimal total = cash.add(card).add(transfer).add(voucher);
+        return new DailyStats(date, total, cash, card, transfer, voucher);
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +130,8 @@ public class PaymentService {
         return paymentRepository.findDatesWithPayments(currentGymId());
     }
 
-    public record DailyStats(LocalDate date, BigDecimal total, BigDecimal cash, BigDecimal card, BigDecimal transfer) {}
+    public record DailyStats(LocalDate date, BigDecimal total, BigDecimal cash, BigDecimal card,
+                             BigDecimal transfer, BigDecimal voucher) {}
 
     private UUID currentGymId() {
         return currentDetails().getGymId();

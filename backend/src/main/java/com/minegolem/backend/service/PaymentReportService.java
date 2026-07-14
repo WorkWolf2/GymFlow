@@ -239,8 +239,12 @@ public class PaymentReportService {
             pdfTable.addCell(cClient);
             
             // Method
-            String methodStr = p.getMethod() == PaymentMethod.CASH ? "Contanti" : 
-                              p.getMethod() == PaymentMethod.CARD ? "Carta" : "Bonifico";
+            String methodStr = switch (p.getMethod()) {
+                case CASH -> "Contanti";
+                case CARD -> "Carta";
+                case TRANSFER -> "Bonifico";
+                case VOUCHER -> "Voucher";
+            };
             PdfPCell cMethod = new PdfPCell();
             cMethod.setBackgroundColor(rowBg);
             cMethod.setPadding(6f);

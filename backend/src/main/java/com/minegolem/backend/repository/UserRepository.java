@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -59,4 +60,21 @@ public interface UserRepository extends JpaRepository<User, UUID> {
           AND u.email <> ''
         """)
     java.util.List<User> findAllWithValidEmailByGymId(@Param("gymId") UUID gymId);
+
+    List<User> findByGymIdAndDeletedAtIsNullOrderByLastNameAscFirstNameAsc(UUID gymId);
+
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
+          AND NOT EXISTS (
+              SELECT mc.id FROM MedicalCertificate mc
+              WHERE mc.user.id = u.id
+                AND mc.deletedAt IS NULL
+                AND mc.expiryDate >= :today
+          )
+        ORDER BY u.lastName ASC, u.firstName ASC
+        """)
+    List<User> findWithoutValidCertificate(@Param("gymId") UUID gymId,
+                                            @Param("today") java.time.LocalDate today);
 }

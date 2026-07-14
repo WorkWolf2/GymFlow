@@ -38,6 +38,12 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(name = "gross_amount")
+    private BigDecimal grossAmount;
+
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod method;

@@ -13,6 +13,8 @@ public record PaymentResponse(
     UUID userId,
     String userFullName,
     BigDecimal amount,
+    BigDecimal grossAmount,
+    BigDecimal discountAmount,
     PaymentType type,
     PaymentMethod method,
     LocalDate paymentDate,
@@ -24,10 +26,21 @@ public record PaymentResponse(
             payment.getUser() != null ? payment.getUser().getId() : null,
             payment.getUser() != null ? payment.getUser().getFullName() : null,
             payment.getAmount(),
+            payment.getGrossAmount() != null ? payment.getGrossAmount() : payment.getAmount(),
+            payment.getDiscountAmount() != null ? payment.getDiscountAmount() : BigDecimal.ZERO,
             payment.getType() != null ? payment.getType() : PaymentType.INCOME,
             payment.getMethod(),
             payment.getPaymentDate(),
-            payment.getNotes()
+            localizedNotes(payment.getNotes())
         );
+    }
+
+    private static String localizedNotes(String notes) {
+        if (notes == null) return null;
+        String prefix = "Auto-payment for subscription ";
+        if (notes.startsWith(prefix)) {
+            return "Incasso automatico per abbonamento: " + notes.substring(prefix.length());
+        }
+        return notes;
     }
 }

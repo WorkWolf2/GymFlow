@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,12 +48,21 @@ public class SubscriptionService {
 
         StaffUser staffUser = staffUserRepository.findById(staffId).orElse(null);
 
+        BigDecimal grossAmount = request.price();
+        BigDecimal discountAmount = request.discountAmount() != null
+            ? request.discountAmount()
+            : BigDecimal.ZERO;
+        if (discountAmount.compareTo(grossAmount) > 0) {
+            throw new BusinessException("Lo sconto non può superare il prezzo dell'abbonamento");
+        }
+        BigDecimal netAmount = grossAmount.subtract(discountAmount);
+
         Subscription subscription = Subscription.builder()
             .user(user)
             .subscriptionType(type)
             .startDate(request.startDate())
             .endDate(endDate)
-            .price(request.price())
+            .price(netAmount)
             .notes(request.notes())
             .createdBy(staffUser)
             .build();
@@ -65,11 +75,13 @@ public class SubscriptionService {
             .gym(gym)
             .user(user)
             .subscription(saved)
-            .amount(request.price())
+            .amount(netAmount)
+            .grossAmount(grossAmount)
+            .discountAmount(discountAmount)
             .method(request.paymentMethod())
             .type(PaymentType.INCOME)
             .paymentDate(LocalDate.now())
-            .notes("Auto-payment for subscription " + type.getName())
+            .notes("Incasso automatico per abbonamento: " + type.getName())
             .createdBy(staffUser)
             .build();
         paymentRepository.save(payment);
@@ -108,7 +120,7 @@ public class SubscriptionService {
         if (type.getValidityDays() != null) {
             return startDate.plusDays(type.getValidityDays());
         }
-        throw new BusinessException("Subscription type has no validity configuration");
+        throw new BusinessException("Il piano di abbonamento non ha una validità configurata");
     }
 
     private UUID currentGymId() {

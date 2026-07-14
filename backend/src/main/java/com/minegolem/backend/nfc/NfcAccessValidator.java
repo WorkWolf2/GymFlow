@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -32,18 +33,19 @@ public class NfcAccessValidator {
         boolean granted,
         DenialReason denialReason,
         User user,
-        String tagUid
+        String tagUid,
+        UUID gymId
     ) {
-        public static ValidationResult granted(User user, String tagUid) {
-            return new ValidationResult(true, null, user, tagUid);
+        public static ValidationResult granted(User user, String tagUid, UUID gymId) {
+            return new ValidationResult(true, null, user, tagUid, gymId);
         }
 
-        public static ValidationResult denied(DenialReason reason, User user, String tagUid) {
-            return new ValidationResult(false, reason, user, tagUid);
+        public static ValidationResult denied(DenialReason reason, User user, String tagUid, UUID gymId) {
+            return new ValidationResult(false, reason, user, tagUid, gymId);
         }
 
         public static ValidationResult unknownTag(String tagUid) {
-            return new ValidationResult(false, DenialReason.TAG_UNKNOWN, null, tagUid);
+            return new ValidationResult(false, DenialReason.TAG_UNKNOWN, null, tagUid, null);
         }
     }
 
@@ -66,7 +68,7 @@ public class NfcAccessValidator {
         User user = tag.getUser();
 
         if (user == null) {
-            return ValidationResult.denied(DenialReason.NO_USER, null, tagUid);
+            return ValidationResult.denied(DenialReason.NO_USER, null, tagUid, tag.getGym().getId());
         }
 
         return validateUser(user, tagUid);
@@ -88,9 +90,11 @@ public class NfcAccessValidator {
     }
 
     private ValidationResult validateUser(User user, String tagUid) {
+        UUID gymId = user.getGym().getId();
+
         if (!user.isActive() || user.isDeleted()) {
             log.info("Inactive user tried access: {}", user.getId());
-            return ValidationResult.denied(DenialReason.USER_INACTIVE, user, tagUid);
+            return ValidationResult.denied(DenialReason.USER_INACTIVE, user, tagUid, gymId);
         }
 
         // 3. active ABBONAMENTO subscription?
@@ -100,7 +104,7 @@ public class NfcAccessValidator {
 
         if (!hasActiveSub) {
             log.info("No active subscription for user: {}", user.getId());
-            return ValidationResult.denied(DenialReason.NO_ACTIVE_SUBSCRIPTION, user, tagUid);
+            return ValidationResult.denied(DenialReason.NO_ACTIVE_SUBSCRIPTION, user, tagUid, gymId);
         }
 
         boolean hasActiveInsurance = !subscriptionRepository
@@ -109,7 +113,7 @@ public class NfcAccessValidator {
 
         if (!hasActiveInsurance) {
             log.info("No active insurance for user: {}", user.getId());
-            return ValidationResult.denied(DenialReason.NO_ACTIVE_INSURANCE, user, tagUid);
+            return ValidationResult.denied(DenialReason.NO_ACTIVE_INSURANCE, user, tagUid, gymId);
         }
 
         // 4. medical certificate valid?
@@ -118,16 +122,16 @@ public class NfcAccessValidator {
 
         if (certOpt.isEmpty()) {
             log.info("No medical certificate for user: {}", user.getId());
-            return ValidationResult.denied(DenialReason.CERT_MISSING, user, tagUid);
+            return ValidationResult.denied(DenialReason.CERT_MISSING, user, tagUid, gymId);
         }
 
         MedicalCertificate cert = certOpt.get();
         if (!cert.isValid()) {
             log.info("Expired medical certificate for user: {}", user.getId());
-            return ValidationResult.denied(DenialReason.CERT_EXPIRED, user, tagUid);
+            return ValidationResult.denied(DenialReason.CERT_EXPIRED, user, tagUid, gymId);
         }
 
         log.info("Access GRANTED for user: {} tag: {}", user.getFullName(), tagUid);
-        return ValidationResult.granted(user, tagUid);
+        return ValidationResult.granted(user, tagUid, gymId);
     }
 }

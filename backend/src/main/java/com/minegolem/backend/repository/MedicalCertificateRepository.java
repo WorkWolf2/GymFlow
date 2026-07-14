@@ -34,4 +34,35 @@ public interface MedicalCertificateRepository extends JpaRepository<MedicalCerti
     List<MedicalCertificate> findExpiringSoon(@Param("gymId") UUID gymId,
                                               @Param("from") LocalDate from,
                                               @Param("to") LocalDate to);
+
+    @Query("""
+        SELECT mc FROM MedicalCertificate mc
+        JOIN FETCH mc.user u
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
+          AND mc.deletedAt IS NULL
+          AND mc.expiryDate BETWEEN :from AND :to
+        ORDER BY mc.expiryDate ASC, u.lastName ASC, u.firstName ASC
+        """)
+    List<MedicalCertificate> findForExpiryReport(@Param("gymId") UUID gymId,
+                                                  @Param("from") LocalDate from,
+                                                  @Param("to") LocalDate to);
+
+    @Query("""
+        SELECT mc FROM MedicalCertificate mc
+        JOIN FETCH mc.user u
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
+          AND mc.deletedAt IS NULL
+          AND mc.expiryDate >= :today
+          AND NOT EXISTS (
+              SELECT newer.id FROM MedicalCertificate newer
+              WHERE newer.user.id = u.id
+                AND newer.deletedAt IS NULL
+                AND newer.expiryDate > mc.expiryDate
+          )
+        ORDER BY mc.expiryDate ASC, u.lastName ASC, u.firstName ASC
+        """)
+    List<MedicalCertificate> findLatestValidForReport(@Param("gymId") UUID gymId,
+                                                       @Param("today") LocalDate today);
 }

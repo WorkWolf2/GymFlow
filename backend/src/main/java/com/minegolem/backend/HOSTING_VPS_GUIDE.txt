@@ -1,0 +1,371 @@
+GUIDA HOSTING VPS - GYMFLOW LEGION
+==================================
+
+Obiettivo
+---------
+Mettere il backend GymFlow in produzione su una VPS, collegarlo a un dominio e servirlo via HTTPS dietro Nginx.
+
+Questa guida assume:
+- VPS Ubuntu 22.04/24.04
+- Dominio acquistato, esempio: tuodominio.it
+- Applicazione Spring Boot gia' pronta con profilo prod
+- Database PostgreSQL
+- Reverse proxy Nginx
+
+
+1. Preparare DNS del dominio
+----------------------------
+Nel pannello del provider del dominio crea questi record DNS:
+
+Record A:
+  Nome: @
+  Valore: IP_DELLA_VPS
+  TTL: 300 oppure Auto
+
+Record A:
+  Nome: www
+  Valore: IP_DELLA_VPS
+  TTL: 300 oppure Auto
+
+Esempio:
+  tuodominio.it      A    123.123.123.123
+  www.tuodominio.it  A    123.123.123.123
+
+Se vuoi usare un sottodominio per il gestionale:
+  app.tuodominio.it  A    123.123.123.123
+
+Consiglio:
+usa app.tuodominio.it per il SaaS e lascia www.tuodominio.it per eventuale sito vetrina.
+
+Attendi la propagazione DNS. Di solito bastano pochi minuti, ma puo' richiedere alcune ore.
+
+
+2. Entrare nella VPS
+--------------------
+Dal tuo PC:
+
+  ssh root@IP_DELLA_VPS
+
+Aggiorna il server:
+
+  apt update && apt upgrade -y
+
+Installa pacchetti base:
+
+  apt install -y curl wget git unzip ufw nginx certbot python3-certbot-nginx postgresql postgresql-contrib openjdk-17-jre
+
+
+3. Configurare firewall
+-----------------------
+Apri solo le porte necessarie:
+
+  ufw allow OpenSSH
+  ufw allow 'Nginx Full'
+  ufw enable
+
+Se usi anche il lettore NFC TCP sulla porta 2169 e deve essere raggiungibile dall'esterno:
+
+  ufw allow 2169/tcp
+
+Se il lettore NFC sta nella stessa rete o passa da VPN, meglio NON esporre la porta 2169 pubblicamente.
+
+
+4. Creare database PostgreSQL
+-----------------------------
+Entra in PostgreSQL:
+
+  sudo -u postgres psql
+
+Crea database e utente:
+
+  CREATE DATABASE gymsaas;
+  CREATE USER gymsaas WITH ENCRYPTED PASSWORD 'PASSWORD_FORTE_DATABASE';
+  GRANT ALL PRIVILEGES ON DATABASE gymsaas TO gymsaas;
+  \q
+
+Permessi schema public:
+
+  sudo -u postgres psql -d gymsaas
+  GRANT ALL ON SCHEMA public TO gymsaas;
+  ALTER SCHEMA public OWNER TO gymsaas;
+  \q
+
+
+5. Caricare il progetto sulla VPS
+---------------------------------
+Opzione consigliata con Git:
+
+  cd /opt
+  git clone URL_DEL_TUO_REPOSITORY gymflow-backend
+  cd /opt/gymflow-backend/backend
+
+Se carichi manualmente via SFTP, metti il progetto in:
+
+  /opt/gymflow-backend/backend
+
+
+6. Creare file .env production
+------------------------------
+Dentro la cartella backend:
+
+  cd /opt/gymflow-backend/backend
+  nano .env
+
+Contenuto esempio:
+
+  SPRING_PROFILES_ACTIVE=prod
+  SERVER_PORT=8080
+
+  DB_URL=jdbc:postgresql://localhost:5432/gymsaas
+  DB_USER=gymsaas
+  DB_PASSWORD=PASSWORD_FORTE_DATABASE
+
+  JWT_SECRET=CAMBIA_CON_UNA_STRINGA_RANDOM_DI_ALMENO_32_CARATTERI
+  JWT_EXPIRATION=86400000
+  JWT_REFRESH_EXPIRATION=604800000
+
+  APP_CORS_ALLOWED_ORIGINS=https://app.tuodominio.it
+
+  MAIL_HOST=smtp.gmail.com
+  MAIL_PORT=587
+  MAIL_USER=la-tua-email
+  MAIL_PASSWORD=password-app-smtp
+
+  MINIO_URL=http://localhost:9000
+  MINIO_ACCESS_KEY=minio_user_forte
+  MINIO_SECRET_KEY=minio_password_forte
+  MINIO_BUCKET=gymsaas
+
+  NFC_ENABLED=true
+  NFC_TCP_HOST=0.0.0.0
+  NFC_TCP_PORT=2169
+
+  BACKUP_ENABLED=true
+  BACKUP_DIRECTORY=/opt/gymflow-backend/backups
+  BACKUP_MAX_FILES=10
+  BACKUP_CRON=0 0 22 * * *
+  PG_DUMP_COMMAND=pg_dump
+
+Nota importante:
+JWT_SECRET deve essere lungo e casuale. Esempio per generarlo:
+
+  openssl rand -base64 48
+
+
+7. Build del progetto
+---------------------
+Installa Node.js se devi rigenerare CSS:
+
+  apt install -y nodejs npm
+
+Dentro /opt/gymflow-backend/backend:
+
+  npm ci
+  npm run build:css:prod
+  chmod +x mvnw
+  ./mvnw -DskipTests package
+
+Il jar finale sara' in:
+
+  target/GymFlow-1.0.0.jar
+
+
+8. Creare servizio systemd
+--------------------------
+Crea il servizio:
+
+  nano /etc/systemd/system/gymflow.service
+
+Contenuto:
+
+  [Unit]
+  Description=GymFlow Backend
+  After=network.target postgresql.service
+
+  [Service]
+  Type=simple
+  WorkingDirectory=/opt/gymflow-backend/backend
+  EnvironmentFile=/opt/gymflow-backend/backend/.env
+  ExecStart=/usr/bin/java -XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dspring.profiles.active=prod -jar /opt/gymflow-backend/backend/target/GymFlow-1.0.0.jar
+  Restart=always
+  RestartSec=10
+  User=root
+
+  [Install]
+  WantedBy=multi-user.target
+
+Avvia:
+
+  systemctl daemon-reload
+  systemctl enable gymflow
+  systemctl start gymflow
+
+Controlla stato:
+
+  systemctl status gymflow
+
+Log live:
+
+  journalctl -u gymflow -f
+
+Test locale dalla VPS:
+
+  curl http://127.0.0.1:8080/actuator/health
+
+Risposta attesa:
+
+  {"status":"UP"}
+
+
+9. Configurare Nginx reverse proxy
+----------------------------------
+Crea config:
+
+  nano /etc/nginx/sites-available/gymflow
+
+Per dominio app.tuodominio.it:
+
+  server {
+      listen 80;
+      server_name app.tuodominio.it;
+
+      client_max_body_size 20M;
+
+      location / {
+          proxy_pass http://127.0.0.1:8080;
+          proxy_http_version 1.1;
+
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+      }
+  }
+
+Abilita sito:
+
+  ln -s /etc/nginx/sites-available/gymflow /etc/nginx/sites-enabled/gymflow
+  nginx -t
+  systemctl reload nginx
+
+
+10. Attivare HTTPS con Certbot
+------------------------------
+Quando il DNS punta gia' alla VPS:
+
+  certbot --nginx -d app.tuodominio.it
+
+Se usi anche www:
+
+  certbot --nginx -d tuodominio.it -d www.tuodominio.it
+
+Certbot modifichera' Nginx per usare HTTPS.
+
+Test rinnovo automatico:
+
+  certbot renew --dry-run
+
+
+11. Impostare dominio dentro .env
+---------------------------------
+Se usi:
+
+  https://app.tuodominio.it
+
+Allora in .env:
+
+  APP_CORS_ALLOWED_ORIGINS=https://app.tuodominio.it
+
+Poi riavvia:
+
+  systemctl restart gymflow
+
+Se hai frontend e backend sullo stesso dominio, questa impostazione e' semplice.
+Se in futuro separi frontend e API, esempio:
+
+  frontend: https://app.tuodominio.it
+  backend:  https://api.tuodominio.it
+
+allora:
+
+  APP_CORS_ALLOWED_ORIGINS=https://app.tuodominio.it
+
+
+12. Deploy aggiornamenti futuri
+-------------------------------
+Quando aggiorni il codice:
+
+  cd /opt/gymflow-backend/backend
+  git pull
+  npm ci
+  npm run build:css:prod
+  ./mvnw -DskipTests package
+  systemctl restart gymflow
+  journalctl -u gymflow -f
+
+
+13. Backup database manuale
+---------------------------
+Crea cartella:
+
+  mkdir -p /opt/gymflow-backend/backups
+
+Backup manuale:
+
+  PGPASSWORD='PASSWORD_FORTE_DATABASE' pg_dump -U gymsaas -h localhost gymsaas > /opt/gymflow-backend/backups/gymsaas_$(date +%F_%H-%M).sql
+
+Ripristino, solo se necessario:
+
+  PGPASSWORD='PASSWORD_FORTE_DATABASE' psql -U gymsaas -h localhost gymsaas < file_backup.sql
+
+
+14. Checklist finale production
+-------------------------------
+Prima di aprire ai clienti controlla:
+
+  systemctl status gymflow
+  curl http://127.0.0.1:8080/actuator/health
+  nginx -t
+  certbot renew --dry-run
+
+Dal browser:
+
+  https://app.tuodominio.it
+
+Controlla anche:
+- JWT_SECRET cambiato e forte
+- DB_PASSWORD cambiata e forte
+- APP_CORS_ALLOWED_ORIGINS con dominio HTTPS corretto
+- Swagger non pubblico in prod
+- Actuator espone solo health/info
+- Porta PostgreSQL non aperta pubblicamente
+- Porta MinIO non aperta pubblicamente, se usato solo dal backend
+- Porta 2169 aperta solo se serve davvero da fuori
+
+
+15. Alternativa con Docker
+--------------------------
+Se preferisci Docker, sulla VPS installa Docker e usa il Dockerfile presente.
+
+Build:
+
+  docker build -t gymflow-backend:latest .
+
+Run esempio:
+
+  docker run -d \
+    --name gymflow-backend \
+    --env-file .env \
+    -p 127.0.0.1:8080:8080 \
+    -p 2169:2169 \
+    --restart unless-stopped \
+    gymflow-backend:latest
+
+Con Nginx rimane uguale:
+
+  proxy_pass http://127.0.0.1:8080;
+
+Per production semplice su una singola VPS, systemd + jar e' spesso la strada piu' diretta.

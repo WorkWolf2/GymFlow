@@ -1,7 +1,6 @@
 package com.minegolem.backend;
 
 import io.github.cdimascio.dotenv.Dotenv;
-import io.github.cdimascio.dotenv.DotenvEntriesFilter;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
@@ -21,12 +20,7 @@ public class BackendApplication {
                 .directory(System.getProperty("user.dir"))
                 .ignoreIfMissing()
                 .load();
-        dotenv.entries(DotenvEntriesFilter.DECLARED_IN_ENV_FILE).forEach(e -> {
-                System.setProperty(e.getKey(), e.getValue());
-                System.err.println(e.getKey() + "=" + e.getValue());
-            }
-        );
-
+        dotenv.entries().forEach(e -> System.setProperty(e.getKey(), e.getValue()));
 
         SpringApplication.run(BackendApplication.class, args);
     }

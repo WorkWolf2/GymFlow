@@ -4,29 +4,36 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 @Service
 public class Er750Service {
 
     private static final String READER_IP = "169.254.40.235";
     private static final int PORT = 2167;
+    private static final int CONNECT_TIMEOUT_MS = 2_000;
+    private static final int READ_TIMEOUT_MS = 1_500;
 
     public void openDoor(int seconds) throws IOException {
 
         byte[] packet = buildOpenDoorPacket(seconds);
 
-        try (Socket socket = new Socket(READER_IP, PORT)) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(READER_IP, PORT), CONNECT_TIMEOUT_MS);
+            socket.setSoTimeout(READ_TIMEOUT_MS);
 
             OutputStream out = socket.getOutputStream();
             out.write(packet);
             out.flush();
 
-            byte[] response = socket.getInputStream().readNBytes(64);
-
-            System.out.println(
-                "Response: " + bytesToHex(response)
-            );
+            try {
+                byte[] response = socket.getInputStream().readNBytes(64);
+                System.out.println("Response: " + bytesToHex(response));
+            } catch (SocketTimeoutException ignored) {
+                System.out.println("ER750 open-door command sent without response before timeout");
+            }
         }
     }
 

@@ -44,7 +44,9 @@ public class NfcConnectionHandler {
 
     public void handle(Socket socket, String clientIp) {
         try (socket) {
-            socket.setSoTimeout(30_000); // 30s read timeout
+            // Event connections are intentionally long-lived and can remain idle
+            // for minutes between two badge scans. Keep them open indefinitely.
+            socket.setSoTimeout(0);
             InputStream in = socket.getInputStream();
             OutputStream out = socket.getOutputStream();
             activeOutputs.put(clientIp, out);
@@ -55,8 +57,6 @@ public class NfcConnectionHandler {
                 processFrame(buffer, bytesRead, clientIp, out);
             }
 
-        } catch (java.net.SocketTimeoutException e) {
-            log.debug("NFC connection timed out from {}", clientIp);
         } catch (IOException e) {
             log.warn("NFC connection error from {}: {}", clientIp, e.getMessage());
         } finally {
@@ -95,7 +95,7 @@ public class NfcConnectionHandler {
         NfcAccessValidator.ValidationResult result = accessValidator.validate(frame.tagUid());
 
         // persist access log
-        Gym gym = gymRepository.findById(UUID.fromString(defaultGymId)).orElse(null);
+        Gym gym = resolveGym(result);
         Access access = Access.builder()
             .gym(gym)
             .user(result.user())
@@ -151,6 +151,13 @@ public class NfcConnectionHandler {
                     .build();
                 nfcTagRepository.save(tag);
             });
+    }
+
+    private Gym resolveGym(NfcAccessValidator.ValidationResult result) {
+        UUID gymId = result.gymId() != null
+            ? result.gymId()
+            : UUID.fromString(defaultGymId);
+        return gymRepository.findById(gymId).orElse(null);
     }
 
     private boolean writeCommand(OutputStream out, String command) {

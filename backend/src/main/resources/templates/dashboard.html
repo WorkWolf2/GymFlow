@@ -12,54 +12,54 @@
 <div th:fragment="dashboard" class="dashboard-content space-y-5">
 
     <!-- HEADER -->
-    <div class="flex items-end justify-between gap-4">
+    <div class="flex items-end justify-between gap-4 stagger-item">
         <h1 class="text-xl font-semibold text-foreground">Dashboard</h1>
         <p class="text-sm text-foreground-muted">Aggiornata automaticamente</p>
     </div>
 
     <!-- SUMMARY -->
-    <div class="card overflow-hidden">
+    <div class="card overflow-hidden stagger-item">
         <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-surface-border">
 
         <div class="p-4">
             <div>
                 <p class="text-sm text-foreground-muted mb-1">Clienti attivi</p>
-                <p id="stat-active-users" class="text-2xl font-semibold text-foreground">-</p>
+                <p id="stat-active-users" class="text-2xl font-semibold text-foreground tabular-nums">-</p>
             </div>
         </div>
 
         <div class="p-4">
             <div>
                 <p class="text-sm text-foreground-muted mb-1">Accessi oggi</p>
-                <p id="stat-accesses-today" class="text-2xl font-semibold text-foreground">-</p>
+                <p id="stat-accesses-today" class="text-2xl font-semibold text-foreground tabular-nums">-</p>
             </div>
         </div>
 
         <div class="p-4">
             <div>
                 <p class="text-sm text-foreground-muted mb-1">Incassi oggi</p>
-                <p id="stat-revenue-today" class="text-2xl font-semibold text-accent">-</p>
+                <p id="stat-revenue-today" class="text-2xl font-semibold text-accent tabular-nums">-</p>
             </div>
         </div>
 
         <div class="p-4">
             <div>
                 <p class="text-sm text-foreground-muted mb-1">Uscite oggi</p>
-                <p id="stat-expenses-today" class="text-2xl font-semibold text-danger">-</p>
+                <p id="stat-expenses-today" class="text-2xl font-semibold text-danger tabular-nums">-</p>
             </div>
         </div>
         </div>
     </div>
 
     <!-- ALERTS -->
-    <div id="expiring-alerts" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
+    <div id="expiring-alerts" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden stagger-item">
 
         <button type="button" id="alert-subscriptions"
-             class="card p-4 border-warning/30 flex items-center gap-3 hidden text-left w-full cursor-pointer hover:bg-surface-hover transition-colors">
+             class="card p-4 min-h-20 flex items-center gap-3 hidden text-left w-full cursor-pointer hover:bg-surface-hover active:scale-[0.96] transition-[scale,background-color,box-shadow] duration-150 ease-out">
 
             <div>
                 <p class="text-sm font-medium text-foreground">
-                    <span id="expiring-subs-count">0</span> abbonamenti in scadenza
+                    <span id="expiring-subs-count" class="tabular-nums">0</span> abbonamenti in scadenza
                 </p>
                 <p class="text-xs text-foreground-muted">Nei prossimi 7 giorni</p>
             </div>
@@ -67,11 +67,11 @@
         </button>
 
         <button type="button" id="alert-certs"
-             class="card p-4 border-danger/30 flex items-center gap-3 hidden text-left w-full cursor-pointer hover:bg-surface-hover transition-colors">
+             class="card p-4 min-h-20 flex items-center gap-3 hidden text-left w-full cursor-pointer hover:bg-surface-hover active:scale-[0.96] transition-[scale,background-color,box-shadow] duration-150 ease-out">
 
             <div>
                 <p class="text-sm font-medium text-foreground">
-                    <span id="expiring-certs-count">0</span> certificati in scadenza
+                    <span id="expiring-certs-count" class="tabular-nums">0</span> certificati in scadenza
                 </p>
                 <p class="text-xs text-foreground-muted">Entro 30 giorni</p>
             </div>
@@ -86,7 +86,7 @@
             <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
                 <h2 id="expiring-modal-title" class="text-lg font-semibold text-foreground">In scadenza</h2>
                 <button type="button" id="close-expiring-modal"
-                    class="close-expiring-modal text-foreground-muted hover:text-foreground transition-colors">
+                    class="close-expiring-modal icon-button">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -96,23 +96,84 @@
         </div>
     </div>
 
-    <!-- RECENT ACCESS -->
-    <div class="card overflow-hidden">
-
-        <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-2">
-            <h2 class="text-sm font-medium text-foreground">Accessi recenti</h2>
-            <span class="text-xs text-foreground-muted">NFC</span>
+    <!-- BUSINESS ANALYTICS -->
+    <section class="space-y-4 stagger-item">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-foreground">Business intelligence</h2>
+                <p class="text-xs text-foreground-muted">Indicatori strategici e previsioni</p>
+            </div>
+            <span class="text-xs text-foreground-subtle">Mese corrente</span>
         </div>
 
-        <div id="recent-accesses-list" class="divide-y divide-surface-border">
-
-            <p class="px-5 py-8 text-center text-sm text-foreground-subtle"
-               id="recent-accesses-empty">
-                In attesa di accessi NFC.
-            </p>
-
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="card p-4">
+                <p class="text-xs text-foreground-muted">Entrate</p>
+                <p id="analytics-revenue" class="mt-1 text-xl font-semibold text-foreground tabular-nums">-</p>
+                <p id="analytics-growth" class="mt-1 text-xs text-foreground-subtle tabular-nums">-</p>
+            </div>
+            <div class="card p-4">
+                <p class="text-xs text-foreground-muted">Profitto</p>
+                <p id="analytics-profit" class="mt-1 text-xl font-semibold text-accent tabular-nums">-</p>
+                <p id="analytics-expenses" class="mt-1 text-xs text-foreground-subtle tabular-nums">-</p>
+            </div>
+            <div class="card p-4">
+                <p class="text-xs text-foreground-muted">Clienti attivi</p>
+                <p id="analytics-active" class="mt-1 text-xl font-semibold text-foreground tabular-nums">-</p>
+                <p id="analytics-members-flow" class="mt-1 text-xs text-foreground-subtle tabular-nums">-</p>
+            </div>
+            <div class="card p-4">
+                <p class="text-xs text-foreground-muted">Rinnovi entro 7 giorni</p>
+                <p id="analytics-renewals" class="mt-1 text-xl font-semibold text-warning tabular-nums">-</p>
+                <p id="analytics-renewal-value" class="mt-1 text-xs text-foreground-subtle tabular-nums">-</p>
+            </div>
         </div>
-    </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="card overflow-hidden lg:col-span-2">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-foreground">Andamento economico</h3>
+                    <span id="analytics-forecast" class="text-xs text-foreground-muted tabular-nums"></span>
+                </div>
+                <div id="analytics-trend" class="p-5 h-56 flex items-end gap-3"></div>
+            </div>
+
+            <div class="card overflow-hidden">
+                <div class="px-5 py-3 border-b border-surface-border">
+                    <h3 class="text-sm font-medium text-foreground">Insight automatici</h3>
+                </div>
+                <div id="analytics-insights" class="divide-y divide-surface-border">
+                    <p class="px-5 py-8 text-sm text-foreground-subtle text-center">Analisi in corso...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="card p-5">
+                <p class="text-xs text-foreground-muted">Comportamento clienti</p>
+                <div class="mt-4 space-y-3 text-sm">
+                    <div class="flex justify-between gap-3"><span class="text-foreground-muted">Ora di punta</span><strong id="analytics-peak-hour">-</strong></div>
+                    <div class="flex justify-between gap-3"><span class="text-foreground-muted">Giorno più attivo</span><strong id="analytics-busiest-day">-</strong></div>
+                    <div class="flex justify-between gap-3"><span class="text-foreground-muted">Visite medie</span><strong id="analytics-average-visits">-</strong></div>
+                </div>
+            </div>
+
+            <div class="card p-5">
+                <p class="text-xs text-foreground-muted">Clienti</p>
+                <div class="mt-4 grid grid-cols-2 gap-3 text-center">
+                    <div class="rounded bg-surface-hover p-3"><strong id="analytics-new-members" class="block text-lg text-success tabular-nums">-</strong><span class="text-xs text-foreground-muted">Nuovi</span></div>
+                    <div class="rounded bg-surface-hover p-3"><strong id="analytics-lost-members" class="block text-lg text-danger tabular-nums">-</strong><span class="text-xs text-foreground-muted">Persi</span></div>
+                    <div class="rounded bg-surface-hover p-3"><strong id="analytics-renewed-members" class="block text-lg tabular-nums">-</strong><span class="text-xs text-foreground-muted">Rinnovi</span></div>
+                    <div class="rounded bg-surface-hover p-3"><strong id="analytics-inactive-members" class="block text-lg tabular-nums">-</strong><span class="text-xs text-foreground-muted">Inattivi</span></div>
+                </div>
+            </div>
+
+            <div class="card p-5">
+                <p class="text-xs text-foreground-muted">Metodi di pagamento</p>
+                <div id="analytics-payment-methods" class="mt-4 space-y-3"></div>
+            </div>
+        </div>
+    </section>
 
     <script>
         $(document).ready(function() {
@@ -219,7 +280,7 @@
                                         ${detail}
                                         <p class="text-xs text-foreground-subtle mt-0.5">Scade il ${dateLabel}</p>
                                     </a>
-                                    <button class="send-expire-mail-btn text-accent hover:text-accent-hover p-2 rounded hover:bg-surface-active transition-colors duration-150 shrink-0" 
+                                    <button class="send-expire-mail-btn icon-button text-accent hover:text-accent-hover shrink-0" 
                                             data-id="${item.userId}" 
                                             data-name="${item.userFullName}" 
                                             data-date="${dateLabel}"
@@ -297,51 +358,105 @@
                 });
             }
 
-            function loadRecentEvents() {
+            function loadAnalytics() {
                 $.ajax({
-                    url: '/api/accesses?size=10',
+                    url: '/api/dashboard/analytics',
                     type: 'GET',
                     success: function(data) {
-                        const events = data.content || [];
-                        const list = $('#recent-accesses-list');
+                        const economics = data.economics || {};
+                        const customers = data.customers || {};
+                        const attendance = data.attendance || {};
+                        const forecast = data.forecast || {};
 
-                        if (events.length > 0) {
-                            $('#recent-accesses-empty').remove();
-                            list.empty();
+                        $('#analytics-revenue').text(formatEuro(economics.revenue || 0));
+                        $('#analytics-profit').text(formatEuro(economics.profit || 0));
+                        $('#analytics-expenses').text('Uscite ' + formatEuro(economics.expenses || 0));
+                        $('#analytics-active').text(customers.active || 0);
+                        $('#analytics-renewals').text(forecast.subscriptionsExpiringIn7Days || 0);
+                        $('#analytics-renewal-value').text(formatEuro(forecast.renewalValueAtRisk || 0) + ' da rinnovare');
+                        $('#analytics-forecast').text('Previsione prossimo mese: ' + formatEuro(forecast.expectedRevenueNextMonth || 0));
 
-                            events.forEach(event => {
-                                const granted = event.granted;
-                                const statusColor = granted ? "bg-success" : "bg-danger";
-                                const textColor = granted ? "text-success" : "text-danger";
-                                const statusText = granted ? "Concesso" : "Negato";
-                                const accessCode = event.clientCode && String(event.nfcTagUid) === String(event.clientCode) ? 'ID #' + event.clientCode : (event.nfcTagUid ? 'NFC ' + event.nfcTagUid : '');
-                                const userLabel = event.clientCode ? '#' + event.clientCode + ' - ' + (event.userFullName || 'Sconosciuto') : (event.userFullName || 'Sconosciuto');
+                        const growth = Number(economics.revenueGrowthPercent || 0);
+                        $('#analytics-growth')
+                            .text((growth >= 0 ? '+' : '') + growth.toLocaleString('it-IT') + '% rispetto al mese scorso')
+                            .removeClass('text-success text-danger text-foreground-subtle')
+                            .addClass(growth >= 0 ? 'text-success' : 'text-danger');
 
-                                list.append(`
-                                    <div class="px-5 py-3 flex items-center gap-3">
-                                        <div class="w-2 h-2 rounded-full ${statusColor}"></div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-foreground truncate">
-                                                ${userLabel}
-                                            </p>
-                                            <p class="text-xs text-foreground-muted">
-                                                ${accessCode}
-                                            </p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-xs font-medium ${textColor}">${statusText}</p>
-                                            <p class="text-xs text-foreground-subtle">
-                                                ${formatDateTime(event.accessTime)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                `);
-                            });
-                        }
+                        $('#analytics-members-flow').text('+' + (customers.newMembers || 0) + ' nuovi · ' + (customers.lostMembers || 0) + ' persi');
+                        $('#analytics-new-members').text(customers.newMembers || 0);
+                        $('#analytics-lost-members').text(customers.lostMembers || 0);
+                        $('#analytics-renewed-members').text(customers.renewals || 0);
+                        $('#analytics-inactive-members').text(customers.inactive || 0);
+
+                        const dayNames = {
+                            MONDAY: 'Lunedì', TUESDAY: 'Martedì', WEDNESDAY: 'Mercoledì',
+                            THURSDAY: 'Giovedì', FRIDAY: 'Venerdì', SATURDAY: 'Sabato', SUNDAY: 'Domenica'
+                        };
+                        $('#analytics-peak-hour').text(attendance.peakHour || '-');
+                        $('#analytics-busiest-day').text(dayNames[attendance.busiestDay] || '-');
+                        $('#analytics-average-visits').text((attendance.averageVisitsPerMemberPerWeek || 0) + ' / settimana');
+
+                        renderTrend(data.monthlyTrend || []);
+                        renderInsights(data.insights || []);
+                        renderPaymentMethods((data.payments || {}).percentageByMethod || {});
                     },
                     error: function() {
-                        console.error('Errore caricamento accessi recenti');
+                        $('#analytics-insights').html('<p class="px-5 py-8 text-sm text-danger text-center">Analitiche non disponibili</p>');
                     }
+                });
+            }
+
+            function renderTrend(items) {
+                const container = $('#analytics-trend').empty();
+                const maxValue = Math.max(1, ...items.map(item => Number(item.revenue || 0)));
+                const monthNames = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+
+                items.forEach(function(item) {
+                    const revenue = Number(item.revenue || 0);
+                    const height = Math.max(4, Math.round((revenue / maxValue) * 150));
+                    const monthNumber = Number(String(item.month).split('-')[1] || 1);
+                    container.append(`
+                        <div class="flex-1 min-w-0 h-full flex flex-col justify-end items-center gap-2" title="${formatEuro(revenue)}">
+                            <span class="text-xs text-foreground-muted hidden sm:block tabular-nums">${formatEuro(revenue)}</span>
+                            <div class="w-full max-w-12 rounded-t bg-accent/80 transition-[height,background-color] duration-300 ease-out" style="height:${height}px"></div>
+                            <span class="text-xs text-foreground-subtle">${monthNames[monthNumber - 1]}</span>
+                        </div>
+                    `);
+                });
+            }
+
+            function renderInsights(items) {
+                const container = $('#analytics-insights').empty();
+                const styles = {
+                    POSITIVE: ['bg-success', 'text-success'],
+                    WARNING: ['bg-warning', 'text-warning'],
+                    INFO: ['bg-accent', 'text-accent']
+                };
+                items.forEach(function(item) {
+                    const style = styles[item.severity] || styles.INFO;
+                    const variation = item.changePercent != null ? ` <span class="${style[1]} tabular-nums">${Number(item.changePercent).toLocaleString('it-IT')}%</span>` : '';
+                    container.append(`
+                        <div class="px-5 py-4 flex gap-3">
+                            <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 ${style[0]}"></span>
+                            <p class="text-sm text-foreground text-pretty">${item.message || ''}${variation}</p>
+                        </div>
+                    `);
+                });
+            }
+
+            function renderPaymentMethods(percentages) {
+                const labels = { CASH: 'Contanti', CARD: 'Carta', TRANSFER: 'Bonifico', VOUCHER: 'Voucher' };
+                const container = $('#analytics-payment-methods').empty();
+                Object.keys(labels).forEach(function(method) {
+                    const value = Number(percentages[method] || 0);
+                    container.append(`
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-foreground-muted">${labels[method]}</span><strong class="tabular-nums">${value.toLocaleString('it-IT')}%</strong>
+                            </div>
+                            <div class="h-1.5 rounded bg-surface-hover overflow-hidden"><div class="h-full bg-accent rounded transition-[width] duration-300 ease-out" style="width:${Math.min(100, value)}%"></div></div>
+                        </div>
+                    `);
                 });
             }
 
@@ -389,13 +504,13 @@
 
             window.LegionAsdRefreshDashboard = function() {
                 loadDashboardSummary();
-                loadRecentEvents();
+                loadAnalytics();
             };
             window.LegionAsdRefreshExpirationTemplates = loadExpirationTemplates;
 
             loadExpirationTemplates();
             loadDashboardSummary();
-            loadRecentEvents();
+            loadAnalytics();
         });
     </script>
 
