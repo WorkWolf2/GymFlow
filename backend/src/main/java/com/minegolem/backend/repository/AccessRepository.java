@@ -43,4 +43,8 @@ public interface AccessRepository extends JpaRepository<Access, UUID> {
     long countDistinctUsersPresent(@Param("gymId") UUID gymId, @Param("since") LocalDateTime since);
 
     List<Access> findTop20ByGymIdOrderByAccessTimeDesc(UUID gymId);
+
+    java.util.Optional<Access> findFirstByUserIdAndGrantedTrueOrderByAccessTimeDesc(UUID userId);
+
+    long countByUserIdAndGrantedTrueAndAccessTimeAfter(UUID userId, LocalDateTime since);
 }

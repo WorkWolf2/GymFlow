@@ -1,264 +1,158 @@
 #!/usr/bin/env python3
-"""
-Bridge locale GymFlow per lettore NFC/ER750.
-
-Flusso:
-1. Il PC locale riceve una scansione NFC dal lettore sulla porta EVENT_SERVER_PORT.
-2. Il PC locale chiede alla VPS se il tag puo' entrare.
-3. La VPS risponde OPEN o DENY.
-4. Solo se la risposta e' OPEN, questo script invia il comando di apertura a
-   DOOR_READER_HOST:DOOR_READER_PORT.
-
-Modifica i valori nella sezione CONFIGURAZIONE, senza usare file .env.
-"""
-
+"""Bridge locale GymFlow: NFC/ER750 collegato alla VPS tramite WebSocket."""
 from __future__ import annotations
 
-import json
-import re
-import socket
-import threading
-import time
-import urllib.error
-import urllib.request
+import json, re, socket, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
+try:
+    import websocket
+except ImportError as exc:
+    raise SystemExit("Installa websocket-client: py -m pip install websocket-client") from exc
 
-# =========================
 # CONFIGURAZIONE
-# =========================
-
-# URL pubblico del backend sulla VPS, senza slash finale.
 VPS_URL = "https://app.tuodominio.it"
-
-# Deve essere uguale ad access.bridge.api-key configurata nel backend sulla VPS.
 BRIDGE_KEY = "INSERISCI_QUI_LA_CHIAVE_DEL_BRIDGE"
-
-# Server HTTP locale opzionale, utile per test manuali con POST /scan.
-LOCAL_HTTP_HOST = "127.0.0.1"
-LOCAL_HTTP_PORT = 8787
-
-# Nome dispositivo mostrato nei log accessi.
+GYM_ID = "00000000-0000-0000-0000-000000000001"
 DEFAULT_DEVICE_ID = socket.gethostname()
-
-# Event server: qui il lettore si collega/invia la carta letta.
-EVENT_SERVER_ENABLED = True
-EVENT_SERVER_HOST = "0.0.0.0"
-EVENT_SERVER_PORT = 2169
+LOCAL_HTTP_HOST, LOCAL_HTTP_PORT = "127.0.0.1", 8787
+EVENT_SERVER_ENABLED, EVENT_SERVER_HOST, EVENT_SERVER_PORT = True, "0.0.0.0", 2169
 EVENT_READ_TIMEOUT_SECONDS = 0.5
+DOOR_READER_HOST, DOOR_READER_PORT = "169.254.40.235", 2167
+REQUEST_TIMEOUT_SECONDS, DOOR_CONNECT_TIMEOUT_SECONDS, DOOR_READ_TIMEOUT_SECONDS = 8, 2, 1.5
+RECONNECT_DELAY_SECONDS = 5
 
-# Comando apertura: IP e porta del lettore/centralina da comandare.
-DOOR_READER_HOST = "169.254.40.235"
-DOOR_READER_PORT = 2167
-
-# Timeout connessioni.
-REQUEST_TIMEOUT_SECONDS = 8
-DOOR_CONNECT_TIMEOUT_SECONDS = 2
-DOOR_READ_TIMEOUT_SECONDS = 1.5
-
+def ws_url() -> str:
+    base = VPS_URL.rstrip("/").replace("https://", "wss://", 1).replace("http://", "ws://", 1)
+    return base + "/ws/access-bridge"
 
 def normalize_tag(value: str) -> str:
     return re.sub(r"[^A-Fa-f0-9]", "", value or "").upper()
 
-
-def extract_tag(raw: str) -> str:
-    text = raw.strip()
-    keyed = re.search(r"(?:TAG|UID|CARD|BADGE|NFC|RFID)\s*[:=]\s*([A-Fa-f0-9:\-\s]+)", text, re.I)
-    if keyed:
-        return normalize_tag(keyed.group(1))
-    return normalize_tag(text)
-
-
-def extract_tag_from_bytes(raw: bytes) -> str:
+def extract_tag(raw: bytes) -> str:
     text = raw.decode("utf-8", errors="ignore").strip()
-    tag = extract_tag(text)
-    if tag:
-        return tag
-    return normalize_tag(raw.hex())
-
-
-def post_to_vps(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]:
-    if not BRIDGE_KEY:
-        raise RuntimeError("BRIDGE_KEY non configurata nella sezione CONFIGURAZIONE")
-
-    payload = json.dumps({
-        "tagUid": tag_uid,
-        "deviceId": device_id,
-        "deviceIp": device_ip,
-    }).encode("utf-8")
-
-    request = urllib.request.Request(
-        f"{VPS_URL}/api/access-bridge/validate",
-        data=payload,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "X-Access-Bridge-Key": BRIDGE_KEY,
-        },
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Errore VPS {exc.code}: {body}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"VPS non raggiungibile: {exc.reason}") from exc
-
+    found = re.search(r"(?:TAG|UID|CARD|BADGE|NFC|RFID)\s*[:=]\s*([A-Fa-f0-9:\-\s]+)", text, re.I)
+    return normalize_tag(found.group(1) if found else text) or normalize_tag(raw.hex())
 
 def crc16(data: bytes, start: int = 1) -> int:
     crc = 0xFFFF
-    for byte in data[start:]:
-        crc ^= byte
-        for _ in range(8):
-            if crc & 1:
-                crc = (crc >> 1) ^ 0xA001
-            else:
-                crc >>= 1
+    for value in data[start:]:
+        crc ^= value
+        for _ in range(8): crc = (crc >> 1) ^ 0xA001 if crc & 1 else crc >> 1
     return crc & 0xFFFF
 
-
-def build_er750_open_packet(seconds: int) -> bytes:
+def open_door(seconds: int) -> None:
     seconds = max(1, min(int(seconds), 255))
-    command = bytes([0x01, 0x00, 0x11, 0x02, 0x00, seconds])
-    checksum = crc16(command, 1)
-    return command + bytes([(checksum >> 8) & 0xFF, checksum & 0xFF])
+    command = bytes([1, 0, 0x11, 2, 0, seconds]); checksum = crc16(command, 1)
+    packet = command + bytes([checksum >> 8, checksum & 0xFF])
+    with socket.create_connection((DOOR_READER_HOST, DOOR_READER_PORT), timeout=DOOR_CONNECT_TIMEOUT_SECONDS) as sock:
+        sock.settimeout(DOOR_READ_TIMEOUT_SECONDS); sock.sendall(packet)
+        try: print("ER750 response:", sock.recv(64).hex().upper())
+        except socket.timeout: print("Comando apertura inviato a ER750")
 
+class VpsBridge:
+    def __init__(self) -> None:
+        self.ws: websocket.WebSocketApp | None = None
+        self.connected, self.lock = threading.Event(), threading.Lock()
+        self.pending: dict[str, tuple[threading.Event, dict[str, Any]]] = {}
 
-def open_er750_door(seconds: int) -> None:
-    packet = build_er750_open_packet(seconds)
-    with socket.create_connection(
-        (DOOR_READER_HOST, DOOR_READER_PORT),
-        timeout=DOOR_CONNECT_TIMEOUT_SECONDS,
-    ) as sock:
-        sock.settimeout(DOOR_READ_TIMEOUT_SECONDS)
-        sock.sendall(packet)
+    def start(self) -> None: threading.Thread(target=self._run, daemon=True).start()
 
+    def _run(self) -> None:
+        while True:
+            self.ws = websocket.WebSocketApp(ws_url(), on_open=self._opened, on_message=self._message,
+                on_close=self._closed, on_error=lambda _ws, err: print(f"Errore WebSocket VPS: {err}"))
+            self.ws.run_forever(ping_interval=30, ping_timeout=10)
+            self.connected.clear(); time.sleep(RECONNECT_DELAY_SECONDS)
+
+    def _opened(self, _ws: websocket.WebSocketApp) -> None:
+        self.send({"type":"REGISTER", "apiKey":BRIDGE_KEY, "gymId":GYM_ID, "deviceId":DEFAULT_DEVICE_ID})
+
+    def _closed(self, _ws: websocket.WebSocketApp, code: int | None, reason: str | None) -> None:
+        print(f"WebSocket VPS disconnesso ({code}: {reason})")
+
+    def _message(self, _ws: websocket.WebSocketApp, raw: str) -> None:
         try:
-            response = sock.recv(64)
-            if response:
-                print(f"ER750 response: {response.hex().upper()}")
-        except socket.timeout:
-            print("Comando apertura inviato a ER750, nessuna risposta prima del timeout")
+            payload = json.loads(raw); msg_type = payload.get("type")
+            if msg_type == "REGISTERED":
+                self.connected.set(); print(f"Bridge registrato per palestra {payload.get('gymId')}")
+            elif msg_type == "SCAN_RESULT":
+                with self.lock: pending = self.pending.get(payload.get("requestId", ""))
+                if pending: pending[1].update(payload.get("result", {})); pending[0].set()
+            elif msg_type == "OPEN_DOOR": self._remote_open(payload)
+        except Exception as exc: print(f"Messaggio VPS non valido: {exc}")
 
+    def _remote_open(self, payload: dict[str, Any]) -> None:
+        command_id = payload.get("commandId", "")
+        try:
+            open_door(payload.get("relaySeconds", 3))
+            self.send({"type":"COMMAND_RESULT", "commandId":command_id, "success":True})
+        except Exception as exc:
+            self.send({"type":"COMMAND_RESULT", "commandId":command_id, "success":False, "message":str(exc)})
 
-def process_scan(tag_uid: str, device_id: str, device_ip: str) -> dict[str, Any]:
-    tag_uid = normalize_tag(tag_uid)
-    if not tag_uid:
-        return {"granted": False, "command": "DENY", "message": "Tag vuoto o non valido"}
+    def send(self, payload: dict[str, Any]) -> None:
+        with self.lock:
+            if not self.ws or not self.ws.sock or not self.ws.sock.connected: raise RuntimeError("WebSocket VPS non connesso")
+            self.ws.send(json.dumps(payload, ensure_ascii=False))
 
-    result = post_to_vps(tag_uid, device_id, device_ip)
-    command = result.get("command", "DENY")
-    granted = result.get("granted") is True
-    relay_seconds = result.get("relaySeconds") or 3
+    def scan(self, tag_uid: str, device_ip: str) -> dict[str, Any]:
+        tag_uid = normalize_tag(tag_uid)
+        if not tag_uid: return {"granted":False, "command":"DENY", "message":"Tag vuoto o non valido"}
+        if not self.connected.wait(REQUEST_TIMEOUT_SECONDS): return {"granted":False, "command":"DENY", "message":"VPS non connessa"}
+        request_id, done, result = str(uuid.uuid4()), threading.Event(), {}
+        with self.lock: self.pending[request_id] = (done, result)
+        try:
+            self.send({"type":"SCAN", "requestId":request_id, "tagUid":tag_uid, "deviceId":DEFAULT_DEVICE_ID, "deviceIp":device_ip})
+            return result if done.wait(REQUEST_TIMEOUT_SECONDS) else {"granted":False, "command":"DENY", "message":"Timeout validazione VPS"}
+        finally:
+            with self.lock: self.pending.pop(request_id, None)
 
-    print(
-        f"{time.strftime('%Y-%m-%d %H:%M:%S')} "
-        f"tag={tag_uid} device={device_id} command={command} message={result.get('message', '')}"
-    )
+bridge = VpsBridge()
 
-    if granted and command == "OPEN":
-        open_er750_door(relay_seconds)
-
+def process_scan(tag_uid: str, ip: str) -> dict[str, Any]:
+    result = bridge.scan(tag_uid, ip)
+    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} tag={tag_uid} command={result.get('command')} message={result.get('message', '')}")
+    if result.get("granted") and result.get("command") == "OPEN": open_door(result.get("relaySeconds") or 3)
     return result
 
-
-class BridgeHttpHandler(BaseHTTPRequestHandler):
+class LocalApi(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
-        if self.path == "/health":
-            self.send_json(200, {"status": "UP"})
-            return
-        self.send_json(404, {"error": "Not found"})
-
+        self.reply(200, {"status":"UP", "vpsConnected":bridge.connected.is_set()}) if self.path == "/health" else self.reply(404, {"error":"Not found"})
     def do_POST(self) -> None:
-        if self.path != "/scan":
-            self.send_json(404, {"error": "Not found"})
-            return
-
+        if self.path != "/scan": self.reply(404, {"error":"Not found"}); return
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            body = self.rfile.read(length).decode("utf-8")
-            payload = json.loads(body or "{}")
-            tag_uid = payload.get("tagUid") or payload.get("tag") or payload.get("uid") or ""
-            device_id = payload.get("deviceId") or DEFAULT_DEVICE_ID
-            result = process_scan(tag_uid, device_id, self.client_address[0])
-            self.send_json(200, result)
-        except Exception as exc:
-            self.send_json(500, {"granted": False, "command": "DENY", "message": str(exc)})
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))) or "{}")
+            self.reply(200, process_scan(body.get("tagUid") or body.get("tag") or body.get("uid") or "", self.client_address[0]))
+        except Exception as exc: self.reply(500, {"granted":False, "command":"DENY", "message":str(exc)})
+    def log_message(self, _format: str, *args: Any) -> None: pass
+    def reply(self, status: int, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload, ensure_ascii=False).encode(); self.send_response(status); self.send_header("Content-Type","application/json; charset=utf-8"); self.send_header("Content-Length",str(len(body))); self.end_headers(); self.wfile.write(body)
 
-    def log_message(self, format: str, *args: Any) -> None:
-        return
-
-    def send_json(self, status: int, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-
-def handle_event_client(conn: socket.socket, address: tuple[str, int]) -> None:
+def event_client(conn: socket.socket, address: tuple[str, int]) -> None:
     with conn:
-        buffer = b""
-        conn.settimeout(EVENT_READ_TIMEOUT_SECONDS)
+        buffer = b""; conn.settimeout(EVENT_READ_TIMEOUT_SECONDS)
         while True:
             try:
                 chunk = conn.recv(1024)
-                if not chunk:
-                    if buffer:
-                        response = process_event_frame(buffer, address)
-                        conn.sendall(response.encode("utf-8"))
-                    return
+                if not chunk: return
+                buffer += chunk
+                while b"\n" in buffer:
+                    line, buffer = buffer.split(b"\n", 1); result = process_scan(extract_tag(line), address[0]); conn.sendall(f"{result.get('command', 'DENY')}:{result.get('message', '')}\n".encode())
             except socket.timeout:
                 if buffer:
-                    response = process_event_frame(buffer, address)
-                    conn.sendall(response.encode("utf-8"))
-                    buffer = b""
-                continue
+                    result = process_scan(extract_tag(buffer), address[0]); buffer = b""; conn.sendall(f"{result.get('command', 'DENY')}:{result.get('message', '')}\n".encode())
 
-            buffer += chunk
-
-            while b"\n" in buffer:
-                line, buffer = buffer.split(b"\n", 1)
-                response = process_event_frame(line, address)
-                conn.sendall(response.encode("utf-8"))
-
-
-def process_event_frame(frame: bytes, address: tuple[str, int]) -> str:
-    tag_uid = extract_tag_from_bytes(frame)
-    try:
-        result = process_scan(tag_uid, DEFAULT_DEVICE_ID, address[0])
-        return f"{result.get('command', 'DENY')}:{result.get('message', '')}\n"
-    except Exception as exc:
-        return f"DENY:{exc}\n"
-
-
-def start_event_server() -> None:
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server.bind((EVENT_SERVER_HOST, EVENT_SERVER_PORT))
-    server.listen(20)
+def event_server() -> None:
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM); server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); server.bind((EVENT_SERVER_HOST, EVENT_SERVER_PORT)); server.listen(20)
     print(f"Event server attivo su {EVENT_SERVER_HOST}:{EVENT_SERVER_PORT}")
-
     while True:
-        conn, address = server.accept()
-        threading.Thread(target=handle_event_client, args=(conn, address), daemon=True).start()
-
+        conn, address = server.accept(); threading.Thread(target=event_client, args=(conn, address), daemon=True).start()
 
 def main() -> None:
-    if EVENT_SERVER_ENABLED:
-        threading.Thread(target=start_event_server, daemon=True).start()
+    bridge.start()
+    if EVENT_SERVER_ENABLED: threading.Thread(target=event_server, daemon=True).start()
+    print(f"Bridge locale: http://{LOCAL_HTTP_HOST}:{LOCAL_HTTP_PORT}; VPS: {ws_url()}")
+    ThreadingHTTPServer((LOCAL_HTTP_HOST, LOCAL_HTTP_PORT), LocalApi).serve_forever()
 
-    httpd = ThreadingHTTPServer((LOCAL_HTTP_HOST, LOCAL_HTTP_PORT), BridgeHttpHandler)
-    print(f"GymFlow bridge locale attivo su http://{LOCAL_HTTP_HOST}:{LOCAL_HTTP_PORT}")
-    print(f"VPS: {VPS_URL}")
-    print(f"Event server: {EVENT_SERVER_HOST}:{EVENT_SERVER_PORT}")
-    print(f"Comando apertura: {DOOR_READER_HOST}:{DOOR_READER_PORT}")
-    httpd.serve_forever()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()

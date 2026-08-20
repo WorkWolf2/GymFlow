@@ -32,5 +32,9 @@ public record UserResponse(
     boolean hasCertificate,
     LocalDate certIssuedDate,
     LocalDate certExpiryDate,
-    String nfcTagUid
+    String nfcTagUid,
+    LocalDateTime lastAccessTime,
+    Long daysSinceLastAccess,
+    String timeAgoText,
+    ClientReturnPredictionResponse returnPrediction
 ) {}

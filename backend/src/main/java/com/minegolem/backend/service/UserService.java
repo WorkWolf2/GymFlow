@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,6 +36,7 @@ public class UserService {
     private final SubscriptionRepository subscriptionRepository;
     private final MedicalCertificateRepository medicalCertificateRepository;
     private final NfcTagRepository nfcTagRepository;
+    private final AccessRepository accessRepository;
     private final FileStorageService fileStorageService;
     private final AuditService auditService;
     private final FiscalCodeService fiscalCodeService;
@@ -202,6 +204,8 @@ public class UserService {
             .map(NfcTag::getTagUid)
             .orElse(null);
 
+        var prediction = computeReturnPrediction(u, hasActiveSub, certStatus);
+
         return new UserResponse(
             u.getId(), u.getClientCode(), u.getFirstName(), u.getLastName(), u.getFullName(),
             u.getEmail(), u.getPhone(), u.getBirthDate(), u.getBirthPlace(), u.getBirthProvince(), u.getSex(), u.getFiscalCode(),
@@ -209,7 +213,157 @@ public class UserService {
             u.getCreatedAt(), hasActiveSub, certStatus, hasCertificate,
             certOpt.map(MedicalCertificate::getIssuedDate).orElse(null),
             certOpt.map(MedicalCertificate::getExpiryDate).orElse(null),
-            nfcUid
+            nfcUid,
+            prediction.lastAccessTime(),
+            prediction.daysSinceLastAccess(),
+            prediction.timeAgoText(),
+            prediction
+        );
+    }
+
+    private com.minegolem.backend.dto.response.ClientReturnPredictionResponse computeReturnPrediction(
+            User u, boolean hasActiveSub, MedicalCertificate.Status certStatus) {
+        var lastAccessOpt = accessRepository.findFirstByUserIdAndGrantedTrueOrderByAccessTimeDesc(u.getId());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastAccessTime = lastAccessOpt.map(com.minegolem.backend.domain.entity.Access::getAccessTime).orElse(null);
+
+        Long daysSince = null;
+        String timeAgoText;
+
+        if (lastAccessTime != null) {
+            daysSince = java.time.Duration.between(lastAccessTime, now).toDays();
+            if (daysSince == 0) {
+                timeAgoText = "Oggi (" + lastAccessTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + ")";
+            } else if (daysSince == 1) {
+                timeAgoText = "Ieri (" + lastAccessTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + ")";
+            } else if (daysSince <= 30) {
+                timeAgoText = daysSince + " giorni fa";
+            } else if (daysSince <= 60) {
+                timeAgoText = (daysSince / 7) + " settimane fa (" + daysSince + " giorni)";
+            } else {
+                timeAgoText = (daysSince / 30) + " mesi fa (" + daysSince + " giorni)";
+            }
+        } else {
+            timeAgoText = "Nessun ingresso registrato";
+        }
+
+        LocalDateTime thirtyDaysAgo = now.minusDays(30);
+        long accessesLast30Days = accessRepository.countByUserIdAndGrantedTrueAndAccessTimeAfter(u.getId(), thirtyDaysAgo);
+
+        int score = 50;
+        List<String> factors = new java.util.ArrayList<>();
+
+        if (lastAccessTime == null) {
+            Long daysSinceCreated = u.getCreatedAt() != null ? java.time.Duration.between(u.getCreatedAt(), now).toDays() : 30L;
+            if (daysSinceCreated <= 7) {
+                score = 75;
+                factors.add("Nuovo iscritto negli ultimi 7 giorni");
+            } else {
+                score = 15;
+                factors.add("Nessun ingresso registrato dall'iscrizione");
+            }
+        } else {
+            if (daysSince == 0) {
+                score = 98;
+                factors.add("Ingresso registrato oggi");
+            } else if (daysSince == 1) {
+                score = 92;
+                factors.add("Ultimo ingresso registrato ieri");
+            } else if (daysSince <= 3) {
+                score = 85;
+                factors.add("Presente in palestra " + daysSince + " giorni fa");
+            } else if (daysSince <= 7) {
+                score = 75;
+                factors.add("Ultimo ingresso " + daysSince + " giorni fa");
+            } else if (daysSince <= 14) {
+                score = 55;
+                factors.add("Assente da oltre 1 settimana (" + daysSince + " giorni)");
+            } else if (daysSince <= 30) {
+                score = 35;
+                factors.add("Assente da oltre 2 settimane (" + daysSince + " giorni)");
+            } else if (daysSince <= 60) {
+                score = 18;
+                factors.add("Assente da oltre 1 mese (" + daysSince + " giorni)");
+            } else {
+                score = 5;
+                factors.add("Assente da più di 2 mesi (" + daysSince + " giorni)");
+            }
+        }
+
+        if (accessesLast30Days >= 12) {
+            score += 10;
+            factors.add("Alta frequenza: " + accessesLast30Days + " ingressi negli ultimi 30 giorni");
+        } else if (accessesLast30Days >= 6) {
+            score += 5;
+            factors.add("Buona frequenza: " + accessesLast30Days + " ingressi negli ultimi 30 giorni");
+        } else if (accessesLast30Days > 0) {
+            score += 2;
+            factors.add(accessesLast30Days + " ingressi negli ultimi 30 giorni");
+        } else if (lastAccessTime != null) {
+            score -= 10;
+            factors.add("Nessun ingresso negli ultimi 30 giorni");
+        }
+
+        if (hasActiveSub) {
+            score += 5;
+            factors.add("Abbonamento attivo");
+        } else {
+            score -= 20;
+            factors.add("Abbonamento non attivo o scaduto");
+        }
+
+        if (certStatus == MedicalCertificate.Status.VALID) {
+            factors.add("Certificato medico valido");
+        } else if (certStatus == MedicalCertificate.Status.EXPIRING_SOON) {
+            factors.add("Certificato medico in scadenza");
+        } else {
+            score -= 5;
+            factors.add("Certificato medico scaduto o mancante");
+        }
+
+        score = Math.max(0, Math.min(100, score));
+
+        int activeBlocks;
+        String level;
+        String label;
+        String color;
+        String badgeClass;
+
+        if (score >= 80) {
+            activeBlocks = 5;
+            level = "VERY_HIGH";
+            label = "Il cliente torna";
+            color = "#10b981";
+            badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        } else if (score >= 60) {
+            activeBlocks = 4;
+            level = "HIGH";
+            label = "Probabile ritorno";
+            color = "#84cc16";
+            badgeClass = "bg-lime-500/10 text-lime-400 border border-lime-500/20";
+        } else if (score >= 40) {
+            activeBlocks = 3;
+            level = "MEDIUM";
+            label = "Frequenza incerta";
+            color = "#eab308";
+            badgeClass = "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20";
+        } else if (score >= 20) {
+            activeBlocks = 2;
+            level = "LOW";
+            label = "A rischio abbandono";
+            color = "#f97316";
+            badgeClass = "bg-orange-500/10 text-orange-400 border border-orange-500/20";
+        } else {
+            activeBlocks = 1;
+            level = "VERY_LOW";
+            label = "Il cliente non torna";
+            color = "#ef4444";
+            badgeClass = "bg-red-500/10 text-red-400 border border-red-500/20";
+        }
+
+        return new com.minegolem.backend.dto.response.ClientReturnPredictionResponse(
+            score, level, label, color, badgeClass, activeBlocks,
+            lastAccessTime, daysSince, timeAgoText, accessesLast30Days, factors
         );
     }
 

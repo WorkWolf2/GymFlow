@@ -13,7 +13,7 @@ import com.minegolem.backend.repository.AccessRepository;
 import com.minegolem.backend.repository.GymRepository;
 import com.minegolem.backend.repository.NfcTagRepository;
 import com.minegolem.backend.nfc.NfcAccessValidator;
-import com.minegolem.backend.nfc.NfcConnectionHandler;
+import com.minegolem.backend.nfc.AccessBridgeWebSocketHandler;
 import com.minegolem.backend.nfc.NfcEventPublisher;
 import com.minegolem.backend.security.StaffUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class AccessService {
     private final GymRepository gymRepository;
     private final NfcTagRepository nfcTagRepository;
     private final NfcAccessValidator accessValidator;
-    private final NfcConnectionHandler nfcConnectionHandler;
+    private final AccessBridgeWebSocketHandler accessBridgeWebSocketHandler;
     private final NfcEventPublisher nfcEventPublisher;
 
     @Value("${access.bridge.api-key:}")
@@ -109,14 +109,14 @@ public class AccessService {
         nfcEventPublisher.publishAccessEvent(saved, result.user(), "manual");
 
         if (result.granted()) {
-            nfcConnectionHandler.openDoor();
+            accessBridgeWebSocketHandler.sendOpenDoor(currentGymId(), bridgeRelaySeconds, "manual-validation");
         }
 
         return AccessResponse.from(saved);
     }
 
     public boolean openDoor() {
-        return nfcConnectionHandler.openDoor();
+        return accessBridgeWebSocketHandler.sendOpenDoor(currentGymId(), bridgeRelaySeconds, "manual-open-door");
     }
 
     public boolean isValidBridgeApiKey(String apiKey) {

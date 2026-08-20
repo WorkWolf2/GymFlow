@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
-@ConditionalOnProperty(name = "nfc.tcp.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "nfc.tcp.enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class NfcGatewayServer {

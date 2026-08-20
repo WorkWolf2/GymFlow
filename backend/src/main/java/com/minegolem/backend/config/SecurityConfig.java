@@ -52,6 +52,7 @@ public class SecurityConfig {
                         // 🔥 API PROTETTE (SOLO QUESTE USANO JWT)
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/access-bridge/**").permitAll()
+                        .requestMatchers("/ws/access-bridge").permitAll()
                         .requestMatchers("/api/**").authenticated()
 
                         // 🟢 UI COMPLETAMENTE APERTA (THYMELEAF)

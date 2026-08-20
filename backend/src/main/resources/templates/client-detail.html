@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it" xmlns:th="http://www.thymeleaf.org"
     th:replace="~{fragments/layout :: layout(title=${title}, hideNav=false, content=~{::div.client-detail-content})}">
 
@@ -38,7 +38,11 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <nav class="flex flex-wrap gap-2 border-b border-surface-border pb-3 text-sm" aria-label="Sezioni cliente">
+            <a href="#client-data" class="btn-ghost">Dati cliente</a><a href="#dossier-section" class="btn-ghost">Dossier</a><a href="#dossier-progress-form" class="btn-ghost">Progressi</a><a href="#dossier-notes" class="btn-ghost">Note</a><a href="#dossier-documents" class="btn-ghost">Documenti</a>
+        </nav>
+
+        <div id="client-data" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Abbonamenti -->
             <div class="card overflow-hidden flex flex-col mb-5">
                 <div class="px-5 py-4 border-b border-surface-border">
@@ -61,13 +65,77 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
-            <div class="card overflow-hidden">
+            <!-- Accesso e Presenze + Algoritmo Predittivo -->
+            <div class="card overflow-hidden flex flex-col justify-between">
                 <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
-                    <h2 class="font-medium text-foreground">Accesso</h2>
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="door-open" class="w-4 h-4 text-accent"></i>
+                        <h2 class="font-medium text-foreground">Accesso e Presenze</h2>
+                    </div>
                     <span class="text-xs text-foreground-muted text-right" id="current-nfc-tag">Nessun tag assegnato</span>
+                </div>
+
+                <div class="p-5 space-y-5">
+                    <!-- Ultimo Accesso e Tempo Trascorso -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 rounded-lg bg-surface-hover/50 border border-surface-border">
+                        <div>
+                            <span class="text-xs text-foreground-muted block font-medium uppercase tracking-wider mb-1">Ultimo accesso in palestra</span>
+                            <div class="flex items-center gap-2 text-foreground font-semibold text-sm">
+                                <i data-lucide="calendar-clock" class="w-4 h-4 text-accent shrink-0"></i>
+                                <span id="last-access-datetime">Caricamento...</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-xs text-foreground-muted block font-medium uppercase tracking-wider mb-1">Tempo dall'ultimo ingresso</span>
+                            <div class="flex items-center gap-2 font-semibold text-sm" id="time-ago-wrapper">
+                                <i data-lucide="history" class="w-4 h-4 text-foreground-muted shrink-0"></i>
+                                <span id="days-since-last-access" class="text-foreground">Caricamento...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Algoritmo Predittivo (Ritorno Cliente) -->
+                    <div class="p-4 rounded-xl border border-surface-border bg-gradient-to-br from-surface to-surface-active/30 space-y-3">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+                                <span class="text-xs font-semibold text-foreground tracking-wide uppercase">Algoritmo Predittivo Ritorno</span>
+                            </div>
+                            <span id="prediction-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold">Caricamento...</span>
+                        </div>
+
+                        <!-- Quadratini colorati con bordi stondati -->
+                        <div class="flex items-center gap-2 pt-1" id="prediction-blocks-container">
+                            <div class="prediction-block w-8 h-8 rounded-md border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm" data-block="1">1</div>
+                            <div class="prediction-block w-8 h-8 rounded-md border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm" data-block="2">2</div>
+                            <div class="prediction-block w-8 h-8 rounded-md border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm" data-block="3">3</div>
+                            <div class="prediction-block w-8 h-8 rounded-md border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm" data-block="4">4</div>
+                            <div class="prediction-block w-8 h-8 rounded-md border flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm" data-block="5">5</div>
+                        </div>
+
+                        <!-- Details & Factors -->
+                        <div class="text-xs text-foreground-muted pt-2 border-t border-surface-border/60">
+                            <div class="flex items-center justify-between font-medium mb-1.5">
+                                <span>Indice di fidelizzazione calcolato:</span>
+                                <span id="prediction-score-text" class="font-bold text-foreground">0%</span>
+                            </div>
+                            <ul id="prediction-factors-list" class="space-y-1 text-[11px] text-foreground-subtle">
+                                <!-- Factors dynamically injected -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Storico Accessi Recenti -->
+                    <div>
+                        <span class="text-xs text-foreground-muted block font-medium mb-2 uppercase tracking-wider">Storico ingressi recenti</span>
+                        <div id="recent-user-accesses" class="divide-y divide-surface-border rounded-lg border border-surface-border max-h-[160px] overflow-y-auto text-xs">
+                            <p class="p-3 text-center text-foreground-subtle">Caricamento ingressi...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            <!-- Certificato Medico -->
             <div class="card overflow-hidden">
                 <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between">
                     <h2 class="font-medium text-foreground">Certificato Medico</h2>
@@ -91,6 +159,20 @@
                 <p class="md:col-span-2 text-sm text-foreground-subtle text-center">Nessun documento caricato</p>
             </div>
         </div>
+
+        <!-- Dossier cliente: contenuto aggiuntivo separato dalla scheda anagrafica -->
+        <section class="space-y-6" id="dossier-section">
+            <div class="flex items-center justify-between gap-3">
+                <div><h2 class="text-xl font-semibold text-foreground">Dossier</h2><p class="text-sm text-foreground-muted">Note, progressi, allegati e informazioni aggiuntive.</p></div>
+                <div class="flex flex-wrap items-center gap-2 text-xs text-foreground-muted"><label><input id="print-notes" type="checkbox" checked> Note</label><label><input id="print-progress" type="checkbox" checked> Progressi</label><label><input id="print-fields" type="checkbox" checked> Note aggiuntive</label><button id="download-dossier-btn" class="btn-ghost flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i>Scarica dossier</button></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Note</h3></div><form id="dossier-note-form" class="p-5 space-y-3"><textarea id="dossier-note-content" required maxlength="10000" rows="3" class="input" placeholder="Aggiungi una nota..."></textarea><button class="btn-primary" type="submit">Salva nota</button></form><div id="dossier-notes" class="divide-y divide-surface-border"><p class="p-5 text-sm text-foreground-subtle">Caricamento...</p></div></div>
+                <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Note aggiuntive</h3></div><form id="dossier-field-form" class="p-5 space-y-3"><textarea id="dossier-field-value" required maxlength="10000" rows="3" class="input" placeholder="Aggiungi una nota libera..."></textarea><button class="btn-primary" type="submit">Salva nota</button></form><div id="dossier-fields" class="divide-y divide-surface-border"><p class="p-5 text-sm text-foreground-subtle">Caricamento...</p></div></div>
+            </div>
+            <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Monitoraggio progressi</h3></div><form id="dossier-progress-form" class="p-5 grid grid-cols-2 md:grid-cols-5 gap-3"><input id="progress-date" type="date" required class="input"><input id="progress-weight" type="number" step="0.01" min="0" class="input" placeholder="Peso kg"><input id="progress-height" type="number" step="0.01" min="0" class="input" placeholder="Altezza cm"><input id="progress-fat" type="number" step="0.01" min="0" max="100" class="input" placeholder="Massa grassa %"><input id="progress-muscle" type="number" step="0.01" min="0" class="input" placeholder="Massa muscolare"><textarea id="progress-observations" class="input col-span-2 md:col-span-4" placeholder="Osservazioni (opzionale)"></textarea><button class="btn-primary" type="submit">Registra</button></form><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-surface-active text-foreground-muted"><tr><th class="p-3 text-left">Data</th><th class="p-3 text-left">Peso</th><th class="p-3 text-left">Altezza</th><th class="p-3 text-left">Grassa</th><th class="p-3 text-left">Muscolare</th><th></th></tr></thead><tbody id="dossier-progress"></tbody></table></div></div>
+            <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Documenti dossier</h3></div><form id="dossier-document-form" class="p-5 grid grid-cols-1 md:grid-cols-4 gap-3"><input id="dossier-document-name" class="input" placeholder="Nome documento"><input id="dossier-document-description" class="input" placeholder="Descrizione"><input id="dossier-document-file" required type="file" class="input"><button class="btn-primary" type="submit">Carica</button></form><div id="dossier-documents" class="divide-y divide-surface-border"><p class="p-5 text-sm text-foreground-subtle">Caricamento...</p></div></div>
+        </section>
 
         <div class="card overflow-hidden mb-5">
             <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between gap-3">
@@ -136,8 +218,7 @@
                     </div>
                     <p class="text-[10px] text-foreground-subtle">L'incasso, comprensivo dello sconto, verrà registrato automaticamente in data odierna.</p>
                     <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di
-                            Pagamento</label>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di Pagamento</label>
                         <select id="sub-payment-method" required class="input">
                             <option value="CASH">Contanti</option>
                             <option value="CARD">Carta / Bancomat</option>
@@ -319,8 +400,7 @@
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data di
-                                Nascita</label>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data di Nascita</label>
                             <input type="date" id="edit-birth-date" class="input" />
                         </div>
                         <div>
@@ -366,6 +446,24 @@
             const clientId = /*[[${clientId}]]*/ '';
 
             $(document).ready(function () {
+                function dossierApi(path, options) { return $.ajax(Object.assign({ url: '/api/users/' + clientId + '/dossier' + path }, options || {})); }
+                function esc(value) { return $('<div>').text(value || '').html(); }
+                function dossierDate(value) { return value ? new Date(value).toLocaleDateString('it-IT') : '—'; }
+                function loadDossier() {
+                    dossierApi('', { type: 'GET' }).done(function (d) {
+                        $('#dossier-notes').html(d.notes.length ? d.notes.map(function(n) { return '<div class="p-4"><div class="flex justify-between gap-3"><span class="text-xs text-foreground-muted">' + dossierDate(n.createdAt) + (n.authorName ? ' · ' + esc(n.authorName) : '') + '</span><button data-id="' + n.id + '" class="delete-dossier-note text-xs text-red-400">Elimina</button></div><p class="mt-1 text-sm whitespace-pre-wrap">' + esc(n.content) + '</p></div>'; }).join('') : '<p class="p-5 text-sm text-foreground-subtle">Nessuna nota nel dossier.</p>');
+                        $('#dossier-fields').html(d.fields.length ? d.fields.map(function(f) { return '<div class="p-4 flex justify-between gap-3"><p class="text-sm whitespace-pre-wrap">' + esc(f.fieldValue) + '</p><button data-id="' + f.id + '" class="delete-dossier-field text-xs text-red-400">Elimina</button></div>'; }).join('') : '<p class="p-5 text-sm text-foreground-subtle">Nessuna nota aggiuntiva.</p>');
+                        $('#dossier-progress').html(d.progress.length ? d.progress.map(function(p) { return '<tr class="border-t border-surface-border"><td class="p-3">' + dossierDate(p.recordedDate) + '</td><td class="p-3">' + (p.weight || '—') + '</td><td class="p-3">' + (p.height || '—') + '</td><td class="p-3">' + (p.bodyFatPercentage || '—') + '</td><td class="p-3">' + (p.muscleMass || '—') + '</td><td><button data-id="' + p.id + '" class="delete-dossier-progress text-xs text-red-400">Elimina</button></td></tr>'; }).join('') : '<tr><td colspan="6" class="p-5 text-center text-sm text-foreground-subtle">Nessuna rilevazione.</td></tr>');
+                        $('#dossier-documents').html(d.documents.length ? d.documents.map(function(x) { return '<div class="p-4 flex justify-between gap-3"><span><a class="text-accent hover:underline" target="_blank" href="' + esc(x.url) + '">' + esc(x.name) + '</a><small class="block text-foreground-muted">' + esc(x.description) + '</small></span><button data-id="' + x.id + '" class="delete-dossier-document text-xs text-red-400">Elimina</button></div>'; }).join('') : '<p class="p-5 text-sm text-foreground-subtle">Nessun allegato.</p>');
+                    }).fail(function () { $('#dossier-notes').html('<p class="p-5 text-sm text-red-400">Impossibile caricare il dossier.</p>'); });
+                }
+                $('#dossier-note-form').submit(function(e) { e.preventDefault(); dossierApi('/notes',{type:'POST',contentType:'application/json',data:JSON.stringify({content:$('#dossier-note-content').val()})}).done(function(){ $('#dossier-note-form')[0].reset();loadDossier(); }).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile salvare la nota');}); });
+                $('#dossier-field-form').submit(function(e) { e.preventDefault(); dossierApi('/fields',{type:'POST',contentType:'application/json',data:JSON.stringify({fieldName:'Nota aggiuntiva',fieldValue:$('#dossier-field-value').val(),valueType:'TEXT'})}).done(function(){ $('#dossier-field-form')[0].reset();loadDossier(); }).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile salvare la nota');}); });
+                $('#dossier-progress-form').submit(function(e) { e.preventDefault(); var val=function(id){return $(id).val() ? parseFloat($(id).val()) : null;};dossierApi('/progress',{type:'POST',contentType:'application/json',data:JSON.stringify({recordedDate:$('#progress-date').val(),weight:val('#progress-weight'),height:val('#progress-height'),bodyFatPercentage:val('#progress-fat'),muscleMass:val('#progress-muscle'),observations:$('#progress-observations').val()})}).done(function(){$('#dossier-progress-form')[0].reset();loadDossier();}).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile registrare il progresso');}); });
+                $('#dossier-document-form').submit(function(e) { e.preventDefault(); var fd=new FormData();fd.append('file',$('#dossier-document-file')[0].files[0]);fd.append('name',$('#dossier-document-name').val());fd.append('description',$('#dossier-document-description').val());dossierApi('/documents',{type:'POST',data:fd,processData:false,contentType:false}).done(function(){$('#dossier-document-form')[0].reset();loadDossier();}).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile caricare il documento');}); });
+                $(document).on('click','.delete-dossier-note,.delete-dossier-field,.delete-dossier-progress,.delete-dossier-document',function(){if(!confirm('Eliminare definitivamente questo elemento dal dossier?'))return;var type=$(this).hasClass('delete-dossier-note')?'notes':$(this).hasClass('delete-dossier-field')?'fields':$(this).hasClass('delete-dossier-progress')?'progress':'documents';dossierApi('/'+type+'/'+$(this).data('id'),{type:'DELETE'}).done(loadDossier);});
+                $('#download-dossier-btn').click(function(){ var btn=$(this), original=btn.html(), token=localStorage.getItem('jwt_token'); btn.prop('disabled',true); fetch('/api/users/' + clientId + '/dossier/pdf?includeNotes=' + $('#print-notes').is(':checked') + '&includeProgress=' + $('#print-progress').is(':checked') + '&includeFields=' + $('#print-fields').is(':checked'),{headers:token?{'Authorization':'Bearer '+token}:{}}).then(function(response){if(!response.ok)throw new Error('PDF non generato');var disposition=response.headers.get('Content-Disposition')||'',match=disposition.match(/filename=\"?([^\";]+)\"?/);return response.blob().then(function(blob){return {blob:blob,filename:match?match[1]:'dossier_cliente.pdf'};});}).then(function(result){var url=window.URL.createObjectURL(result.blob),a=document.createElement('a');a.href=url;a.download=result.filename;document.body.appendChild(a);a.click();a.remove();window.URL.revokeObjectURL(url);}).catch(function(){alert('Errore durante il download del dossier PDF');}).finally(function(){btn.prop('disabled',false).html(original);if(window.lucide)lucide.createIcons();}); });
+                loadDossier();
                 let provincesLoaded = FiscalCode.loadProvinceSelect('#edit-birth-province');
                 let currentSubscriptions = [];
 
@@ -439,6 +537,88 @@
                                 badge.text("SCADUTO");
                                 badge.addClass("bg-danger/10 text-danger border border-danger/20");
                             }
+
+                            // ==========================================
+                            // ACCESSI E ALGORITMO PREDITTIVO
+                            // ==========================================
+                            if (user.lastAccessTime) {
+                                const dtParts = user.lastAccessTime.split('T');
+                                const formattedDt = formatDate(dtParts[0]) + (dtParts[1] ? ' ore ' + dtParts[1].substring(0, 5) : '');
+                                $('#last-access-datetime').text(formattedDt);
+                            } else {
+                                $('#last-access-datetime').text('Nessun ingresso registrato');
+                            }
+
+                            $('#days-since-last-access').text(user.timeAgoText || 'Nessun ingresso');
+
+                            if (user.returnPrediction) {
+                                const pred = user.returnPrediction;
+                                $('#prediction-badge')
+                                    .attr('class', 'px-2.5 py-1 rounded-full text-xs font-semibold ' + (pred.badgeClass || 'bg-surface-border text-foreground-muted'))
+                                    .text(pred.score + '% — ' + pred.label);
+
+                                $('#prediction-score-text').text(pred.score + '% (' + pred.label + ')');
+
+                                const factorsList = $('#prediction-factors-list').empty();
+                                if (pred.factors && pred.factors.length > 0) {
+                                    pred.factors.forEach(function (f) {
+                                        factorsList.append(`<li class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${pred.color}"></span>${f}</li>`);
+                                    });
+                                }
+
+                                const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#10b981'];
+                                $('#prediction-blocks-container .prediction-block').each(function (index) {
+                                    const blockNum = index + 1;
+                                    const blockColor = colors[index];
+                                    if (blockNum <= pred.activeBlocks) {
+                                        $(this).css({
+                                            'background-color': blockColor,
+                                            'border-color': blockColor,
+                                            'color': '#ffffff',
+                                            'box-shadow': '0 0 10px ' + blockColor + '66',
+                                            'opacity': '1'
+                                        }).text(blockNum);
+                                    } else {
+                                        $(this).css({
+                                            'background-color': 'rgba(255, 255, 255, 0.05)',
+                                            'border-color': 'rgba(255, 255, 255, 0.1)',
+                                            'color': 'rgba(255, 255, 255, 0.25)',
+                                            'box-shadow': 'none',
+                                            'opacity': '0.3'
+                                        }).text(blockNum);
+                                    }
+                                });
+                            }
+
+                            // Fetch user's recent access logs
+                            $.ajax({
+                                url: '/api/accesses/user/' + clientId,
+                                type: 'GET',
+                                success: function (accesses) {
+                                    const list = $('#recent-user-accesses').empty();
+                                    if (!accesses || accesses.length === 0) {
+                                        list.html('<p class="p-3 text-center text-foreground-subtle">Nessun ingresso registrato</p>');
+                                        return;
+                                    }
+                                    accesses.slice(0, 10).forEach(function (acc) {
+                                        const dt = acc.accessTime ? acc.accessTime.replace('T', ' ').substring(0, 16) : '—';
+                                        const statusBadge = acc.granted
+                                            ? '<span class="text-emerald-400 font-medium flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Consentito</span>'
+                                            : '<span class="text-rose-400 font-medium flex items-center gap-1"><i data-lucide="x-circle" class="w-3 h-3"></i> Negato</span>';
+
+                                        list.append(`
+                                            <div class="px-3 py-2 flex items-center justify-between hover:bg-surface-hover/60 transition-colors">
+                                                <div class="flex items-center gap-2">
+                                                    <i data-lucide="log-in" class="w-3.5 h-3.5 text-foreground-muted"></i>
+                                                    <span class="font-mono text-foreground">${dt}</span>
+                                                </div>
+                                                <div>${statusBadge}</div>
+                                            </div>
+                                        `);
+                                    });
+                                    if (window.lucide) lucide.createIcons();
+                                }
+                            });
                         }
                     });
                 }
@@ -481,7 +661,6 @@
                 }
 
                 function loadData() {
-
                     // Abbonamenti
                     $.ajax({
                         url: '/api/subscriptions/user/' + clientId,
@@ -506,22 +685,22 @@
                                         : 'text-danger';
 
                                 list.append(`
-                        <div class="px-5 py-3 flex items-center justify-between gap-3 group">
-                            <div class="min-w-0">
-                                <p class="text-sm font-medium text-foreground">${s.subscriptionType.name}</p>
-                                <p class="text-xs text-foreground-muted">
-                                    Scade il
-                                    <span class="${activeClass} font-medium">${end}</span>
-                                </p>
-                            </div>
-                            <button type="button"
-                                class="delete-sub-btn shrink-0 p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors"
-                                data-id="${s.id}"
-                                title="Rimuovi abbonamento">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    `);
+                                    <div class="px-5 py-3 flex items-center justify-between gap-3 group">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-medium text-foreground">${s.subscriptionType.name}</p>
+                                            <p class="text-xs text-foreground-muted">
+                                                Scade il
+                                                <span class="${activeClass} font-medium">${end}</span>
+                                            </p>
+                                        </div>
+                                        <button type="button"
+                                            class="delete-sub-btn shrink-0 p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors"
+                                            data-id="${s.id}"
+                                            title="Rimuovi abbonamento">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                `);
                             });
                             if (window.lucide) lucide.createIcons();
                         }
@@ -545,7 +724,7 @@
                             payments.forEach(function (p) {
                                 const isExpense = p.type === 'EXPENSE';
                                 const amountVal = typeof p.amount === 'number' ? p.amount : parseFloat(p.amount || 0);
-                                const amount = (isExpense ? 'âˆ’ ' : '') + new Intl.NumberFormat('it-IT', {
+                                const amount = (isExpense ? '− ' : '') + new Intl.NumberFormat('it-IT', {
                                     style: 'currency',
                                     currency: 'EUR'
                                 }).format(Math.abs(amountVal));
@@ -554,18 +733,18 @@
                                 const date = formatDate(p.paymentDate);
 
                                 list.append(`
-                        <div class="px-5 py-3 flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium ${amountClass}">${amount}</p>
-                                <p class="text-xs text-foreground-muted">
-                                    ${date} - ${p.method}${isExpense ? ' · Uscita' : ''}
-                                </p>
-                            </div>
-                            <div class="text-xs text-foreground-muted text-right">
-                                ${p.notes || ''}
-                            </div>
-                        </div>
-                    `);
+                                    <div class="px-5 py-3 flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium ${amountClass}">${amount}</p>
+                                            <p class="text-xs text-foreground-muted">
+                                                ${date} - ${p.method}${isExpense ? ' · Uscita' : ''}
+                                            </p>
+                                        </div>
+                                        <div class="text-xs text-foreground-muted text-right">
+                                            ${p.notes || ''}
+                                        </div>
+                                    </div>
+                                `);
                             });
                         }
                     });
@@ -577,7 +756,7 @@
                             return;
                         }
                         vouchers.forEach(function (v) {
-                            const cost = v.cost == null ? '—' : new Intl.NumberFormat('it-IT', {style: 'currency', currency: 'EUR'}).format(v.cost);
+                            const cost = v.cost == null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v.cost);
                             const dates = (v.startDate ? formatDate(v.startDate) : '—') + ' → ' + (v.endDate ? formatDate(v.endDate) : '—');
                             list.append(`<div class="px-5 py-3 flex items-center justify-between gap-3">
                                 <div class="min-w-0"><p class="text-sm font-medium text-foreground">${v.name || 'Voucher senza nome'}</p>
@@ -729,18 +908,16 @@
                         type: 'GET',
                         success: function (types) {
                             const select = $('#sub-type-id');
-
                             select.empty();
                             typesMap = {};
 
                             types.forEach(function (t) {
                                 typesMap[t.id] = t;
-
                                 select.append(`
-                        <option value="${t.id}">
-                            ${t.name} (${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0)})
-                        </option>
-                    `);
+                                    <option value="${t.id}">
+                                        ${t.name} (${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0)})
+                                    </option>
+                                `);
                             });
 
                             if (types.length > 0) {
@@ -750,7 +927,6 @@
                             }
 
                             $('#sub-start-date')[0].valueAsDate = new Date();
-
                             $('#sub-modal').removeClass('hidden');
                         }
                     });
@@ -758,7 +934,6 @@
 
                 $('#sub-type-id').change(function () {
                     const id = $(this).val();
-
                     if (typesMap[id]) {
                         $('#sub-price').val(typesMap[id].defaultPrice);
                         $('#sub-discount').val('');
@@ -811,7 +986,6 @@
                         url: '/api/nfc/unassigned',
                         type: 'GET',
                         success: function (tags) {
-
                             const select = $('#nfc-tag-uid');
                             select.empty();
 
@@ -819,18 +993,15 @@
                                 select.append(
                                     '<option value="">Nessun tag rilevato</option>'
                                 );
-
                                 $('#submit-nfc-btn').prop('disabled', true);
                             } else {
-
                                 tags.forEach(function (tag) {
                                     select.append(`
-                            <option value="${tag.tagUid}">
-                                ${tag.tagUid}
-                            </option>
-                        `);
+                                        <option value="${tag.tagUid}">
+                                            ${tag.tagUid}
+                                        </option>
+                                    `);
                                 });
-
                                 $('#submit-nfc-btn').prop('disabled', false);
                             }
 
@@ -845,12 +1016,8 @@
 
                 $('#nfc-form').submit(function (e) {
                     e.preventDefault();
-
                     const tagUid = $('#nfc-tag-uid').val();
-
-                    if (!tagUid) {
-                        return;
-                    }
+                    if (!tagUid) return;
 
                     $('#submit-nfc-btn')
                         .prop('disabled', true)
@@ -864,7 +1031,7 @@
                             userId: clientId
                         },
                         success: function (tag) {
-                            $('#current-nfc-tag').text(tag.tagUid);
+                            $('#current-nfc-tag').text('Tag NFC ' + tag.tagUid);
                             $('#nfc-modal').addClass('hidden');
                         },
                         error: function () {
@@ -879,7 +1046,7 @@
                 });
 
                 // =========================
-                // CERTIFICATO
+                // CERTIFICATO & VOUCHER & DOCS
                 // =========================
 
                 $('#new-voucher-btn').click(function () {
@@ -895,8 +1062,10 @@
                     $('#submit-voucher-btn').prop('disabled', true).text('Salvataggio...');
                     $.ajax({
                         url: '/api/users/' + clientId + '/vouchers', type: 'POST', contentType: 'application/json',
-                        data: JSON.stringify({name: $('#voucher-name').val() || null, code: $('#voucher-code').val() || null,
-                            cost: $('#voucher-cost').val() || null, startDate: start || null, endDate: end || null}),
+                        data: JSON.stringify({
+                            name: $('#voucher-name').val() || null, code: $('#voucher-code').val() || null,
+                            cost: $('#voucher-cost').val() || null, startDate: start || null, endDate: end || null
+                        }),
                         success: function () { $('#voucher-modal').addClass('hidden'); loadData(); },
                         error: function (xhr) { alert(xhr.responseJSON?.detail || 'Impossibile salvare il voucher'); },
                         complete: function () { $('#submit-voucher-btn').prop('disabled', false).text('Salva'); }
@@ -904,8 +1073,10 @@
                 });
                 $(document).on('click', '.delete-voucher-btn', function () {
                     if (!confirm('Eliminare questo voucher?')) return;
-                    $.ajax({url: '/api/vouchers/' + $(this).data('id'), type: 'DELETE', success: loadData,
-                        error: function () { alert('Impossibile eliminare il voucher'); }});
+                    $.ajax({
+                        url: '/api/vouchers/' + $(this).data('id'), type: 'DELETE', success: loadData,
+                        error: function () { alert('Impossibile eliminare il voucher'); }
+                    });
                 });
 
                 $('#manage-cert-btn').click(function () {
@@ -966,10 +1137,7 @@
                     });
                 });
 
-                // =========================
                 // DOCUMENTI
-                // =========================
-
                 $('#manage-docs-btn').click(function () {
                     $('#doc-front-file').val('');
                     $('#doc-back-file').val('');
@@ -1122,8 +1290,3 @@
 </body>
 
 </html>
-
-
-
-
-
