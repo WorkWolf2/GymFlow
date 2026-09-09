@@ -16,6 +16,7 @@
         <div class="card overflow-hidden">
             <div class="flex items-center gap-4 px-5 py-2.5 border-b border-surface-border bg-background-tertiary">
                 <div class="flex-1 text-xs font-medium text-foreground-muted">Nome Piano</div>
+                <div class="w-32 text-xs font-medium text-foreground-muted">Tipo</div>
                 <div class="flex-1 text-xs font-medium text-foreground-muted">Prezzo</div>
                 <div class="flex-1 text-xs font-medium text-foreground-muted">Scadenza</div>
                 <div class="w-16 shrink-0"></div>
@@ -28,38 +29,57 @@
         <div id="subscription-modal" class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
             <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
-                    <h2 class="text-lg font-semibold text-foreground">Nuovo Piano Abbonamento</h2>
+                    <h2 class="text-lg font-semibold text-foreground">Nuovo Piano / Pacchetto</h2>
                     <button class="close-modal text-foreground-muted hover:text-foreground transition-colors">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
                 <form id="subscription-form" class="p-6 space-y-4">
                     <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Nome Piano</label>
-                        <input type="text" id="sub-name" required class="input" placeholder="es. Mensile Base" />
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Nome Piano / Pacchetto</label>
+                        <input type="text" id="sub-name" required class="input" placeholder="es. Pacchetto 10 Ingressi, Mensile Base" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tipo</label>
+                        <select id="sub-type" class="input" required>
+                            <option value="ABBONAMENTO">Abbonamento</option>
+                            <option value="PACCHETTO">Pacchetto</option>
+                            <option value="ASSICURAZIONE">Assicurazione</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Colore Associato</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" id="sub-color" value="#6366f1" class="w-10 h-10 rounded cursor-pointer border border-surface-border bg-transparent p-0.5" />
+                            <input type="text" id="sub-color-hex" value="#6366f1" class="input flex-1 font-mono text-xs uppercase" placeholder="#6366f1" />
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-2 flex-wrap" id="preset-colors">
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#6366f1" data-color="#6366f1"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#8b5cf6" data-color="#8b5cf6"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#ec4899" data-color="#ec4899"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#ef4444" data-color="#ef4444"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#f97316" data-color="#f97316"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#f59e0b" data-color="#f59e0b"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#10b981" data-color="#10b981"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#06b6d4" data-color="#06b6d4"></button>
+                            <button type="button" class="w-6 h-6 rounded-md color-preset border border-white/20 transition-transform hover:scale-110" style="background:#3b82f6" data-color="#3b82f6"></button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo (EUR)</label>
                         <input type="number" step="0.01" min="0" id="sub-price" required class="input" placeholder="es. 49.99" />
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Validita (Giorni)</label>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Validità (Giorni)</label>
                         <input type="number" id="sub-days" min="1" required class="input" placeholder="es. 30" />
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Fine fissa (opzionale)</label>
                         <input type="date" id="sub-forced-expiry" class="input" />
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tipo</label>
-                        <select id="sub-type" class="input" required>
-                            <option value="ABBONAMENTO">Abbonamento</option>
-                            <option value="ASSICURAZIONE">Assicurazione</option>
-                        </select>
-                    </div>
                     <div class="pt-4 flex items-center justify-end gap-3">
                         <button type="button" class="close-modal btn-ghost">Annulla</button>
-                        <button type="submit" id="submit-sub-btn" class="btn-primary">Crea Piano</button>
+                        <button type="submit" id="submit-sub-btn" class="btn-primary">Crea</button>
                     </div>
                 </form>
             </div>
@@ -70,6 +90,21 @@
                 function formatDate(value) {
                     return value ? new Date(value).toLocaleDateString('it-IT') : '-';
                 }
+
+                $('#sub-color').on('input', function() {
+                    $('#sub-color-hex').val($(this).val());
+                });
+                $('#sub-color-hex').on('input', function() {
+                    const val = $(this).val();
+                    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                        $('#sub-color').val(val);
+                    }
+                });
+                $(document).on('click', '.color-preset', function() {
+                    const color = $(this).data('color');
+                    $('#sub-color').val(color);
+                    $('#sub-color-hex').val(color);
+                });
 
                 function loadSubscriptionTypes() {
                     $.ajax({
@@ -83,13 +118,28 @@
                                 return;
                             }
                             data.forEach(function(sub) {
-                            const price = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(sub.defaultPrice || 0);
-                            const expiryText = sub.forcedExpiry
-                                ? `${sub.validityDays || '-'} giorni, fino al ${formatDate(sub.forcedExpiry)}`
-                                : `${sub.validityDays || '-'} giorni`;
-                            list.append(`
+                                const price = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(sub.defaultPrice || 0);
+                                const expiryText = sub.forcedExpiry
+                                    ? `${sub.validityDays || '-'} giorni, fino al ${formatDate(sub.forcedExpiry)}`
+                                    : `${sub.validityDays || '-'} giorni`;
+                                
+                                const color = sub.color || '#6366f1';
+                                let typeBadge = '';
+                                if (sub.type === 'PACCHETTO') {
+                                    typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border" style="background-color: ${color}20; color: ${color}; border-color: ${color}40;">Pacchetto</span>`;
+                                } else if (sub.type === 'ASSICURAZIONE') {
+                                    typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Assicurazione</span>`;
+                                } else {
+                                    typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-active text-foreground-muted border border-surface-border">Abbonamento</span>`;
+                                }
+
+                                list.append(`
                                     <div class="flex items-center gap-4 px-5 py-3 border-b border-surface-border hover:bg-surface-hover transition-colors">
-                                        <div class="flex-1 text-sm font-medium text-foreground">${sub.name}</div>
+                                        <div class="flex-1 flex items-center gap-2.5 text-sm font-medium text-foreground">
+                                            <span class="w-3.5 h-3.5 rounded-[4px] shrink-0 shadow-sm border border-white/10 inline-block" style="background-color: ${color};"></span>
+                                            <span>${sub.name}</span>
+                                        </div>
+                                        <div class="w-32 text-xs">${typeBadge}</div>
                                         <div class="flex-1 text-sm text-accent">${price}</div>
                                         <div class="flex-1 text-sm text-foreground-muted">${expiryText}</div>
                                         <div class="w-16 shrink-0 text-right">
@@ -108,6 +158,8 @@
                 loadSubscriptionTypes();
 
                 $('#new-sub-btn').click(function() {
+                    $('#sub-color').val('#6366f1');
+                    $('#sub-color-hex').val('#6366f1');
                     $('#subscription-modal').removeClass('hidden');
                 });
 
@@ -126,6 +178,7 @@
                         validityDays: parseInt($('#sub-days').val(), 10),
                         forcedExpiry: $('#sub-forced-expiry').val() || null,
                         type: $('#sub-type').val(),
+                        color: $('#sub-color-hex').val() || $('#sub-color').val() || '#6366f1',
                         active: true
                     };
 
@@ -142,7 +195,7 @@
                             alert("Errore durante il salvataggio.");
                         },
                         complete: function() {
-                            $('#submit-sub-btn').prop('disabled', false).text('Crea Piano');
+                            $('#submit-sub-btn').prop('disabled', false).text('Crea');
                         }
                     });
                 });
@@ -162,3 +215,4 @@
     </div>
 </body>
 </html>
+

@@ -3,6 +3,7 @@ package com.minegolem.backend.controller;
 
 import com.minegolem.backend.domain.entity.Subscription;
 import com.minegolem.backend.dto.request.SubscriptionRequest;
+import com.minegolem.backend.dto.request.SubscriptionUpdateRequest;
 import com.minegolem.backend.dto.response.SubscriptionResponse;
 import com.minegolem.backend.security.StaffUserDetails;
 import com.minegolem.backend.service.RealtimeEventService;
@@ -44,6 +45,19 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptionService.listByUser(userId).stream().map(SubscriptionResponse::from).toList());
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_WRITE')")
+    public ResponseEntity<SubscriptionResponse> update(
+        @AuthenticationPrincipal StaffUserDetails userDetails,
+        @PathVariable UUID id,
+        @Valid @RequestBody SubscriptionUpdateRequest request
+    ) {
+        Subscription subscription = subscriptionService.update(id, request);
+        realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "UPDATED", subscription.getId());
+        realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", subscription.getId());
+        return ResponseEntity.ok(SubscriptionResponse.from(subscription));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('SUBSCRIPTION_WRITE')")
     public ResponseEntity<Void> delete(
@@ -55,4 +69,18 @@ public class SubscriptionController {
         realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/stop-and-go")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_WRITE')")
+    public ResponseEntity<SubscriptionResponse> applyStopAndGo(
+        @AuthenticationPrincipal StaffUserDetails userDetails,
+        @PathVariable UUID id,
+        @RequestBody(required = false) com.minegolem.backend.dto.request.StopAndGoRequest request
+    ) {
+        Subscription subscription = subscriptionService.applyStopAndGo(id, request);
+        realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "UPDATED", subscription.getId());
+        realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", subscription.getId());
+        return ResponseEntity.ok(SubscriptionResponse.from(subscription));
+    }
 }
+

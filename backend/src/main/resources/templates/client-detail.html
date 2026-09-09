@@ -3,19 +3,27 @@
     th:replace="~{fragments/layout :: layout(title=${title}, hideNav=false, content=~{::div.client-detail-content})}">
 
 <body>
-    <div class="client-detail-content space-y-12">
+    <div class="client-detail-content space-y-6">
         <!-- Header -->
-        <div class="flex items-center gap-4">
-            <a href="/clients"
-                class="p-2 rounded-full hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            </a>
-            <div>
-                <h1 class="text-xl font-semibold text-foreground" id="client-name">Caricamento...</h1>
-                <p class="text-sm text-foreground-muted" id="client-email"></p>
-                <p class="text-xs font-mono text-foreground-subtle" id="client-code"></p>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="/clients"
+                    class="p-2 rounded-xl border border-surface-border bg-surface hover:bg-surface-active text-foreground-muted hover:text-foreground transition-colors shrink-0">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </a>
+                <div class="w-11 h-11 rounded-xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center font-bold text-sm shrink-0" id="client-avatar-initials">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h1 class="text-xl font-bold text-foreground truncate" id="client-name">Caricamento...</h1>
+                        <span id="client-code-badge" class="px-2 py-0.5 rounded-md text-xs font-mono bg-surface-active text-foreground-muted border border-surface-border hidden"></span>
+                        <div id="client-package-badges" class="flex items-center gap-1.5 flex-wrap"></div>
+                    </div>
+                </div>
             </div>
-            <div class="ml-auto flex flex-wrap gap-2">
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
                 <button type="button" id="download-sheet-btn"
                     class="btn-ghost text-foreground-muted hover:text-foreground hover:bg-surface-active flex items-center gap-2"
                     title="Scarica scheda PDF">
@@ -27,17 +35,77 @@
                     <i data-lucide="pencil" class="w-[15px] h-[15px]"></i>
                     Modifica
                 </button>
-                <button id="new-sub-btn" class="btn-primary flex items-center gap-2">
-                    <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
-                    Nuovo Abbonamento
-                </button>
                 <button id="assign-nfc-btn" class="btn-ghost flex items-center gap-2">
                     <i data-lucide="badge-check" class="w-[15px] h-[15px]"></i>
                     Assegna NFC
                 </button>
+                <button id="new-sub-btn" class="btn-primary flex items-right gap-2">
+                    <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
+                    Nuovo Abbonamento
+                </button>
             </div>
         </div>
 
+        <!-- Generalità Cliente Bar -->
+        <div class="card p-3.5 bg-surface border border-surface-border rounded-xl shadow-sm">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5" id="client-general-grid">
+
+                <!-- Telefono -->
+                <div class="p-2.5 rounded-lg bg-[#e6f1fb]/50 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#e6f1fb] text-[#185fa5] flex items-center justify-center shrink-0">
+                        <i data-lucide="phone" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <span class="block text-[11px] text-black">Telefono</span>
+                        <span id="gen-phone" class="text-[13px] font-medium text-foreground truncate block">—</span>
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="p-2.5 rounded-lg bg-[#eeedfe]/50 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#eeedfe] text-[#534ab7] flex items-center justify-center shrink-0">
+                        <i data-lucide="mail" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <span class="block text-[11px] text-black">Email</span>
+                        <span id="gen-email" class="text-[13px] font-medium text-foreground truncate block" title="">—</span>
+                    </div>
+                </div>
+
+                <!-- Nascita -->
+                <div class="p-2.5 rounded-lg bg-[#faeeda]/50 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#faeeda] text-[#854f0b] flex items-center justify-center shrink-0">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <span class="block text-[11px] text-black">Nascita</span>
+                        <span id="gen-birth" class="text-[13px] font-medium text-foreground truncate block">—</span>
+                    </div>
+                </div>
+
+                <!-- Codice Fiscale -->
+                <div class="p-2.5 rounded-lg bg-[#eaf3de]/50 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-[#eaf3de] text-[#3b6d11] flex items-center justify-center shrink-0">
+                        <i data-lucide="fingerprint" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <span class="block text-[11px] text-black">Codice Fiscale</span>
+                        <span id="gen-fiscal" class="text-[13px] font-mono font-medium text-foreground uppercase truncate block tracking-wide">—</span>
+                    </div>
+                </div>
+
+                <!-- Indirizzo -->
+                <div class="p-2.5 rounded-lg bg-[#fbeaf0]/50 flex items-center gap-2.5 col-span-1 sm:col-span-2 lg:col-span-1">
+                    <div class="w-8 h-8 rounded-lg bg-[#fbeaf0] text-[#993556] flex items-center justify-center shrink-0">
+                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <span class="block text-[11px] text-black">Indirizzo</span>
+                        <span id="gen-address" class="text-[13px] font-medium text-foreground truncate block" title="">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
         <nav class="flex flex-wrap gap-2 border-b border-surface-border pb-3 text-sm" aria-label="Sezioni cliente">
             <a href="#client-data" class="btn-ghost">Dati cliente</a><a href="#dossier-section" class="btn-ghost">Dossier</a><a href="#dossier-progress-form" class="btn-ghost">Progressi</a><a href="#dossier-notes" class="btn-ghost">Note</a><a href="#dossier-documents" class="btn-ghost">Documenti</a>
         </nav>
@@ -162,17 +230,243 @@
 
         <!-- Dossier cliente: contenuto aggiuntivo separato dalla scheda anagrafica -->
         <section class="space-y-6" id="dossier-section">
-            <div class="flex items-center justify-between gap-3">
-                <div><h2 class="text-xl font-semibold text-foreground">Dossier</h2><p class="text-sm text-foreground-muted">Note, progressi, allegati e informazioni aggiuntive.</p></div>
-                <div class="flex flex-wrap items-center gap-2 text-xs text-foreground-muted"><label><input id="print-notes" type="checkbox" checked> Note</label><label><input id="print-progress" type="checkbox" checked> Progressi</label><label><input id="print-fields" type="checkbox" checked> Note aggiuntive</label><button id="download-dossier-btn" class="btn-ghost flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i>Scarica dossier</button></div>
+            <!-- Dossier header with print controls -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-foreground">Dossier Monitoraggio</h2>
+                    <p class="text-sm text-foreground-muted">Percorso e storia del cliente — documentazione professionale completa.</p>
+                </div>
+                <div class="card p-4 flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-[10px] font-medium text-foreground-muted mb-1">Periodo</label>
+                        <div class="flex items-center gap-1.5">
+                            <input type="date" id="pdf-from-date" class="input text-xs h-8 px-2 w-32" placeholder="Dal">
+                            <span class="text-foreground-muted text-xs">→</span>
+                            <input type="date" id="pdf-to-date" class="input text-xs h-8 px-2 w-32" placeholder="Al">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-medium text-foreground-muted mb-1">Oppure mese</label>
+                        <input type="month" id="pdf-month" class="input text-xs h-8 px-2 w-36">
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <label class="flex items-center gap-1 cursor-pointer text-foreground-muted"><input type="checkbox" id="pdf-assessment" checked class="accent-accent"> Valutazione</label>
+                        <label class="flex items-center gap-1 cursor-pointer text-foreground-muted"><input type="checkbox" id="pdf-progress" checked class="accent-accent"> Monitoraggio</label>
+                        <label class="flex items-center gap-1 cursor-pointer text-foreground-muted"><input type="checkbox" id="pdf-programs" checked class="accent-accent"> Programmazione</label>
+                        <label class="flex items-center gap-1 cursor-pointer text-foreground-muted"><input type="checkbox" id="pdf-notes" checked class="accent-accent"> Note</label>
+                    </div>
+                    <button id="download-dossier-btn" class="btn-primary flex items-center gap-2 h-8 px-3 text-sm shrink-0">
+                        <i data-lucide="file-down" class="w-4 h-4"></i>Scarica PDF
+                    </button>
+                </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Note</h3></div><form id="dossier-note-form" class="p-5 space-y-3"><textarea id="dossier-note-content" required maxlength="10000" rows="3" class="input" placeholder="Aggiungi una nota..."></textarea><button class="btn-primary" type="submit">Salva nota</button></form><div id="dossier-notes" class="divide-y divide-surface-border"><p class="p-5 text-sm text-foreground-subtle">Caricamento...</p></div></div>
-                <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Note aggiuntive</h3></div><form id="dossier-field-form" class="p-5 space-y-3"><textarea id="dossier-field-value" required maxlength="10000" rows="3" class="input" placeholder="Aggiungi una nota libera..."></textarea><button class="btn-primary" type="submit">Salva nota</button></form><div id="dossier-fields" class="divide-y divide-surface-border"><p class="p-5 text-sm text-foreground-subtle">Caricamento...</p></div></div>
+
+            <!-- 1. Anagrafica & Obiettivi -->
+            <div class="card overflow-hidden" id="dossier-profile-card">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-3 bg-surface-hover/30">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="user-circle" class="w-4 h-4 text-accent"></i>
+                        <h3 class="font-semibold text-sm text-foreground">Anagrafica & Obiettivi</h3>
+                    </div>
+                    <button type="button" id="edit-profile-btn" class="btn-ghost text-xs flex items-center gap-1.5 text-accent">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>Modifica
+                    </button>
+                </div>
+                <!-- View mode -->
+                <div id="profile-view" class="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Data Prima Iscrizione</p>
+                        <p class="text-sm font-medium text-foreground" id="pv-first-reg">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Obiettivo Principale</p>
+                        <p class="text-sm text-foreground" id="pv-main-goal">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Obiettivi Secondari</p>
+                        <p class="text-sm text-foreground" id="pv-secondary-goals">—</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Livello Esperienza</p>
+                        <p class="text-sm text-foreground" id="pv-exp-level">—</p>
+                    </div>
+                </div>
+                <!-- Edit mode (hidden) -->
+                <form id="profile-edit-form" class="p-5 space-y-4 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Obiettivo Principale</label>
+                            <textarea id="pe-main-goal" rows="3" class="input resize-none" placeholder="Es. Dimagrimento, ipertrofia..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Obiettivi Secondari</label>
+                            <textarea id="pe-secondary-goals" rows="3" class="input resize-none" placeholder="Es. Mobilità, resistenza cardiovascolare..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Livello Esperienza</label>
+                            <select id="pe-exp-level" class="input">
+                                <option value="">— Seleziona —</option>
+                                <option value="BASSO">Basso</option>
+                                <option value="MEDIO">Medio</option>
+                                <option value="ALTO">Alto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3">
+                        <button type="button" id="cancel-profile-edit" class="btn-ghost text-sm">Annulla</button>
+                        <button type="submit" class="btn-primary text-sm flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i>Salva</button>
+                    </div>
+                </form>
             </div>
-            <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Monitoraggio progressi</h3></div><form id="dossier-progress-form" class="p-5 grid grid-cols-2 md:grid-cols-5 gap-3"><input id="progress-date" type="date" required class="input"><input id="progress-weight" type="number" step="0.01" min="0" class="input" placeholder="Peso kg"><input id="progress-height" type="number" step="0.01" min="0" class="input" placeholder="Altezza cm"><input id="progress-fat" type="number" step="0.01" min="0" max="100" class="input" placeholder="Massa grassa %"><input id="progress-muscle" type="number" step="0.01" min="0" class="input" placeholder="Massa muscolare"><textarea id="progress-observations" class="input col-span-2 md:col-span-4" placeholder="Osservazioni (opzionale)"></textarea><button class="btn-primary" type="submit">Registra</button></form><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-surface-active text-foreground-muted"><tr><th class="p-3 text-left">Data</th><th class="p-3 text-left">Peso</th><th class="p-3 text-left">Altezza</th><th class="p-3 text-left">Grassa</th><th class="p-3 text-left">Muscolare</th><th></th></tr></thead><tbody id="dossier-progress"></tbody></table></div></div>
-            <div class="card overflow-hidden"><div class="px-5 py-4 border-b border-surface-border"><h3 class="font-medium text-foreground">Documenti dossier</h3></div><form id="dossier-document-form" class="p-5 grid grid-cols-1 md:grid-cols-4 gap-3"><input id="dossier-document-name" class="input" placeholder="Nome documento"><input id="dossier-document-description" class="input" placeholder="Descrizione"><input id="dossier-document-file" required type="file" class="input"><button class="btn-primary" type="submit">Carica</button></form><div id="dossier-documents" class="divide-y divide-surface-border"><p class="p-5 text-sm text-foreground-subtle">Caricamento...</p></div></div>
+
+            <!-- 2. Valutazione Iniziale -->
+            <div class="card overflow-hidden" id="dossier-assessment-card">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-3 bg-surface-hover/30">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="clipboard-list" class="w-4 h-4 text-accent"></i>
+                        <h3 class="font-semibold text-sm text-foreground">Valutazione Iniziale</h3>
+                        <span class="text-[10px] text-foreground-subtle" id="assessment-updated-at"></span>
+                    </div>
+                    <button type="button" id="edit-assessment-btn" class="btn-ghost text-xs flex items-center gap-1.5 text-accent">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>Modifica
+                    </button>
+                </div>
+                <!-- View mode -->
+                <div id="assessment-view" class="p-5 space-y-4">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                        <div class="bg-surface-hover/40 rounded-lg p-3 text-center">
+                            <p class="text-[10px] text-foreground-subtle mb-1">Peso Iniziale</p>
+                            <p class="text-sm font-bold text-foreground" id="av-weight">—</p>
+                        </div>
+                        <div class="bg-surface-hover/40 rounded-lg p-3 text-center">
+                            <p class="text-[10px] text-foreground-subtle mb-1">Altezza</p>
+                            <p class="text-sm font-bold text-foreground" id="av-height">—</p>
+                        </div>
+                        <div class="bg-surface-hover/40 rounded-lg p-3 text-center col-span-3">
+                            <p class="text-[10px] text-foreground-subtle mb-1">File BIA Iniziale</p>
+                            <div id="av-bia" class="flex items-center justify-center gap-2">
+                                <span class="text-sm text-foreground-subtle italic">Nessun file</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Circonferenze Iniziali</p>
+                            <p class="text-sm text-foreground whitespace-pre-line" id="av-measurements">—</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Valutazione Scritta</p>
+                            <p class="text-sm text-foreground whitespace-pre-line" id="av-assessment">—</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-1">Limitazioni Segnalate</p>
+                            <p class="text-sm text-foreground whitespace-pre-line" id="av-limitations">—</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Edit mode (hidden) -->
+                <form id="assessment-edit-form" enctype="multipart/form-data" class="p-5 space-y-4 hidden">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Peso (kg)</label>
+                            <input type="number" step="0.01" min="0" id="ae-weight" class="input" placeholder="es. 75.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Altezza (cm)</label>
+                            <input type="number" step="0.1" min="0" id="ae-height" class="input" placeholder="es. 175">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">File BIA (PDF o immagine)</label>
+                            <input type="file" id="ae-bia-file" accept=".pdf,image/*,.xlsx,.xls" class="input">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Circonferenze Iniziali</label>
+                            <textarea id="ae-measurements" rows="5" class="input resize-none" placeholder="Es:&#10;Vita: 85 cm&#10;Fianchi: 98 cm&#10;Coscia dx: 55 cm..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Valutazione Scritta</label>
+                            <textarea id="ae-assessment" rows="5" class="input resize-none" placeholder="Descrizione della condizione iniziale del cliente..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Limitazioni Segnalate</label>
+                            <textarea id="ae-limitations" rows="5" class="input resize-none" placeholder="Infortuni, patologie, limitazioni fisiche..."></textarea>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-3">
+                        <button type="button" id="cancel-assessment-edit" class="btn-ghost text-sm">Annulla</button>
+                        <button type="submit" class="btn-primary text-sm flex items-center gap-1.5"><i data-lucide="save" class="w-4 h-4"></i>Salva Valutazione</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 3. Monitoraggio -->
+            <div class="card overflow-hidden" id="dossier-monitoring-card">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-3 bg-surface-hover/30">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="activity" class="w-4 h-4 text-accent"></i>
+                        <h3 class="font-semibold text-sm text-foreground">Monitoraggio Periodico</h3>
+                        <span class="text-[10px] text-foreground-subtle" id="monitoring-count"></span>
+                    </div>
+                    <button type="button" id="add-monitoring-btn" class="btn-primary text-xs flex items-center gap-1.5 h-8 px-3">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>Nuovo Controllo
+                    </button>
+                </div>
+                <div id="monitoring-list" class="divide-y divide-surface-border">
+                    <p class="p-6 text-sm text-foreground-subtle text-center">Caricamento...</p>
+                </div>
+            </div>
+
+            <!-- 4. Programmazione -->
+            <div class="card overflow-hidden" id="dossier-programs-card">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center justify-between gap-3 bg-surface-hover/30">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="dumbbell" class="w-4 h-4 text-accent"></i>
+                        <h3 class="font-semibold text-sm text-foreground">Programmazione Allenamento</h3>
+                    </div>
+                    <button type="button" id="add-program-btn" class="btn-primary text-xs flex items-center gap-1.5 h-8 px-3">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>Aggiungi Scheda
+                    </button>
+                </div>
+                <div id="programs-list" class="divide-y divide-surface-border">
+                    <p class="p-6 text-sm text-foreground-subtle text-center">Caricamento...</p>
+                </div>
+            </div>
+
+            <!-- 5. Note libere -->
+            <div class="card overflow-hidden">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center gap-2 bg-surface-hover/30">
+                    <i data-lucide="message-square" class="w-4 h-4 text-accent"></i>
+                    <h3 class="font-semibold text-sm text-foreground">Note del Percorso</h3>
+                </div>
+                <form id="dossier-note-form" class="p-5 flex gap-3">
+                    <textarea id="dossier-note-content" required maxlength="10000" rows="2" class="input flex-1 resize-none" placeholder="Aggiungi una nota narrativa al percorso..."></textarea>
+                    <button class="btn-primary shrink-0 self-end" type="submit">Salva</button>
+                </form>
+                <div id="dossier-notes" class="divide-y divide-surface-border">
+                    <p class="p-5 text-sm text-foreground-subtle text-center">Nessuna nota</p>
+                </div>
+            </div>
+
+            <!-- 6. Documenti -->
+            <div class="card overflow-hidden">
+                <div class="px-5 py-3 border-b border-surface-border flex items-center gap-2 bg-surface-hover/30">
+                    <i data-lucide="paperclip" class="w-4 h-4 text-accent"></i>
+                    <h3 class="font-semibold text-sm text-foreground">Documenti Dossier</h3>
+                </div>
+                <form id="dossier-document-form" class="p-5 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <input id="dossier-document-name" class="input" placeholder="Nome documento">
+                    <input id="dossier-document-description" class="input" placeholder="Descrizione">
+                    <input id="dossier-document-file" required type="file" class="input">
+                    <button class="btn-primary" type="submit">Carica</button>
+                </form>
+                <div id="dossier-documents" class="divide-y divide-surface-border">
+                    <p class="p-5 text-sm text-foreground-subtle text-center">Nessun documento</p>
+                </div>
+            </div>
         </section>
+
 
         <div class="card overflow-hidden mb-5">
             <div class="px-5 py-4 border-b border-surface-border flex items-center justify-between gap-3">
@@ -233,6 +527,232 @@
                 </form>
             </div>
         </div>
+
+        <!-- Edit Subscription Modal -->
+        <div id="edit-sub-modal"
+            class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div
+                class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="pencil" class="w-5 h-5 text-accent"></i>
+                        <h2 class="text-lg font-semibold text-foreground">Modifica Abbonamento</h2>
+                    </div>
+                    <button class="close-edit-sub-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="edit-sub-form" class="p-6 space-y-4">
+                    <input type="hidden" id="edit-sub-id" />
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Piano</label>
+                        <select id="edit-sub-type-id" required class="input"></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio</label>
+                            <input type="date" id="edit-sub-start-date" required class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Scadenza</label>
+                            <input type="date" id="edit-sub-end-date" required class="input" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo (€)</label>
+                        <input type="number" step="0.01" min="0" id="edit-sub-price" required class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note</label>
+                        <textarea id="edit-sub-notes" rows="2" class="input resize-none" placeholder="Note facoltative..."></textarea>
+                    </div>
+                    <div class="pt-4 flex items-center justify-end gap-3">
+                        <button type="button" class="close-edit-sub-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-edit-sub-btn" class="btn-primary">Salva Modifiche</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Monitoring (Progress) Modal -->
+        <div id="monitoring-modal" class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border sticky top-0 bg-surface z-10">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-accent"></i>
+                        <h2 class="text-lg font-semibold text-foreground" id="monitoring-modal-title">Nuovo Controllo</h2>
+                    </div>
+                    <button class="close-monitoring-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="monitoring-form" enctype="multipart/form-data" class="p-6 space-y-5">
+                    <input type="hidden" id="monitoring-edit-id">
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="col-span-2 sm:col-span-1">
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Controllo *</label>
+                            <input type="date" id="mon-date" required class="input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Peso (kg)</label>
+                            <input type="number" step="0.01" min="0" id="mon-weight" class="input" placeholder="es. 75.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Massa Grassa (%)</label>
+                            <input type="number" step="0.01" min="0" max="100" id="mon-fat" class="input" placeholder="es. 18.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Massa Muscolare (kg)</label>
+                            <input type="number" step="0.01" min="0" id="mon-muscle" class="input" placeholder="es. 40.2">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">File BIA (PDF / Immagine)</label>
+                        <input type="file" id="mon-bia-file" accept=".pdf,image/*,.xlsx,.xls" class="input">
+                        <p class="text-[11px] text-foreground-subtle mt-1" id="mon-bia-current"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Circonferenze</label>
+                        <textarea id="mon-measurements" rows="3" class="input resize-none" placeholder="Vita: cm&#10;Fianchi: cm&#10;Coscia dx: cm&#10;Braccio dx: cm..."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Progressi Rilevati</label>
+                            <textarea id="mon-progress-notes" rows="3" class="input resize-none" placeholder="Miglioramenti fisici e fisiologici osservati..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Carichi / Performance</label>
+                            <textarea id="mon-performance" rows="3" class="input resize-none" placeholder="Es. Squat: 80kg x5&#10;Panca: 70kg x8..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note del Coach</label>
+                            <textarea id="mon-coach-notes" rows="3" class="input resize-none" placeholder="Osservazioni e valutazioni personali..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Criticità Rilevate</label>
+                            <textarea id="mon-issues" rows="3" class="input resize-none" placeholder="Problemi, dolori, ostacoli emersi..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Modifiche Effettuate</label>
+                            <textarea id="mon-changes" rows="3" class="input resize-none" placeholder="Variazioni al programma, alla dieta, ecc..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Prossimo Controllo</label>
+                            <input type="date" id="mon-next-date" class="input">
+                        </div>
+                    </div>
+
+                    <div class="pt-3 flex items-center justify-end gap-3 border-t border-surface-border">
+                        <button type="button" class="close-monitoring-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-monitoring-btn" class="btn-primary flex items-center gap-1.5">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Salva Controllo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Program Modal -->
+        <div id="program-modal" class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-lg overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="dumbbell" class="w-5 h-5 text-accent"></i>
+                        <h2 class="text-lg font-semibold text-foreground">Aggiungi Scheda di Allenamento</h2>
+                    </div>
+                    <button class="close-program-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="program-form" enctype="multipart/form-data" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">File Scheda (PDF / Immagine)</label>
+                        <input type="file" id="prog-file" accept=".pdf,image/*,.doc,.docx" class="input">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio Scheda</label>
+                            <input type="date" id="prog-start-date" class="input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Revisione</label>
+                            <input type="date" id="prog-review-date" class="input">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Modifiche / Descrizione</label>
+                        <textarea id="prog-changes" rows="3" class="input resize-none" placeholder="Variazioni rispetto alla scheda precedente, obiettivi specifici..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Coach Responsabile</label>
+                        <input type="text" id="prog-coach" class="input" placeholder="Nome del coach">
+                    </div>
+                    <div class="pt-3 flex items-center justify-end gap-3">
+                        <button type="button" class="close-program-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-program-btn" class="btn-primary flex items-center gap-1.5">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            Salva Scheda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Stop & Go Modal -->
+        <div id="stop-go-modal" class="fixed inset-0 bg-background/80 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="pause-circle" class="w-5 h-5 text-accent"></i>
+                        <h2 class="text-lg font-semibold text-foreground">Attiva Stop&amp;Go</h2>
+                    </div>
+                    <button class="close-stop-go-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <form id="stop-go-form" class="p-6 space-y-4">
+                    <input type="hidden" id="stop-go-sub-id" />
+                    <div class="p-3.5 rounded-lg bg-surface-hover/50 border border-surface-border space-y-1.5">
+                        <p class="text-xs font-semibold text-foreground" id="stop-go-sub-name">Abbonamento Annuale</p>
+                        <p class="text-xs text-foreground-muted">Sospende l'accesso in palestra per <strong>1 mese</strong> e <strong>proroga la data di scadenza</strong> di 1 mese.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio Sospensione</label>
+                        <input type="date" id="stop-go-start-date" required class="input" />
+                        <p class="text-[11px] text-foreground-subtle mt-1" id="stop-go-dates-preview"></p>
+                    </div>
+
+                    <div class="flex items-center justify-between rounded border border-surface-border bg-background-tertiary px-3.5 py-2.5 text-sm">
+                        <span class="text-foreground-muted font-medium">Costo Servizio Stop&amp;Go</span>
+                        <strong class="text-accent font-bold text-base">€ 9,90</strong>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di Pagamento</label>
+                        <select id="stop-go-payment-method" required class="input">
+                            <option value="CASH">Contanti</option>
+                            <option value="CARD">Carta / Bancomat</option>
+                            <option value="TRANSFER">Bonifico</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-3 flex items-center justify-end gap-3">
+                        <button type="button" class="close-stop-go-modal btn-ghost">Annulla</button>
+                        <button type="submit" id="submit-stop-go-btn" class="btn-primary flex items-center gap-1.5">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            Conferma ed Incassa 9,90 €
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
 
         <div id="expired-sub-confirm-modal" class="modal-overlay hidden">
             <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
@@ -449,22 +969,73 @@
                 function dossierApi(path, options) { return $.ajax(Object.assign({ url: '/api/users/' + clientId + '/dossier' + path }, options || {})); }
                 function esc(value) { return $('<div>').text(value || '').html(); }
                 function dossierDate(value) { return value ? new Date(value).toLocaleDateString('it-IT') : '—'; }
-                function loadDossier() {
-                    dossierApi('', { type: 'GET' }).done(function (d) {
-                        $('#dossier-notes').html(d.notes.length ? d.notes.map(function(n) { return '<div class="p-4"><div class="flex justify-between gap-3"><span class="text-xs text-foreground-muted">' + dossierDate(n.createdAt) + (n.authorName ? ' · ' + esc(n.authorName) : '') + '</span><button data-id="' + n.id + '" class="delete-dossier-note text-xs text-red-400">Elimina</button></div><p class="mt-1 text-sm whitespace-pre-wrap">' + esc(n.content) + '</p></div>'; }).join('') : '<p class="p-5 text-sm text-foreground-subtle">Nessuna nota nel dossier.</p>');
-                        $('#dossier-fields').html(d.fields.length ? d.fields.map(function(f) { return '<div class="p-4 flex justify-between gap-3"><p class="text-sm whitespace-pre-wrap">' + esc(f.fieldValue) + '</p><button data-id="' + f.id + '" class="delete-dossier-field text-xs text-red-400">Elimina</button></div>'; }).join('') : '<p class="p-5 text-sm text-foreground-subtle">Nessuna nota aggiuntiva.</p>');
-                        $('#dossier-progress').html(d.progress.length ? d.progress.map(function(p) { return '<tr class="border-t border-surface-border"><td class="p-3">' + dossierDate(p.recordedDate) + '</td><td class="p-3">' + (p.weight || '—') + '</td><td class="p-3">' + (p.height || '—') + '</td><td class="p-3">' + (p.bodyFatPercentage || '—') + '</td><td class="p-3">' + (p.muscleMass || '—') + '</td><td><button data-id="' + p.id + '" class="delete-dossier-progress text-xs text-red-400">Elimina</button></td></tr>'; }).join('') : '<tr><td colspan="6" class="p-5 text-center text-sm text-foreground-subtle">Nessuna rilevazione.</td></tr>');
-                        $('#dossier-documents').html(d.documents.length ? d.documents.map(function(x) { return '<div class="p-4 flex justify-between gap-3"><span><a class="text-accent hover:underline" target="_blank" href="' + esc(x.url) + '">' + esc(x.name) + '</a><small class="block text-foreground-muted">' + esc(x.description) + '</small></span><button data-id="' + x.id + '" class="delete-dossier-document text-xs text-red-400">Elimina</button></div>'; }).join('') : '<p class="p-5 text-sm text-foreground-subtle">Nessun allegato.</p>');
-                    }).fail(function () { $('#dossier-notes').html('<p class="p-5 text-sm text-red-400">Impossibile caricare il dossier.</p>'); });
+
+                // === DOSSIER NOTES ===
+                function loadDossierNotes() {
+                    dossierApi('/notes', { type: 'GET' }).done(function(notes) {
+                        const el = $('#dossier-notes').empty();
+                        if (!notes.length) { el.html('<p class="p-5 text-sm text-foreground-subtle text-center">Nessuna nota nel percorso.</p>'); return; }
+                        notes.forEach(function(n) {
+                            el.append(`<div class="px-5 py-3.5 space-y-1 hover:bg-surface-hover/20">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-[11px] text-foreground-subtle">${dossierDate(n.createdAt)}${n.authorName ? ' · ' + esc(n.authorName) : ''}</span>
+                                    <button data-id="${n.id}" class="delete-dossier-note text-foreground-muted hover:text-danger p-1 rounded transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                </div>
+                                <p class="text-sm text-foreground whitespace-pre-wrap">${esc(n.content)}</p>
+                            </div>`);
+                        });
+                        if (window.lucide) lucide.createIcons();
+                    });
                 }
-                $('#dossier-note-form').submit(function(e) { e.preventDefault(); dossierApi('/notes',{type:'POST',contentType:'application/json',data:JSON.stringify({content:$('#dossier-note-content').val()})}).done(function(){ $('#dossier-note-form')[0].reset();loadDossier(); }).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile salvare la nota');}); });
-                $('#dossier-field-form').submit(function(e) { e.preventDefault(); dossierApi('/fields',{type:'POST',contentType:'application/json',data:JSON.stringify({fieldName:'Nota aggiuntiva',fieldValue:$('#dossier-field-value').val(),valueType:'TEXT'})}).done(function(){ $('#dossier-field-form')[0].reset();loadDossier(); }).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile salvare la nota');}); });
-                $('#dossier-progress-form').submit(function(e) { e.preventDefault(); var val=function(id){return $(id).val() ? parseFloat($(id).val()) : null;};dossierApi('/progress',{type:'POST',contentType:'application/json',data:JSON.stringify({recordedDate:$('#progress-date').val(),weight:val('#progress-weight'),height:val('#progress-height'),bodyFatPercentage:val('#progress-fat'),muscleMass:val('#progress-muscle'),observations:$('#progress-observations').val()})}).done(function(){$('#dossier-progress-form')[0].reset();loadDossier();}).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile registrare il progresso');}); });
-                $('#dossier-document-form').submit(function(e) { e.preventDefault(); var fd=new FormData();fd.append('file',$('#dossier-document-file')[0].files[0]);fd.append('name',$('#dossier-document-name').val());fd.append('description',$('#dossier-document-description').val());dossierApi('/documents',{type:'POST',data:fd,processData:false,contentType:false}).done(function(){$('#dossier-document-form')[0].reset();loadDossier();}).fail(function(xhr){alert(xhr.responseJSON?.detail || 'Impossibile caricare il documento');}); });
-                $(document).on('click','.delete-dossier-note,.delete-dossier-field,.delete-dossier-progress,.delete-dossier-document',function(){if(!confirm('Eliminare definitivamente questo elemento dal dossier?'))return;var type=$(this).hasClass('delete-dossier-note')?'notes':$(this).hasClass('delete-dossier-field')?'fields':$(this).hasClass('delete-dossier-progress')?'progress':'documents';dossierApi('/'+type+'/'+$(this).data('id'),{type:'DELETE'}).done(loadDossier);});
-                $('#download-dossier-btn').click(function(){ var btn=$(this), original=btn.html(), token=localStorage.getItem('jwt_token'); btn.prop('disabled',true); fetch('/api/users/' + clientId + '/dossier/pdf?includeNotes=' + $('#print-notes').is(':checked') + '&includeProgress=' + $('#print-progress').is(':checked') + '&includeFields=' + $('#print-fields').is(':checked'),{headers:token?{'Authorization':'Bearer '+token}:{}}).then(function(response){if(!response.ok)throw new Error('PDF non generato');var disposition=response.headers.get('Content-Disposition')||'',match=disposition.match(/filename=\"?([^\";]+)\"?/);return response.blob().then(function(blob){return {blob:blob,filename:match?match[1]:'dossier_cliente.pdf'};});}).then(function(result){var url=window.URL.createObjectURL(result.blob),a=document.createElement('a');a.href=url;a.download=result.filename;document.body.appendChild(a);a.click();a.remove();window.URL.revokeObjectURL(url);}).catch(function(){alert('Errore durante il download del dossier PDF');}).finally(function(){btn.prop('disabled',false).html(original);if(window.lucide)lucide.createIcons();}); });
-                loadDossier();
+
+                // === DOSSIER DOCUMENTS ===
+                function loadDossierDocuments() {
+                    dossierApi('/documents', { type: 'GET' }).done(function(docs) {
+                        const el = $('#dossier-documents').empty();
+                        if (!docs.length) { el.html('<p class="p-5 text-sm text-foreground-subtle text-center">Nessun allegato.</p>'); return; }
+                        docs.forEach(function(d) {
+                            el.append(`<div class="px-5 py-3.5 flex items-start justify-between gap-3 hover:bg-surface-hover/20">
+                                <div>
+                                    <a href="${esc(d.url)}" target="_blank" class="text-sm font-medium text-accent hover:underline">${esc(d.name)}</a>
+                                    ${d.description ? `<p class="text-xs text-foreground-muted mt-0.5">${esc(d.description)}</p>` : ''}
+                                </div>
+                                <button data-id="${d.id}" class="delete-dossier-document text-foreground-muted hover:text-danger p-1 rounded shrink-0 transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>`);
+                        });
+                        if (window.lucide) lucide.createIcons();
+                    });
+                }
+
+                $('#dossier-note-form').submit(function(e) {
+                    e.preventDefault();
+                    dossierApi('/notes', { type: 'POST', contentType: 'application/json', data: JSON.stringify({ content: $('#dossier-note-content').val() }) })
+                        .done(function() { $('#dossier-note-form')[0].reset(); loadDossierNotes(); })
+                        .fail(function(xhr) { alert(xhr.responseJSON?.detail || 'Impossibile salvare la nota'); });
+                });
+
+                $('#dossier-document-form').submit(function(e) {
+                    e.preventDefault();
+                    var fd = new FormData();
+                    fd.append('file', $('#dossier-document-file')[0].files[0]);
+                    fd.append('name', $('#dossier-document-name').val());
+                    fd.append('description', $('#dossier-document-description').val());
+                    dossierApi('/documents', { type: 'POST', data: fd, processData: false, contentType: false })
+                        .done(function() { $('#dossier-document-form')[0].reset(); loadDossierDocuments(); })
+                        .fail(function(xhr) { alert(xhr.responseJSON?.detail || 'Impossibile caricare il documento'); });
+                });
+
+                $(document).on('click', '.delete-dossier-note', function() {
+                    if (!confirm('Eliminare questa nota?')) return;
+                    dossierApi('/notes/' + $(this).data('id'), { type: 'DELETE' }).done(loadDossierNotes);
+                });
+
+                $(document).on('click', '.delete-dossier-document', function() {
+                    if (!confirm('Eliminare questo documento?')) return;
+                    dossierApi('/documents/' + $(this).data('id'), { type: 'DELETE' }).done(loadDossierDocuments);
+                });
+
                 let provincesLoaded = FiscalCode.loadProvinceSelect('#edit-birth-province');
+
                 let currentSubscriptions = [];
 
                 const refreshFiscalCode = FiscalCode.bindAutofill('#edit-fiscal-code', {
@@ -482,8 +1053,75 @@
                         type: 'GET',
                         success: function (user) {
                             $('#client-name').text(user.fullName);
-                            $('#client-email').text(user.email || user.phone || '');
-                            $('#client-code').text(user.clientCode ? 'ID cliente #' + user.clientCode : '');
+                            const pkgBadges = $('#client-package-badges').empty();
+                            if (user.activePackages && user.activePackages.length > 0) {
+                                user.activePackages.forEach(function(pkg) {
+                                    const color = pkg.color || '#6366f1';
+                                    pkgBadges.append(`
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium border shadow-sm select-none"
+                                              style="background-color: ${color}18; border-color: ${color}44; color: ${color};"
+                                              title="Pacchetto attivo: ${pkg.name}">
+                                            <span class="w-2.5 h-2.5 rounded-[3px] shrink-0 inline-block border border-white/20 shadow-sm" style="background-color: ${color};"></span>
+                                            <span class="font-medium">${pkg.name}</span>
+                                        </span>
+                                    `);
+                                });
+                            }
+                            if (user.fullName) {
+                                const names = user.fullName.trim().split(/\s+/);
+                                const initials = names.map(function(n) { return n[0]; }).filter(Boolean).slice(0, 2).join('').toUpperCase();
+                                $('#client-avatar-initials').text(initials || '—');
+                            }
+
+                            if (user.clientCode) {
+                                $('#client-code-badge').text('ID #' + user.clientCode).removeClass('hidden');
+                            } else {
+                                $('#client-code-badge').addClass('hidden');
+                            }
+
+                            // Generalità grid tiles
+                            if (user.phone) {
+                                $('#gen-phone').html(`<a href="tel:${esc(user.phone)}" class="text-foreground hover:text-accent transition-colors">${esc(user.phone)}</a>`);
+                            } else {
+                                $('#gen-phone').text('—');
+                            }
+
+                            if (user.email) {
+                                $('#gen-email').html(`<a href="mailto:${esc(user.email)}" class="text-foreground hover:text-accent transition-colors truncate block" title="${esc(user.email)}">${esc(user.email)}</a>`);
+                            } else {
+                                $('#gen-email').text('—').removeAttr('title');
+                            }
+
+                            if (user.birthDate) {
+                                let birthText = formatDate(user.birthDate);
+                                if (user.birthPlace) {
+                                    birthText += ` (${user.birthPlace}${user.birthProvince ? ', ' + user.birthProvince : ''})`;
+                                }
+                                const birthYear = new Date(user.birthDate).getFullYear();
+                                const currentYear = new Date().getFullYear();
+                                const age = currentYear - birthYear;
+                                if (!isNaN(age) && age > 0) {
+                                    birthText += ` · ${age} anni`;
+                                }
+                                $('#gen-birth').text(birthText).attr('title', birthText);
+                            } else {
+                                $('#gen-birth').text('—').removeAttr('title');
+                            }
+
+                            if (user.fiscalCode) {
+                                $('#gen-fiscal').text(user.fiscalCode).attr('title', user.fiscalCode);
+                            } else {
+                                $('#gen-fiscal').text('—').removeAttr('title');
+                            }
+
+                            if (user.address) {
+                                $('#gen-address').text(user.address).attr('title', user.address);
+                            } else {
+                                $('#gen-address').text('—').removeAttr('title');
+                            }
+
+                            if (window.lucide) lucide.createIcons();
+
                             $('#edit-client-code').val(user.clientCode ? '#' + user.clientCode : '');
                             $('#current-nfc-tag').text(user.nfcTagUid ? 'Tag NFC ' + user.nfcTagUid : (user.clientCode ? 'Accesso con ID #' + user.clientCode : 'Nessun tag assegnato'));
                             renderDocuments(user);
@@ -683,22 +1321,77 @@
                                     new Date(s.endDate) >= new Date()
                                         ? 'text-success'
                                         : 'text-danger';
+                                const subType = s.subscriptionType || {};
+                                const color = subType.color || '#6366f1';
+                                let typeTag = '';
+                                if (subType.type === 'PACCHETTO') {
+                                    typeTag = `<span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold border" style="background-color: ${color}20; color: ${color}; border-color: ${color}40;">Pacchetto</span>`;
+                                } else if (subType.type === 'ASSICURAZIONE') {
+                                    typeTag = `<span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Assicurazione</span>`;
+                                }
+
+                                let suspensionBadge = '';
+                                if (s.suspended) {
+                                    suspensionBadge = `
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20" title="Accesso attualmente sospeso">
+                                            <i data-lucide="pause-circle" class="w-3 h-3"></i>
+                                            Sospeso Stop&amp;Go: ${formatDate(s.suspendedFrom)} &rarr; ${formatDate(s.suspendedTo)}
+                                        </span>
+                                    `;
+                                } else if (s.stopAndGoApplied) {
+                                    suspensionBadge = `
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-active text-foreground-muted border border-surface-border" title="Stop&Go già usufruito">
+                                            <i data-lucide="check-check" class="w-3 h-3"></i>
+                                            Stop&amp;Go applicato
+                                        </span>
+                                    `;
+                                }
+
+                                let stopGoBtn = '';
+                                if (s.canApplyStopAndGo) {
+                                    stopGoBtn = `
+                                        <button type="button"
+                                            class="apply-stop-go-btn shrink-0 btn-ghost text-xs text-accent border border-accent/40 hover:bg-accent/10 px-2 py-1 rounded-md flex items-center gap-1 transition-colors"
+                                            data-id="${s.id}"
+                                            data-name="${subType.name}"
+                                            title="Sospendi 1 mese e proroga scadenza di 1 mese (9,90 €)">
+                                            <i data-lucide="pause" class="w-3 h-3"></i>
+                                            Stop&amp;Go (9,90 €)
+                                        </button>
+                                    `;
+                                }
 
                                 list.append(`
-                                    <div class="px-5 py-3 flex items-center justify-between gap-3 group">
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-medium text-foreground">${s.subscriptionType.name}</p>
-                                            <p class="text-xs text-foreground-muted">
-                                                Scade il
-                                                <span class="${activeClass} font-medium">${end}</span>
-                                            </p>
+                                    <div class="px-5 py-3 flex items-center justify-between gap-3 group hover:bg-surface-hover/30 transition-colors">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <span class="w-3.5 h-3.5 rounded-[4px] shrink-0 border border-white/10 shadow-sm inline-block" style="background-color: ${color};"></span>
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <p class="text-sm font-medium text-foreground">${subType.name}</p>
+                                                    ${typeTag}
+                                                    ${suspensionBadge}
+                                                </div>
+                                                <p class="text-xs text-foreground-muted">
+                                                    Scade il
+                                                    <span class="${activeClass} font-medium">${end}</span>
+                                                </p>
+                                            </div>
                                         </div>
-                                        <button type="button"
-                                            class="delete-sub-btn shrink-0 p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors"
-                                            data-id="${s.id}"
-                                            title="Rimuovi abbonamento">
-                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                        </button>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            ${stopGoBtn}
+                                            <button type="button"
+                                                class="edit-sub-btn shrink-0 p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-accent transition-colors"
+                                                data-id="${s.id}"
+                                                title="Modifica abbonamento">
+                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button type="button"
+                                                class="delete-sub-btn shrink-0 p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors"
+                                                data-id="${s.id}"
+                                                title="Rimuovi abbonamento">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 `);
                             });
@@ -856,6 +1549,12 @@
 
                 loadUser();
                 loadData();
+                loadDossierProfile();
+                loadDossierAssessment();
+                loadMonitoring();
+                loadPrograms();
+                loadDossierNotes();
+                loadDossierDocuments();
 
                 $(document).on('click', '.delete-sub-btn', function () {
                     const id = $(this).data('id');
@@ -913,9 +1612,10 @@
 
                             types.forEach(function (t) {
                                 typesMap[t.id] = t;
+                                const typePrefix = t.type === 'PACCHETTO' ? '[Pacchetto] ' : (t.type === 'ASSICURAZIONE' ? '[Assicurazione] ' : '');
                                 select.append(`
                                     <option value="${t.id}">
-                                        ${t.name} (${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0)})
+                                        ${typePrefix}${t.name} (${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0)})
                                     </option>
                                 `);
                             });
@@ -975,6 +1675,117 @@
                     }
 
                     createSubscription(req);
+                });
+
+                function fetchSubscriptionTypes() {
+                    return $.ajax({
+                        url: '/api/subscription-types',
+                        type: 'GET'
+                    }).then(function (types) {
+                        typesMap = {};
+                        (types || []).forEach(function (t) {
+                            typesMap[t.id] = t;
+                        });
+                        return types;
+                    });
+                }
+
+                function calculateEndDateForType(type, startDateStr) {
+                    if (!type || !startDateStr) return null;
+                    if (type.forcedExpiry) return type.forcedExpiry;
+                    if (type.validityDays) {
+                        const parts = startDateStr.split('-').map(Number);
+                        const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                        d.setDate(d.getDate() + type.validityDays);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${day}`;
+                    }
+                    return null;
+                }
+
+                function updateEditSubEndDate() {
+                    const typeId = $('#edit-sub-type-id').val();
+                    const startDate = $('#edit-sub-start-date').val();
+                    const type = typesMap[typeId];
+                    const calcEnd = calculateEndDateForType(type, startDate);
+                    if (calcEnd) {
+                        $('#edit-sub-end-date').val(calcEnd);
+                    }
+                }
+
+                $(document).on('click', '.edit-sub-btn', async function () {
+                    const id = $(this).data('id');
+                    const sub = currentSubscriptions.find(function (s) { return s.id === id; });
+                    if (!sub) return;
+
+                    if (Object.keys(typesMap).length === 0) {
+                        await fetchSubscriptionTypes();
+                    }
+
+                    const select = $('#edit-sub-type-id').empty();
+                    Object.values(typesMap).forEach(function (t) {
+                        const typePrefix = t.type === 'PACCHETTO' ? '[Pacchetto] ' : (t.type === 'ASSICURAZIONE' ? '[Assicurazione] ' : '');
+                        select.append(`
+                            <option value="${t.id}">
+                                ${typePrefix}${t.name} (${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0)})
+                            </option>
+                        `);
+                    });
+
+                    $('#edit-sub-id').val(sub.id);
+                    if (sub.subscriptionType && sub.subscriptionType.id) {
+                        select.val(sub.subscriptionType.id);
+                    }
+                    $('#edit-sub-start-date').val(sub.startDate || '');
+                    $('#edit-sub-end-date').val(sub.endDate || '');
+                    $('#edit-sub-price').val(sub.price != null ? sub.price : '');
+                    $('#edit-sub-notes').val(sub.notes || '');
+
+                    $('#edit-sub-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                });
+
+                $('#edit-sub-start-date, #edit-sub-type-id').on('change', function () {
+                    updateEditSubEndDate();
+                });
+
+                $('.close-edit-sub-modal').click(function () {
+                    $('#edit-sub-modal').addClass('hidden');
+                });
+
+                $('#edit-sub-form').submit(function (e) {
+                    e.preventDefault();
+
+                    const id = $('#edit-sub-id').val();
+                    const req = {
+                        subscriptionTypeId: $('#edit-sub-type-id').val(),
+                        startDate: $('#edit-sub-start-date').val(),
+                        endDate: $('#edit-sub-end-date').val() || null,
+                        price: $('#edit-sub-price').val() ? parseFloat($('#edit-sub-price').val()) : null,
+                        notes: $('#edit-sub-notes').val()
+                    };
+
+                    $('#submit-edit-sub-btn').prop('disabled', true).text('Salvataggio...');
+
+                    $.ajax({
+                        url: '/api/subscriptions/' + id,
+                        type: 'PUT',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function () {
+                            $('#edit-sub-modal').addClass('hidden');
+                            loadData();
+                            loadUser();
+                        },
+                        error: function (xhr) {
+                            alert(xhr.responseJSON?.message || xhr.responseJSON?.detail || 'Errore durante la modifica dell\'abbonamento');
+                        },
+                        complete: function () {
+                            $('#submit-edit-sub-btn').prop('disabled', false).text('Salva Modifiche');
+                        }
+                    });
                 });
 
                 // =========================
@@ -1284,8 +2095,530 @@
                     });
                 }
 
+                // =========================
+                // DOSSIER — CORE HELPERS
+                // =========================
+
+                function formatDateIt(d) {
+                    if (!d) return '—';
+                    const parts = d.split('-');
+                    if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+                    return d;
+                }
+
+                function textOrDash(v) { return (v && v.trim()) ? v.trim() : '—'; }
+
+                function dossierBiaLink(url, label) {
+                    if (!url) return '<span class="text-sm text-foreground-subtle italic">Nessun file</span>';
+                    return `<a href="${url}" target="_blank" rel="noopener"
+                               class="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>${label || 'Apri BIA'}
+                            </a>`;
+                }
+
+                // =========================
+                // DOSSIER — PROFILE
+                // =========================
+                const expLevelLabels = { 'BASSO': 'Basso', 'MEDIO': 'Medio', 'ALTO': 'Alto' };
+
+                function loadDossierProfile() {
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/profile',
+                        type: 'GET',
+                        success: function(p) {
+                            $('#pv-first-reg').text(p.firstRegistrationDate ? formatDateIt(p.firstRegistrationDate) : '—');
+                            $('#pv-main-goal').text(textOrDash(p.mainGoal));
+                            $('#pv-secondary-goals').text(textOrDash(p.secondaryGoals));
+                            $('#pv-exp-level').text(p.experienceLevel ? (expLevelLabels[p.experienceLevel] || p.experienceLevel) : '—');
+                            // Populate edit form
+                            $('#pe-main-goal').val(p.mainGoal || '');
+                            $('#pe-secondary-goals').val(p.secondaryGoals || '');
+                            $('#pe-exp-level').val(p.experienceLevel || '');
+                        }
+                    });
+                }
+
+                $('#edit-profile-btn').click(function() {
+                    $('#profile-view').addClass('hidden');
+                    $('#profile-edit-form').removeClass('hidden');
+                });
+
+                $('#cancel-profile-edit').click(function() {
+                    $('#profile-edit-form').addClass('hidden');
+                    $('#profile-view').removeClass('hidden');
+                });
+
+                $('#profile-edit-form').submit(function(e) {
+                    e.preventDefault();
+                    const fd = new FormData();
+                    fd.append('mainGoal', $('#pe-main-goal').val());
+                    fd.append('secondaryGoals', $('#pe-secondary-goals').val());
+                    const expVal = $('#pe-exp-level').val();
+                    if (expVal) fd.append('experienceLevel', expVal);
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/profile',
+                        type: 'POST',
+                        data: fd,
+                        processData: false,
+                        contentType: false,
+                        success: function() {
+                            $('#profile-edit-form').addClass('hidden');
+                            $('#profile-view').removeClass('hidden');
+                            loadDossierProfile();
+                        },
+                        error: function() { alert('Errore nel salvataggio del profilo'); }
+                    });
+                });
+
+                // =========================
+                // DOSSIER — ASSESSMENT (Valutazione Iniziale)
+                // =========================
+
+                function loadDossierAssessment() {
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/profile',
+                        type: 'GET',
+                        success: function(p) {
+                            $('#av-weight').text(p.initialWeight ? p.initialWeight + ' kg' : '—');
+                            $('#av-height').text(p.initialHeight ? p.initialHeight + ' cm' : '—');
+                            $('#av-bia').html(dossierBiaLink(p.initialBiaUrl, 'Apri BIA Iniziale'));
+                            $('#av-measurements').text(textOrDash(p.initialMeasurements));
+                            $('#av-assessment').text(textOrDash(p.initialAssessment));
+                            $('#av-limitations').text(textOrDash(p.initialLimitations));
+                            if (p.updatedAt) {
+                                $('#assessment-updated-at').text('Aggiornata il ' + new Date(p.updatedAt).toLocaleDateString('it-IT'));
+                            }
+                            // Populate edit form
+                            $('#ae-weight').val(p.initialWeight || '');
+                            $('#ae-height').val(p.initialHeight || '');
+                            $('#ae-measurements').val(p.initialMeasurements || '');
+                            $('#ae-assessment').val(p.initialAssessment || '');
+                            $('#ae-limitations').val(p.initialLimitations || '');
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                }
+
+                $('#edit-assessment-btn').click(function() {
+                    $('#assessment-view').addClass('hidden');
+                    $('#assessment-edit-form').removeClass('hidden');
+                });
+
+                $('#cancel-assessment-edit').click(function() {
+                    $('#assessment-edit-form').addClass('hidden');
+                    $('#assessment-view').removeClass('hidden');
+                });
+
+                $('#assessment-edit-form').submit(function(e) {
+                    e.preventDefault();
+                    const fd = new FormData();
+                    if ($('#ae-weight').val()) fd.append('initialWeight', $('#ae-weight').val());
+                    if ($('#ae-height').val()) fd.append('initialHeight', $('#ae-height').val());
+                    fd.append('initialMeasurements', $('#ae-measurements').val());
+                    fd.append('initialAssessment', $('#ae-assessment').val());
+                    fd.append('initialLimitations', $('#ae-limitations').val());
+                    const biaFile = $('#ae-bia-file')[0].files[0];
+                    if (biaFile) fd.append('biaFile', biaFile);
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/profile',
+                        type: 'POST',
+                        data: fd,
+                        processData: false,
+                        contentType: false,
+                        success: function() {
+                            $('#assessment-edit-form').addClass('hidden');
+                            $('#assessment-view').removeClass('hidden');
+                            loadDossierAssessment();
+                        },
+                        error: function() { alert('Errore nel salvataggio della valutazione'); }
+                    });
+                });
+
+                // =========================
+                // DOSSIER — MONITORING (Progressi)
+                // =========================
+
+                function renderMonitoringCard(p, isFirst) {
+                    const d = formatDateIt(p.recordedDate);
+                    const nextD = p.nextCheckDate ? formatDateIt(p.nextCheckDate) : null;
+                    let metrics = [];
+                    if (p.weight) metrics.push(`<span><span class="text-foreground-subtle text-[10px]">Peso</span><br><strong class="text-sm">${p.weight} kg</strong></span>`);
+                    if (p.bodyFatPercentage) metrics.push(`<span><span class="text-foreground-subtle text-[10px]">Massa Grassa</span><br><strong class="text-sm">${p.bodyFatPercentage}%</strong></span>`);
+                    if (p.muscleMass) metrics.push(`<span><span class="text-foreground-subtle text-[10px]">Massa Muscolare</span><br><strong class="text-sm">${p.muscleMass} kg</strong></span>`);
+
+                    function fieldRow(label, value) {
+                        if (!value || !value.trim()) return '';
+                        return `<div><p class="text-[10px] font-semibold text-foreground-subtle uppercase tracking-wide mb-0.5">${label}</p>
+                                <p class="text-sm text-foreground whitespace-pre-line">${value}</p></div>`;
+                    }
+
+                    return `
+                        <div class="px-5 py-4 space-y-3" data-monitoring-id="${p.id}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full mt-1 shrink-0 ${isFirst ? 'bg-accent' : 'bg-surface-border'}" title="${isFirst ? 'Ultimo controllo' : ''}"></div>
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <p class="text-sm font-semibold text-foreground">Controllo del ${d}</p>
+                                            ${isFirst ? '<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">Ultimo</span>' : ''}
+                                            ${nextD ? `<span class="text-[10px] text-foreground-subtle">→ Prossimo: ${nextD}</span>` : ''}
+                                        </div>
+                                        ${p.biaUrl ? `<div class="mt-1">${dossierBiaLink(p.biaUrl, 'Apri BIA')}</div>` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <button type="button" class="edit-monitoring-btn btn-ghost text-xs text-accent px-2 py-1 h-7 flex items-center gap-1"
+                                            data-id="${p.id}">
+                                        <i data-lucide="pencil" class="w-3 h-3"></i>Modifica
+                                    </button>
+                                    <button type="button" class="delete-monitoring-btn p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors"
+                                            data-id="${p.id}" title="Elimina">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            ${metrics.length > 0 ? `<div class="flex flex-wrap gap-4 ml-5 pl-0">${metrics.join('')}</div>` : ''}
+                            ${p.measurements ? `<div class="ml-5">${fieldRow('Circonferenze', p.measurements)}</div>` : ''}
+                            <div class="ml-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                ${fieldRow('Progressi Rilevati', p.progressNotes)}
+                                ${fieldRow('Carichi / Performance', p.performanceNotes)}
+                                ${fieldRow('Note del Coach', p.coachNotes)}
+                                ${fieldRow('Criticità Rilevate', p.criticalIssues)}
+                                ${fieldRow('Modifiche Effettuate', p.changesMade)}
+                            </div>
+                        </div>`;
+                }
+
+                function loadMonitoring() {
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/progress',
+                        type: 'GET',
+                        success: function(list) {
+                            const container = $('#monitoring-list').empty();
+                            const count = list.length;
+                            $('#monitoring-count').text(count > 0 ? count + ' rilevazioni' : '');
+                            if (count === 0) {
+                                container.html('<p class="p-6 text-sm text-foreground-subtle text-center">Nessun controllo registrato</p>');
+                                return;
+                            }
+                            list.forEach(function(p, i) {
+                                container.append(renderMonitoringCard(p, i === 0));
+                            });
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                }
+
+                function openMonitoringModal(data) {
+                    ['#mon-date','#mon-weight','#mon-fat','#mon-muscle','#mon-measurements',
+                     '#mon-progress-notes','#mon-performance','#mon-coach-notes','#mon-issues',
+                     '#mon-changes','#mon-next-date'].forEach(function(s) { $(s).val(''); });
+                    $('#mon-bia-file').val('');
+                    $('#mon-bia-current').text('');
+                    $('#monitoring-edit-id').val('');
+                    $('#monitoring-modal-title').text('Nuovo Controllo');
+                    if (data) {
+                        $('#monitoring-modal-title').text('Modifica Controllo');
+                        $('#monitoring-edit-id').val(data.id);
+                        $('#mon-date').val(data.recordedDate || '');
+                        $('#mon-weight').val(data.weight || '');
+                        $('#mon-fat').val(data.bodyFatPercentage || '');
+                        $('#mon-muscle').val(data.muscleMass || '');
+                        $('#mon-measurements').val(data.measurements || '');
+                        $('#mon-progress-notes').val(data.progressNotes || '');
+                        $('#mon-performance').val(data.performanceNotes || '');
+                        $('#mon-coach-notes').val(data.coachNotes || '');
+                        $('#mon-issues').val(data.criticalIssues || '');
+                        $('#mon-changes').val(data.changesMade || '');
+                        $('#mon-next-date').val(data.nextCheckDate || '');
+                        if (data.biaUrl) $('#mon-bia-current').text('BIA attuale caricato — lascia vuoto per mantenerlo');
+                    } else {
+                        $('#mon-date')[0].valueAsDate = new Date();
+                    }
+                    $('#monitoring-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                }
+
+                $('#add-monitoring-btn').click(function() { openMonitoringModal(null); });
+                $('.close-monitoring-modal').click(function() { $('#monitoring-modal').addClass('hidden'); });
+
+                $(document).on('click', '.edit-monitoring-btn', function() {
+                    const id = $(this).data('id');
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/progress',
+                        success: function(list) {
+                            const p = list.find(function(x) { return x.id === id; });
+                            if (p) openMonitoringModal(p);
+                        }
+                    });
+                });
+
+                $(document).on('click', '.delete-monitoring-btn', function() {
+                    if (!confirm('Eliminare questo controllo dal dossier?')) return;
+                    const id = $(this).data('id');
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/progress/' + id,
+                        type: 'DELETE',
+                        success: function() { loadMonitoring(); },
+                        error: function() { alert('Errore nell\'eliminazione'); }
+                    });
+                });
+
+                $('#monitoring-form').submit(function(e) {
+                    e.preventDefault();
+                    const editId = $('#monitoring-edit-id').val();
+                    const fd = new FormData();
+                    fd.append('recordedDate', $('#mon-date').val());
+                    if ($('#mon-weight').val()) fd.append('weight', $('#mon-weight').val());
+                    if ($('#mon-fat').val()) fd.append('bodyFatPercentage', $('#mon-fat').val());
+                    if ($('#mon-muscle').val()) fd.append('muscleMass', $('#mon-muscle').val());
+                    fd.append('measurements', $('#mon-measurements').val());
+                    fd.append('progressNotes', $('#mon-progress-notes').val());
+                    fd.append('performanceNotes', $('#mon-performance').val());
+                    fd.append('coachNotes', $('#mon-coach-notes').val());
+                    fd.append('criticalIssues', $('#mon-issues').val());
+                    fd.append('changesMade', $('#mon-changes').val());
+                    if ($('#mon-next-date').val()) fd.append('nextCheckDate', $('#mon-next-date').val());
+                    const biaFile = $('#mon-bia-file')[0].files[0];
+                    if (biaFile) fd.append('biaFile', biaFile);
+                    const url = editId
+                        ? '/api/users/' + clientId + '/dossier/progress/' + editId
+                        : '/api/users/' + clientId + '/dossier/progress';
+                    const method = editId ? 'PUT' : 'POST';
+                    $('#submit-monitoring-btn').prop('disabled', true).text('Salvataggio...');
+                    $.ajax({
+                        url: url, type: method, data: fd, processData: false, contentType: false,
+                        success: function() {
+                            $('#monitoring-modal').addClass('hidden');
+                            loadMonitoring();
+                        },
+                        error: function(xhr) { alert(xhr.responseJSON?.detail || 'Errore nel salvataggio'); },
+                        complete: function() {
+                            $('#submit-monitoring-btn').prop('disabled', false).html('<i data-lucide="save" class="w-4 h-4"></i> Salva Controllo');
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                });
+
+                // =========================
+                // DOSSIER — PROGRAMS (Programmazione)
+                // =========================
+
+                function renderProgramCard(p, isFirst) {
+                    const started = p.startDate ? formatDateIt(p.startDate) : '—';
+                    const reviewed = p.reviewDate ? formatDateIt(p.reviewDate) : '—';
+                    return `
+                        <div class="px-5 py-4 flex items-start gap-4" data-program-id="${p.id}">
+                            <div class="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${isFirst ? 'bg-accent/10 text-accent' : 'bg-surface-hover text-foreground-muted'}">
+                                <i data-lucide="dumbbell" class="w-4 h-4"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <p class="text-sm font-semibold text-foreground">Scheda dal ${started}</p>
+                                    ${isFirst ? '<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">Attuale</span>' : ''}
+                                    ${p.coachName ? `<span class="text-[10px] text-foreground-subtle">Coach: ${p.coachName}</span>` : ''}
+                                </div>
+                                <div class="flex flex-wrap gap-x-6 gap-y-0.5 text-xs text-foreground-muted mb-2">
+                                    <span>Data revisione: <strong class="text-foreground">${reviewed}</strong></span>
+                                    ${p.fileUrl ? `<span>${dossierBiaLink(p.fileUrl, 'Apri Scheda')}</span>` : ''}
+                                </div>
+                                ${p.changesMade ? `<p class="text-xs text-foreground whitespace-pre-line">${p.changesMade}</p>` : ''}
+                            </div>
+                            <button type="button" class="delete-program-btn p-1.5 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors shrink-0"
+                                    data-id="${p.id}" title="Elimina scheda">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>`;
+                }
+
+                function loadPrograms() {
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/programs',
+                        type: 'GET',
+                        success: function(list) {
+                            const container = $('#programs-list').empty();
+                            if (!list.length) {
+                                container.html('<p class="p-6 text-sm text-foreground-subtle text-center">Nessuna scheda di allenamento</p>');
+                                return;
+                            }
+                            list.forEach(function(p, i) { container.append(renderProgramCard(p, i === 0)); });
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                }
+
+                $('#add-program-btn').click(function() {
+                    $('#prog-file').val('');
+                    $('#prog-start-date').val('');
+                    $('#prog-review-date').val('');
+                    $('#prog-changes').val('');
+                    $('#prog-coach').val('');
+                    $('#prog-start-date')[0].valueAsDate = new Date();
+                    $('#program-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                });
+
+                $('.close-program-modal').click(function() { $('#program-modal').addClass('hidden'); });
+
+                $(document).on('click', '.delete-program-btn', function() {
+                    if (!confirm('Eliminare questa scheda dal dossier?')) return;
+                    const id = $(this).data('id');
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/programs/' + id,
+                        type: 'DELETE',
+                        success: function() { loadPrograms(); },
+                        error: function() { alert('Errore nell\'eliminazione'); }
+                    });
+                });
+
+                $('#program-form').submit(function(e) {
+                    e.preventDefault();
+                    const fd = new FormData();
+                    if ($('#prog-start-date').val()) fd.append('startDate', $('#prog-start-date').val());
+                    if ($('#prog-review-date').val()) fd.append('reviewDate', $('#prog-review-date').val());
+                    fd.append('changesMade', $('#prog-changes').val());
+                    fd.append('coachName', $('#prog-coach').val());
+                    const file = $('#prog-file')[0].files[0];
+                    if (file) fd.append('file', file);
+                    $('#submit-program-btn').prop('disabled', true).text('Salvataggio...');
+                    $.ajax({
+                        url: '/api/users/' + clientId + '/dossier/programs',
+                        type: 'POST', data: fd, processData: false, contentType: false,
+                        success: function() {
+                            $('#program-modal').addClass('hidden');
+                            loadPrograms();
+                        },
+                        error: function(xhr) { alert(xhr.responseJSON?.detail || 'Errore nel salvataggio'); },
+                        complete: function() {
+                            $('#submit-program-btn').prop('disabled', false).html('<i data-lucide="save" class="w-4 h-4"></i> Salva Scheda');
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                });
+
+                // =========================
+                // DOSSIER — PDF DOWNLOAD
+                // =========================
+
+                $('#download-dossier-btn').click(function() {
+                    const btn = $(this);
+                    const originalHtml = btn.html();
+                    btn.prop('disabled', true).html('<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Generazione...');
+                    if (window.lucide) lucide.createIcons();
+
+                    const params = new URLSearchParams();
+                    const from = $('#pdf-from-date').val();
+                    const to = $('#pdf-to-date').val();
+                    const month = $('#pdf-month').val();
+                    if (month) {
+                        params.append('month', month);
+                    } else {
+                        if (from) params.append('fromDate', from);
+                        if (to) params.append('toDate', to);
+                    }
+                    params.append('includeAssessment', $('#pdf-assessment').is(':checked'));
+                    params.append('includeProgress', $('#pdf-progress').is(':checked'));
+                    params.append('includePrograms', $('#pdf-programs').is(':checked'));
+                    params.append('includeNotes', $('#pdf-notes').is(':checked'));
+
+                    const token = localStorage.getItem('jwt_token');
+                    const url = '/api/users/' + clientId + '/dossier/pdf?' + params.toString();
+
+                    fetch(url, {
+                        method: 'GET',
+                        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+                    })
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Errore durante la generazione del PDF (status ' + response.status + ')');
+                        const disposition = response.headers.get('Content-Disposition') || '';
+                        const match = disposition.match(/filename="?([^";]+)"?/);
+                        return response.blob().then(function(blob) {
+                            return { blob: blob, filename: match ? match[1] : 'dossier_cliente.pdf' };
+                        });
+                    })
+                    .then(function(result) {
+                        const blobUrl = window.URL.createObjectURL(result.blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = result.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(blobUrl);
+                    })
+                    .catch(function(err) {
+                        alert(err.message || 'Errore durante il download del dossier PDF');
+                    })
+                    .finally(function() {
+                        btn.prop('disabled', false).html(originalHtml);
+                        if (window.lucide) lucide.createIcons();
+                    });
+                });
+
+
+                // =========================
+                // STOP & GO
+                // =========================
+
+
+                function updateStopGoPreview() {
+                    const startVal = $('#stop-go-start-date').val();
+                    if (!startVal) return;
+                    const start = new Date(startVal);
+                    const end = new Date(start);
+                    end.setMonth(end.getMonth() + 1);
+                    end.setDate(end.getDate() - 1);
+                    $('#stop-go-dates-preview').text(`Periodo di sospensione: ${start.toLocaleDateString('it-IT')} → ${end.toLocaleDateString('it-IT')}`);
+                }
+
+                $(document).on('click', '.apply-stop-go-btn', function () {
+                    const subId = $(this).data('id');
+                    const subName = $(this).data('name');
+                    $('#stop-go-sub-id').val(subId);
+                    $('#stop-go-sub-name').text(subName || 'Abbonamento Annuale');
+                    $('#stop-go-start-date')[0].valueAsDate = new Date();
+                    updateStopGoPreview();
+                    $('#stop-go-modal').removeClass('hidden');
+                    if (window.lucide) lucide.createIcons();
+                });
+
+                $('.close-stop-go-modal').click(function () {
+                    $('#stop-go-modal').addClass('hidden');
+                });
+
+                $('#stop-go-start-date').on('input change', updateStopGoPreview);
+
+                $('#stop-go-form').submit(function (e) {
+                    e.preventDefault();
+                    const subId = $('#stop-go-sub-id').val();
+                    const req = {
+                        startDate: $('#stop-go-start-date').val(),
+                        paymentMethod: $('#stop-go-payment-method').val()
+                    };
+                    $('#submit-stop-go-btn').prop('disabled', true).text('Attivazione in corso...');
+                    $.ajax({
+                        url: '/api/subscriptions/' + subId + '/stop-and-go',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(req),
+                        success: function () {
+                            $('#stop-go-modal').addClass('hidden');
+                            loadData();
+                            loadUser();
+                        },
+                        error: function (xhr) {
+                            alert(xhr.responseJSON?.detail || 'Errore durante l\'attivazione di Stop&Go.');
+                        },
+                        complete: function () {
+                            $('#submit-stop-go-btn').prop('disabled', false).html('<i data-lucide="check" class="w-4 h-4"></i> Conferma ed Incassa 9,90 €');
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    });
+                });
+
             });
         </script>
+
     </div>
 </body>
 

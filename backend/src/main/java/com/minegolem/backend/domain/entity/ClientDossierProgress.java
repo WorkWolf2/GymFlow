@@ -20,5 +20,13 @@ public class ClientDossierProgress extends BaseEntity {
     @Column(columnDefinition = "TEXT") private String measurements;
     @Column(columnDefinition = "TEXT") private String observations;
     @Column(name = "custom_parameters", columnDefinition = "TEXT") private String customParameters;
+    @Column(name = "bia_file_path", length = 1024) private String biaFilePath;
+    @Column(name = "progress_notes", columnDefinition = "TEXT") private String progressNotes;
+    @Column(name = "performance_notes", columnDefinition = "TEXT") private String performanceNotes;
+    @Column(name = "coach_notes", columnDefinition = "TEXT") private String coachNotes;
+    @Column(name = "critical_issues", columnDefinition = "TEXT") private String criticalIssues;
+    @Column(name = "changes_made", columnDefinition = "TEXT") private String changesMade;
+    @Column(name = "next_check_date") private LocalDate nextCheckDate;
     @Column(name = "deleted_at") private LocalDateTime deletedAt;
 }
+

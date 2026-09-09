@@ -44,16 +44,44 @@ public class Subscription extends BaseEntity {
     @JoinColumn(name = "created_by")
     private StaffUser createdBy;
 
+    @Column(name = "suspended_from")
+    private LocalDate suspendedFrom;
+
+    @Column(name = "suspended_to")
+    private LocalDate suspendedTo;
+
+    @Column(name = "stop_and_go_applied", nullable = false)
+    @Builder.Default
+    private boolean stopAndGoApplied = false;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    public boolean isSuspended(LocalDate date) {
+        return suspendedFrom != null && suspendedTo != null && !date.isBefore(suspendedFrom) && !date.isAfter(suspendedTo);
+    }
+
+    public boolean isCurrentlySuspended() {
+        return isSuspended(LocalDate.now());
+    }
+
     public boolean isActive() {
+        LocalDate now = LocalDate.now();
         return deletedAt == null
-            && !endDate.isBefore(LocalDate.now())
-            && !startDate.isAfter(LocalDate.now());
+            && !endDate.isBefore(now)
+            && !startDate.isAfter(now)
+            && !isCurrentlySuspended();
     }
 
     public boolean isExpired() {
         return endDate.isBefore(LocalDate.now());
     }
+
+    public boolean isAnnual() {
+        if (subscriptionType == null) return false;
+        Integer days = subscriptionType.getValidityDays();
+        String name = subscriptionType.getName();
+        return (days != null && days >= 360) || (name != null && name.toLowerCase().contains("annuale"));
+    }
+
 }

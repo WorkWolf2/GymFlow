@@ -23,13 +23,24 @@ public interface UserRepository extends JpaRepository<User, UUID> {
           AND (:search IS NULL OR :search = '' OR
                LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR
                LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR
+               LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :search, '%')) OR
+               LOWER(CONCAT(u.lastName, ' ', u.firstName)) LIKE LOWER(CONCAT('%', :search, '%')) OR
                LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')) OR
                LOWER(u.phone) LIKE LOWER(CONCAT('%', :search, '%')) OR
-               CAST(u.clientCode AS string) LIKE CONCAT('%', :search, '%'))
+               LOWER(u.fiscalCode) LIKE LOWER(CONCAT('%', :search, '%')) OR
+               CAST(u.clientCode AS string) LIKE CONCAT('%', :search, '%') OR
+               CONCAT('#', CAST(u.clientCode AS string)) LIKE CONCAT('%', :search, '%') OR
+               EXISTS (
+                   SELECT s.id FROM Subscription s
+                   WHERE s.user.id = u.id
+                     AND s.deletedAt IS NULL
+                     AND LOWER(s.subscriptionType.name) LIKE LOWER(CONCAT('%', :search, '%'))
+               ))
         """)
     Page<User> searchByGym(@Param("gymId") UUID gymId,
                            @Param("search") String search,
                            Pageable pageable);
+
 
     Optional<User> findByIdAndGymIdAndDeletedAtIsNull(UUID id, UUID gymId);
 

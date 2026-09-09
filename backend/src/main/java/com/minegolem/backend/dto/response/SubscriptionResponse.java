@@ -14,9 +14,20 @@ public record SubscriptionResponse(
     LocalDate endDate,
     BigDecimal price,
     String notes,
-    boolean active
+    boolean active,
+    LocalDate suspendedFrom,
+    LocalDate suspendedTo,
+    boolean suspended,
+    boolean stopAndGoApplied,
+    boolean annual,
+    boolean canApplyStopAndGo
 ) {
     public static SubscriptionResponse from(Subscription subscription) {
+        boolean isAnnual = subscription.isAnnual();
+        boolean notDeleted = subscription.getDeletedAt() == null;
+        boolean notExpired = !subscription.isExpired();
+        boolean canApply = notDeleted && notExpired && isAnnual && !subscription.isCurrentlySuspended();
+
         return new SubscriptionResponse(
             subscription.getId(),
             subscription.getUser().getId(),
@@ -25,7 +36,14 @@ public record SubscriptionResponse(
             subscription.getEndDate(),
             subscription.getPrice(),
             subscription.getNotes(),
-            subscription.isActive()
+            subscription.isActive(),
+            subscription.getSuspendedFrom(),
+            subscription.getSuspendedTo(),
+            subscription.isCurrentlySuspended(),
+            subscription.isStopAndGoApplied(),
+            isAnnual,
+            canApply
         );
     }
 }
+

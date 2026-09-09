@@ -38,10 +38,12 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
           AND s.subscriptionType.type = :type
           AND s.startDate <= :today
           AND s.endDate >= :today
+          AND (s.suspendedFrom IS NULL OR :today < s.suspendedFrom OR :today > s.suspendedTo)
         """)
     List<Subscription> findActiveByUserAndType(@Param("userId") UUID userId,
                                                @Param("type") SubscriptionTypeEnum type,
                                                @Param("today") LocalDate today);
+
 
     @Query("""
         SELECT s FROM Subscription s

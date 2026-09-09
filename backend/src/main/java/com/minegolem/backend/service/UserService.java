@@ -206,6 +206,18 @@ public class UserService {
 
         var prediction = computeReturnPrediction(u, hasActiveSub, certStatus);
 
+        List<com.minegolem.backend.dto.response.UserPackageInfo> activePackages = subscriptionRepository
+            .findActiveByUserAndType(u.getId(), SubscriptionTypeEnum.PACCHETTO, LocalDate.now())
+            .stream()
+            .map(s -> new com.minegolem.backend.dto.response.UserPackageInfo(
+                s.getId(),
+                s.getSubscriptionType().getName(),
+                s.getSubscriptionType().getColor() != null ? s.getSubscriptionType().getColor() : "#6366f1",
+                s.getStartDate(),
+                s.getEndDate()
+            ))
+            .toList();
+
         return new UserResponse(
             u.getId(), u.getClientCode(), u.getFirstName(), u.getLastName(), u.getFullName(),
             u.getEmail(), u.getPhone(), u.getBirthDate(), u.getBirthPlace(), u.getBirthProvince(), u.getSex(), u.getFiscalCode(),
@@ -217,7 +229,8 @@ public class UserService {
             prediction.lastAccessTime(),
             prediction.daysSinceLastAccess(),
             prediction.timeAgoText(),
-            prediction
+            prediction,
+            activePackages
         );
     }
 

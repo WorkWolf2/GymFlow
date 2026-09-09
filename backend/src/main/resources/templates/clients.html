@@ -18,18 +18,46 @@
         </div>
 
         <!-- Controls: Search & Filter Bar -->
-        <div class="flex items-center justify-between gap-3 stagger-item flex-wrap">
-            <div class="relative flex-1 max-w-sm">
-                <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-subtle w-4 h-4"></i>
-                <input type="text" id="search-input" class="input pl-10 text-xs py-2.5 rounded-xl border border-surface-border bg-surface/40 hover:bg-surface/70 focus:bg-surface hover:border-surface-border/80 focus:border-accent transition-all" placeholder="Cerca per ID, nome, cognome, email...">
+        <div class="flex items-center justify-between gap-4 stagger-item flex-wrap">
+            <div class="flex items-center gap-3 flex-1 max-w-md">
+                <!-- Search Box -->
+                <div class="client-search-box relative flex-1 rounded-xl flex items-center">
+                    <i data-lucide="search" class="search-icon absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted w-4 h-4 pointer-events-none transition-colors"></i>
+                    <input type="text" id="search-input"
+                        class="w-full h-10 pl-10 pr-9 text-sm font-medium rounded-xl bg-transparent text-white placeholder:text-foreground-muted placeholder:font-normal focus:outline-none"
+                        style="color: #ffffff !important;"
+                        placeholder="Cerca per ID, nome, cognome, CF..."
+                        autocomplete="off" spellcheck="false">
+                    <button type="button" id="clear-search-btn" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-white p-1 rounded-md hover:bg-surface-active transition-colors hidden" title="Cancella ricerca">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- Package Filter Pill -->
+                <div class="client-filter-pill relative shrink-0 rounded-xl flex items-center">
+                    <i data-lucide="package" class="absolute left-3 top-1/2 -translate-y-1/2 text-accent w-3.5 h-3.5 pointer-events-none"></i>
+                    <select id="package-filter"
+                        class="h-10 pl-8 pr-7 text-xs sm:text-sm font-medium rounded-xl bg-transparent text-white focus:outline-none w-auto max-w-[165px] cursor-pointer appearance-none"
+                        style="color: #ffffff !important;"
+                        title="Filtra per pacchetto">
+                        <option value="" style="background-color: #1b1b1d; color: #ffffff;">Tutti i pacchetti</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted w-3.5 h-3.5 pointer-events-none"></i>
+                </div>
             </div>
-            <div class="flex items-center gap-2.5 text-xs text-foreground-muted">
-                <span class="hidden sm:inline text-foreground-subtle font-medium">Indicatori:</span>
-                <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium select-none shadow-sm">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Torna
+
+            <!-- Indicators -->
+            <div class="flex items-center gap-2.5 text-xs shrink-0">
+                <span class="hidden sm:inline text-foreground-subtle text-[11px] font-semibold uppercase tracking-wider mr-1">Indicatori</span>
+                
+                <span class="indicator-badge-success inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold select-none cursor-default">
+                    <span class="glow-dot-success"></span>
+                    <span>Torna</span>
                 </span>
-                <span class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium select-none shadow-sm">
-                    <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse-slow"></span> A rischio
+
+                <span class="indicator-badge-danger inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold select-none cursor-default">
+                    <span class="glow-dot-danger"></span>
+                    <span>A rischio</span>
                 </span>
             </div>
         </div>
@@ -106,6 +134,21 @@
                 let currentSearch = "";
                 let totalPages = 0;
 
+                function loadPackageFilterOptions() {
+                    $.ajax({
+                        url: '/api/subscription-types?type=PACCHETTO',
+                        type: 'GET',
+                        success: function(types) {
+                            const select = $('#package-filter');
+                            select.empty().append('<option value="" style="background-color: #1b1b1d; color: #ffffff;">Tutti i pacchetti</option>');
+                            types.forEach(function(t) {
+                                select.append(`<option value="${t.name}" style="background-color: #1b1b1d; color: #ffffff;">Pacchetto: ${t.name}</option>`);
+                            });
+                        }
+                    });
+                }
+                loadPackageFilterOptions();
+
                 function loadClients() {
                     const list = $('#clients-list');
                     list.html($('#loading-skeleton').html());
@@ -163,6 +206,22 @@
                                         ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-[11px] bg-accent/10 text-accent border border-accent/25" title="Codice Tag NFC"><i data-lucide="contact" class="w-3 h-3"></i>NFC: ${user.nfcTagUid}</span>` 
                                         : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-[11px] bg-surface-active text-foreground-muted border border-surface-border" title="Codice Cliente"><i data-lucide="hash" class="w-3 h-3"></i>Cod: ${user.clientCode || '-'}</span>`;
  
+                                    // Build Package Badges with Rounded Squares
+                                    let packageBadgesHtml = '';
+                                    if (user.activePackages && user.activePackages.length > 0) {
+                                        user.activePackages.forEach(function(pkg) {
+                                            const color = pkg.color || '#6366f1';
+                                            packageBadgesHtml += `
+                                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border shadow-sm select-none"
+                                                      style="background-color: ${color}18; border-color: ${color}44; color: ${color};"
+                                                      title="Pacchetto attivo: ${pkg.name}">
+                                                    <span class="w-2.5 h-2.5 rounded-[3px] shrink-0 inline-block border border-white/20 shadow-sm" style="background-color: ${color};"></span>
+                                                    <span class="font-medium">${pkg.name}</span>
+                                                </span>
+                                            `;
+                                        });
+                                    }
+
                                     // Build Return Prediction 5 Rounded Squares Indicator & Sub-line
                                     let predictionBlocksHtml = '';
                                     let predLabel = 'Nessun dato';
@@ -183,7 +242,7 @@
                                             predictionBlocksHtml += `<span class="w-2.5 h-2.5 rounded-[2px] border inline-block transition-all" style="${style}"></span>`;
                                         }
                                     }
-
+ 
                                     const contactIcon = (user.email && user.email.includes('@'))
                                         ? `<i data-lucide="mail" class="w-3.5 h-3.5 text-foreground-subtle/70"></i>`
                                         : (user.phone ? `<i data-lucide="phone" class="w-3.5 h-3.5 text-foreground-subtle/70"></i>` : `<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-foreground-subtle/50"></i>`);
@@ -192,7 +251,7 @@
                                         <div class="grid grid-cols-[40px_1fr_auto] sm:grid-cols-[40px_2.2fr_1.4fr_90px] gap-3 sm:gap-5 px-6 py-4 hover:bg-surface-hover/30 transition-all duration-200 relative group items-center">
                                             <!-- Return Prediction Color Indicator line -->
                                             <div class="absolute left-0 top-0 bottom-0 w-[3px] transition-all group-hover:w-[4px]" style="background-color: ${predColor};"></div>
-
+ 
                                             <!-- Avatar -->
                                             <div class="w-10 h-10 rounded-full bg-background-tertiary border border-surface-border flex items-center justify-center shrink-0 shadow-sm overflow-hidden select-none">
                                                 ${avatar}
@@ -205,6 +264,7 @@
                                                         ${user.fullName}
                                                     </a>
                                                     ${user.clientCode ? `<span class="inline-flex items-center text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-active/60 border border-surface-border/80 text-foreground-muted">#${user.clientCode}</span>` : ''}
+                                                    ${packageBadgesHtml}
                                                 </div>
  
                                                 <p class="text-xs text-foreground-subtle truncate flex items-center gap-1.5">
@@ -262,7 +322,7 @@
                                 });
                                 if (window.lucide) lucide.createIcons();
                             }
-
+ 
                             // Update Pagination
                             if (totalPages > 1) {
                                 $('#pagination-controls').removeClass('hidden');
@@ -275,20 +335,42 @@
                         }
                     });
                 }
-
+ 
                 // Initial Load
                 window.LegionAsdRefreshClients = loadClients;
                 loadClients();
-
-                // Search Event
+                if (window.lucide) lucide.createIcons();
+ 
+                // Search Events
                 let searchTimeout;
-                $('#search-input').on('input', function() {
-                    currentSearch = $(this).val();
+                function performSearch() {
+                    currentSearch = $('#search-input').val().trim();
                     currentPage = 0;
+                    if (currentSearch.length > 0) {
+                        $('#clear-search-btn').removeClass('hidden');
+                    } else {
+                        $('#clear-search-btn').addClass('hidden');
+                    }
+                    if (window.lucide) lucide.createIcons();
                     clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(loadClients, 300);
+                    searchTimeout = setTimeout(loadClients, 250);
+                }
+
+                $('#search-input').on('input', performSearch);
+
+                $('#clear-search-btn').on('click', function() {
+                    $('#search-input').val('').focus();
+                    $('#package-filter').val('');
+                    performSearch();
                 });
 
+                // Package Filter Event
+                $('#package-filter').on('change', function() {
+                    const val = $(this).val();
+                    $('#search-input').val(val);
+                    performSearch();
+                });
+ 
                 // Pagination Events
                 $('#prev-page').click(function() {
                     if (currentPage > 0) {
@@ -296,13 +378,14 @@
                         loadClients();
                     }
                 });
-
+ 
                 $('#next-page').click(function() {
                     if (currentPage < totalPages - 1) {
                         currentPage++;
                         loadClients();
                     }
                 });
+;
 
                 // Dropdown logic
                 $(document).on('click', '.dropdown-toggle', function(e) {

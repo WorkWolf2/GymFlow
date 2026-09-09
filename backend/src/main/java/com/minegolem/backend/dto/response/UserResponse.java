@@ -4,6 +4,7 @@ import com.minegolem.backend.domain.entity.MedicalCertificate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record UserResponse(
@@ -36,5 +37,7 @@ public record UserResponse(
     LocalDateTime lastAccessTime,
     Long daysSinceLastAccess,
     String timeAgoText,
-    ClientReturnPredictionResponse returnPrediction
+    ClientReturnPredictionResponse returnPrediction,
+    List<UserPackageInfo> activePackages
 ) {}
+
