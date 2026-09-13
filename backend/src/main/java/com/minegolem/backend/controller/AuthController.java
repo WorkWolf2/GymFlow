@@ -33,9 +33,10 @@ public class AuthController {
         );
 
         StaffUserDetails userDetails = (StaffUserDetails) auth.getPrincipal();
+        String normalizedEmail = request.email() != null ? request.email().trim() : "";
 
         // update last login
-        staffUserRepository.findByEmailAndActiveTrue(request.email())
+        staffUserRepository.findByEmailIgnoreCaseAndActiveTrue(normalizedEmail)
             .ifPresent(u -> {
                 u.setLastLoginAt(LocalDateTime.now());
                 staffUserRepository.save(u);
@@ -44,7 +45,7 @@ public class AuthController {
         String accessToken = jwtService.generateToken(userDetails);
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
-        String fullName = staffUserRepository.findByEmailAndActiveTrue(request.email())
+        String fullName = staffUserRepository.findByEmailIgnoreCaseAndActiveTrue(normalizedEmail)
             .map(StaffUser::getFullName).orElse("");
 
         return ResponseEntity.ok(AuthResponse.of(accessToken, refreshToken, 86400000L, userDetails, fullName));
@@ -55,7 +56,7 @@ public class AuthController {
         String token = bearerToken.substring(7);
         String email = jwtService.extractUsername(token);
 
-        StaffUser staffUser = staffUserRepository.findByEmailAndActiveTrue(email)
+        StaffUser staffUser = staffUserRepository.findByEmailIgnoreCaseAndActiveTrue(email)
             .orElseThrow();
         StaffUserDetails userDetails = new StaffUserDetails(staffUser);
 

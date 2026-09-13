@@ -1,6 +1,5 @@
 package com.minegolem.backend.config;
 
-
 import com.minegolem.backend.security.JwtAuthFilter;
 import com.minegolem.backend.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,6 +49,7 @@ public class SecurityConfig {
 
                         // 🔥 API PROTETTE (SOLO QUESTE USANO JWT)
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/access-bridge/**").permitAll()
                         .requestMatchers("/ws/access-bridge").permitAll()
                         .requestMatchers("/api/**").authenticated()
@@ -60,8 +59,12 @@ public class SecurityConfig {
                                 "/",
                                 "/login",
                                 "/dashboard",
+                                "/prenota/**",
+                                "/booking/**",
+                                "/public/**",
                                 "/clients/**",
                                 "/accesses/**",
+                                "/reservations/**",
                                 "/payments/**",
                                 "/subscriptions/**",
                                 "/settings/**",
@@ -113,5 +116,4 @@ public class SecurityConfig {
                 .filter(origin -> !origin.isBlank())
                 .toList();
     }
-
 }

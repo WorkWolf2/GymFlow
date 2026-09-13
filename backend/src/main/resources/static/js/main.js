@@ -10,16 +10,21 @@ $(document).ready(function() {
             }
         },
         error: function(jqXHR, textStatus, errorThrown) {
-            if (jqXHR.status === 401 || jqXHR.status === 403) {
+            if (jqXHR.status === 401) {
                 // Token expired or invalid, redirect to login
-                console.warn("Unauthorized access. Redirecting to login...");
+                console.warn("Session expired or unauthorized (401). Redirecting to login...");
                 localStorage.removeItem('jwt_token');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('user_full_name');
+                localStorage.removeItem('user_role');
+                localStorage.removeItem('user_permissions');
                 if (window.location.pathname !== '/login') {
                     window.location.href = '/login';
                 }
+            } else if (jqXHR.status === 403) {
+                console.warn("Forbidden (403): Permessi insufficienti per questa specifica risorsa.");
             } else {
                 console.error("AJAX Error:", textStatus, errorThrown);
-                // Optionally show a global error toast here
             }
         }
     });
@@ -140,6 +145,10 @@ function realtimeRefreshersFor(event) {
         refreshers.add(window.LegionAsdRefreshSettings);
         refreshers.add(window.LegionAsdRefreshEmailTemplates);
         refreshers.add(window.LegionAsdRefreshExpirationTemplates);
+    }
+
+    if (type === 'RESERVATION') {
+        refreshers.add(window.LegionAsdRefreshReservations);
     }
 
     return refreshers;

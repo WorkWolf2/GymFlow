@@ -32,7 +32,7 @@ public class SubscriptionTypeController {
     private final RealtimeEventService realtimeEventService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasAuthority('USER_READ')")
     public ResponseEntity<List<SubscriptionTypeResponse>> list(
         @AuthenticationPrincipal StaffUserDetails user,
         @RequestParam(required = false) SubscriptionTypeEnum type

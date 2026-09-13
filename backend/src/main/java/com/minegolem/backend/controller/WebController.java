@@ -21,8 +21,22 @@ public class WebController {
         return "login";
     }
 
+    @GetMapping({"/prenota", "/booking", "/public/reservations"})
+    public String publicBookingPage(Model model) {
+        model.addAttribute("title", "Prenotazione Palestra");
+        return "prenota";
+    }
+
     @GetMapping({"/", "/dashboard"})
-    public String dashboard(Model model) {
+    public String dashboard(HttpServletRequest request, Model model) {
+        String host = request.getHeader("Host");
+        if (host != null) {
+            String lowerHost = host.toLowerCase();
+            if (lowerHost.startsWith("prenota") || lowerHost.startsWith("booking")) {
+                model.addAttribute("title", "Prenotazione Palestra");
+                return "prenota";
+            }
+        }
         model.addAttribute("title", "Dashboard");
         return "dashboard";
     }
@@ -50,6 +64,12 @@ public class WebController {
     public String accesses(Model model) {
         model.addAttribute("title", "Accessi");
         return "accesses";
+    }
+
+    @GetMapping("/reservations")
+    public String reservations(Model model) {
+        model.addAttribute("title", "Prenotazioni");
+        return "reservations";
     }
 
     @GetMapping("/payments")

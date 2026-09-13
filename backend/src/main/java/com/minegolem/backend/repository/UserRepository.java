@@ -44,6 +44,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByIdAndGymIdAndDeletedAtIsNull(UUID id, UUID gymId);
 
+    Optional<User> findFirstByGymIdAndPhoneAndDeletedAtIsNull(UUID gymId, String phone);
+
     Optional<User> findByClientCodeAndDeletedAtIsNull(Long clientCode);
 
     @Query("SELECT COALESCE(MAX(u.clientCode), 0) + 1 FROM User u")

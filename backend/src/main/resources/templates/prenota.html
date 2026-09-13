@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Prenotazione Ingressi | Legion GymFlow</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0d0d0f">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    },
+                    colors: {
+                        brand: {
+                            gold: '#e8c84a',
+                            goldLight: '#f5de7a',
+                            goldDark: '#b8992e',
+                            dark: '#0d0d0f',
+                            card: '#161619',
+                            cardBorder: '#26262b',
+                            input: '#1a1a1f'
+                        }
+                    },
+                    boxShadow: {
+                        'glow': '0 0 25px -5px rgba(232, 200, 74, 0.35)',
+                        'glow-sm': '0 0 15px -3px rgba(232, 200, 74, 0.25)',
+                        'inner-card': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.06)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <style>
+        body {
+            background-color: #0d0d0f;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a30;
+            border-radius: 999px;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .glass-header {
+            background: rgba(13, 13, 15, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .slot-card {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .slot-card:active {
+            transform: scale(0.97);
+        }
+        .slot-card.selected {
+            border-color: #e8c84a !important;
+            background: linear-gradient(145deg, rgba(232, 200, 74, 0.14) 0%, rgba(22, 22, 25, 0.95) 100%) !important;
+            box-shadow: 0 0 20px -3px rgba(232, 200, 74, 0.35);
+        }
+
+        .day-chip.active {
+            background: #e8c84a;
+            color: #0d0d0f;
+            border-color: #e8c84a;
+            box-shadow: 0 0 16px -2px rgba(232, 200, 74, 0.4);
+        }
+
+        .day-chip.active .day-subtitle {
+            color: #2b260f;
+            font-weight: 700;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand-gold selection:text-black">
+
+    <!-- Top Sticky Navigation Bar -->
+    <header class="sticky top-0 z-40 border-b border-brand-cardBorder/80 glass-header px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl text-black flex items-center justify-center font-black shadow-glow-sm shrink-0">
+                    <img th:src="@{/images/logo.png}" alt="Logo" class="w-full h-full object-contain rounded-sm">
+                </div>
+                <div>
+                    <h1 id="gym-name-header" class="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5 leading-tight">
+                        <span>Legion GymFlow</span>
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                    </h1>
+                    <p class="text-[11px] font-medium text-gray-400 flex items-center gap-1">
+                        <i data-lucide="calendar-check" class="w-3 h-3 text-brand-gold"></i>
+                        Prenotazione Allenamento Libero
+                    </p>
+                </div>
+            </div>
+
+            <!-- Direct Refresh Button -->
+            <button id="refresh-slots-btn" type="button" class="w-9 h-9 rounded-xl bg-brand-card border border-brand-cardBorder text-gray-300 hover:text-brand-gold active:rotate-180 transition-all duration-300 flex items-center justify-center shrink-0" title="Aggiorna disponibilità">
+                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container (Mobile-First Centered) -->
+    <main class="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
+
+        <!-- Welcome & Info Banner -->
+        <div class="rounded-2xl bg-gradient-to-b from-brand-card to-[#121215] border border-brand-cardBorder p-4 shadow-inner-card relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-brand-gold/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="flex items-start justify-between gap-3 relative z-10">
+                <div>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-gold/15 border border-brand-gold/30 text-brand-gold text-[10px] font-black uppercase tracking-wider mb-1.5">
+                        Accesso Rapido
+                    </span>
+                    <h2 class="text-base font-extrabold text-white">Scegli il tuo turno</h2>
+                    <p class="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                        Prenota la tua sessione in palestra in 30 secondi. Non serve registrazione o password.
+                    </p>
+                </div>
+                <div class="w-10 h-10 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center text-brand-gold shrink-0">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- STEP 1: DATE SELECTION                     -->
+        <!-- ========================================== -->
+        <section class="space-y-2">
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-4 h-4 rounded-full bg-brand-gold/20 text-brand-gold flex items-center justify-center text-[10px] font-black">1</span>
+                    Seleziona la Data
+                </label>
+                <!-- Custom Date Picker Trigger -->
+                <label for="custom-date-input" class="cursor-pointer text-[11px] font-bold text-brand-gold hover:text-brand-goldLight flex items-center gap-1">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    <span>Altra Data</span>
+                    <input type="date" id="custom-date-input" class="sr-only">
+                </label>
+            </div>
+
+            <!-- Horizontal Day Selector Carousel -->
+            <div id="day-chips-container" class="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 hide-scrollbar -mx-1 px-1">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- STEP 2: TIME SLOTS SELECTION               -->
+        <!-- ========================================== -->
+        <section class="space-y-2">
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-4 h-4 rounded-full bg-brand-gold/20 text-brand-gold flex items-center justify-center text-[10px] font-black">2</span>
+                    Scegli Fascia Oraria
+                </label>
+                <div id="active-date-display" class="text-[11px] font-mono font-bold text-gray-400">
+                    <!-- e.g. Oggi, 15 Set -->
+                </div>
+            </div>
+
+            <!-- Capacity / Legend Pills -->
+            <div class="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-brand-card/60 border border-brand-cardBorder/60 text-[10px]">
+                <div class="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>Libera (&lt;12)</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-amber-300 font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>Media (12-16)</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-red-400 font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                    <span>Picco (16+)</span>
+                </div>
+            </div>
+
+            <!-- Slots Grid -->
+            <div id="slots-grid" class="grid grid-cols-2 sm:grid-cols-2 gap-2.5">
+                <!-- Populated via JS -->
+                <div class="col-span-2 py-10 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                    <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-brand-gold"></i>
+                    <span class="text-xs font-medium">Caricamento fasce orarie...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- STEP 3: BOOKING FORM CARD                  -->
+        <!-- ========================================== -->
+        <section id="booking-form-section" class="space-y-3 pt-2">
+            <div class="flex items-center justify-between">
+                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span class="w-4 h-4 rounded-full bg-brand-gold/20 text-brand-gold flex items-center justify-center text-[10px] font-black">3</span>
+                    Dati di Prenotazione
+                </label>
+            </div>
+
+            <form id="public-booking-form" class="rounded-2xl bg-brand-card border border-brand-cardBorder p-4 space-y-3.5 shadow-xl">
+                
+                <!-- Selected Slot Summary Banner -->
+                <div id="selected-summary-box" class="p-3 rounded-xl bg-brand-gold/10 border border-brand-gold/30 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-brand-gold text-black flex items-center justify-center font-black">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <div id="summary-slot-label" class="text-xs font-extrabold text-white">Seleziona una fascia</div>
+                            <div id="summary-date-label" class="text-[11px] font-medium text-brand-gold">Tocca uno degli orari sopra</div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono font-bold px-2 py-1 rounded bg-brand-gold/20 text-brand-gold uppercase">Confermato</span>
+                </div>
+
+                <!-- Hidden Selected Fields -->
+                <input type="hidden" id="form-selected-date" name="reservationDate" required>
+                <input type="hidden" id="form-selected-slot" name="timeSlot" required>
+
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center gap-1">
+                        <span>Nome e Cognome</span>
+                        <span class="text-brand-gold">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </span>
+                        <input type="text" id="form-fullname" name="fullName" required placeholder="Es. Mario Rossi"
+                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
+                    </div>
+                </div>
+
+                <!-- Phone -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center justify-between">
+                        <span class="flex items-center gap-1">
+                            <span>Numero di Telefono</span>
+                            <span class="text-brand-gold">*</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 font-normal">Per conferme e orari</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+                            <i data-lucide="phone" class="w-4 h-4"></i>
+                        </span>
+                        <input type="tel" id="form-phone" name="phone" required placeholder="Es. 333 1234567"
+                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm font-mono focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
+                    </div>
+                </div>
+
+                <!-- Email (Optional) -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center justify-between">
+                        <span>Email (Opzionale)</span>
+                        <span class="text-[10px] text-gray-500 font-normal">Facoltativa</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                        </span>
+                        <input type="email" id="form-email" name="email" placeholder="Es. mario.rossi@email.it"
+                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
+                    </div>
+                </div>
+
+                <!-- Notes (Optional) -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center justify-between">
+                        <span>Note o Richieste (Opzionale)</span>
+                        <span class="text-[10px] text-gray-500 font-normal">Es. Prima volta, Lezione prova</span>
+                    </label>
+                    <div class="relative">
+                        <textarea id="form-notes" name="notes" rows="2" placeholder="Eventuali annotazioni per la reception..."
+                                  class="w-full p-3 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-xs focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all"></textarea>
+                    </div>
+                </div>
+
+                <!-- Submit Action Button -->
+                <div class="pt-2">
+                    <button type="submit" id="submit-booking-btn" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-gold to-brand-goldLight text-black font-extrabold text-sm tracking-wide shadow-glow hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>CONFERMA PRENOTAZIONE</span>
+                    </button>
+                    <p class="text-[10px] text-center text-gray-500 mt-2 flex items-center justify-center gap-1">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        Prenotazione istantanea salvata sul registro palestra
+                    </p>
+                </div>
+            </form>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-8 border-t border-brand-cardBorder/60 py-4 px-4 text-center text-xs text-gray-500 max-w-md mx-auto w-full">
+        <p class="font-bold text-gray-400" id="gym-name-footer">Legion GymFlow</p>
+        <p class="text-[11px] text-gray-600 mt-0.5">Powered by <a href="https://github.com/WorkWolf2">GymFlow System</a> &bull; Prenotazioni Aperte al Pubblico</p>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- SUCCESS CONFIRMATION MODAL / TICKET       -->
+    <!-- ========================================== -->
+    <div id="success-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-sm rounded-3xl bg-brand-card border border-brand-cardBorder p-6 text-center space-y-4 shadow-2xl animate-pop-in relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-brand-gold via-brand-goldLight to-brand-goldDark"></div>
+
+            <!-- Success Icon -->
+            <div class="w-16 h-16 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                <i data-lucide="badge-check" class="w-9 h-9"></i>
+            </div>
+
+            <div>
+                <span class="text-[11px] font-black uppercase tracking-widest text-emerald-400">Prenotazione Confermata!</span>
+                <h3 class="text-xl font-black text-white mt-1">Ti aspettiamo in palestra!</h3>
+                <p class="text-xs text-gray-400 mt-1">La tua presenza è stata registrata con successo.</p>
+            </div>
+
+            <!-- Digital Ticket Card -->
+            <div class="rounded-2xl bg-brand-input border border-brand-cardBorder/80 p-4 text-left space-y-2.5 font-mono text-xs">
+                <div class="flex justify-between items-center border-b border-brand-cardBorder/60 pb-2">
+                    <span class="text-gray-400 text-[11px]">CLIENTE</span>
+                    <span id="ticket-name" class="font-bold text-white font-sans text-xs">-</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-brand-cardBorder/60 pb-2">
+                    <span class="text-gray-400 text-[11px]">DATA</span>
+                    <span id="ticket-date" class="font-bold text-brand-gold text-xs">-</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-brand-cardBorder/60 pb-2">
+                    <span class="text-gray-400 text-[11px]">ORARIO</span>
+                    <span id="ticket-slot" class="font-bold text-white text-xs">-</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-[11px]">TELEFONO</span>
+                    <span id="ticket-phone" class="font-bold text-gray-300 text-xs">-</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-2 pt-1">
+                <a id="ticket-gcal-btn" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 px-3 rounded-xl bg-brand-input border border-brand-cardBorder hover:border-brand-gold text-white text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="calendar-plus" class="w-4 h-4 text-brand-gold"></i>
+                    <span>Aggiungi a Google Calendar</span>
+                </a>
+
+                <button id="book-another-btn" type="button" class="w-full py-3 px-3 rounded-xl bg-brand-gold text-black font-extrabold text-xs tracking-wide hover:brightness-105 active:scale-95 transition-all">
+                    EFFETTUA UN'ALTRA PRENOTAZIONE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-box" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm pointer-events-none space-y-2"></div>
+
+    <!-- ========================================== -->
+    <!-- INTERACTIVE SCRIPT                         -->
+    <!-- ========================================== -->
+    <script>
+        $(document).ready(function() {
+            const DAY_NAMES_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+            const MONTH_NAMES_SHORT = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+
+            let selectedDateIso = formatDateIso(new Date());
+            let selectedSlot = null;
+            let availabilityCache = {};
+            let gymInfo = null;
+
+            // Initialize Lucide icons
+            if (window.lucide) lucide.createIcons();
+
+            // Load Gym Info
+            loadGymInfo();
+
+            // Render Day Selector Chips
+            renderDayChips();
+
+            // Load Slots for selected date
+            loadAvailability(selectedDateIso);
+
+            // ==========================================
+            // Helper Functions
+            // ==========================================
+            function formatDateIso(d) {
+                const year = d.getFullYear();
+                const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                const day = d.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            function formatDisplayDate(dateStr) {
+                const d = new Date(dateStr + 'T00:00:00');
+                const dayName = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"][d.getDay()];
+                const dayNum = d.getDate();
+                const monthName = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"][d.getMonth()];
+                return `${dayName} ${dayNum} ${monthName}`;
+            }
+
+            function showToast(msg, type = 'success') {
+                const isErr = type === 'error' || type === 'danger';
+                const bg = isErr ? 'bg-red-500/90 border-red-400 text-white' : 'bg-brand-card/95 border-brand-gold text-white';
+                const icon = isErr ? 'alert-triangle' : 'check-circle-2';
+
+                const toast = $('<div>', {
+                    class: `p-3 rounded-2xl border shadow-2xl flex items-center gap-2.5 text-xs font-bold transition-all duration-200 pointer-events-auto backdrop-blur-md ${bg}`
+                });
+
+                toast.append(`<i data-lucide="${icon}" class="w-4 h-4 shrink-0 text-brand-gold"></i>`);
+                toast.append($('<span>', { class: 'flex-1' }).text(msg));
+
+                $('#toast-box').append(toast);
+                if (window.lucide) lucide.createIcons();
+
+                setTimeout(() => {
+                    toast.fadeOut(300, function() { $(this).remove(); });
+                }, 3500);
+            }
+
+            // ==========================================
+            // 1. Load Gym Info
+            // ==========================================
+            function loadGymInfo() {
+                $.ajax({
+                    url: '/api/public/reservations/gym',
+                    type: 'GET',
+                    success: function(data) {
+                        gymInfo = data;
+                        if (data && data.name) {
+                            $('#gym-name-header span').first().text(data.name);
+                            $('#gym-name-footer').text(data.name);
+                            document.title = `Prenotazioni | ${data.name}`;
+                        }
+                    },
+                    error: function() {
+                        // Keep default fallback
+                    }
+                });
+            }
+
+            // ==========================================
+            // 2. Render Day Chips
+            // ==========================================
+            function renderDayChips() {
+                const container = $('#day-chips-container');
+                container.empty();
+
+                const today = new Date();
+
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(today);
+                    d.setDate(today.getDate() + i);
+
+                    const iso = formatDateIso(d);
+                    const isToday = (i === 0);
+                    const isTomorrow = (i === 1);
+
+                    let title = isToday ? 'Oggi' : isTomorrow ? 'Domani' : DAY_NAMES_SHORT[d.getDay()];
+                    let sub = `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]}`;
+
+                    const isActive = (iso === selectedDateIso);
+
+                    const chip = $(`
+                        <button type="button" class="day-chip flex-shrink-0 flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border transition-all duration-150 min-w-[72px] cursor-pointer ${isActive ? 'active' : 'bg-brand-card border-brand-cardBorder text-gray-300 hover:border-brand-gold/40'}"
+                                data-iso="${iso}">
+                            <span class="text-xs font-black tracking-tight leading-tight">${title}</span>
+                            <span class="day-subtitle text-[10px] font-mono text-gray-400 mt-0.5 leading-tight">${sub}</span>
+                        </button>
+                    `);
+
+                    container.append(chip);
+                }
+            }
+
+            // Day Chip Click
+            $(document).on('click', '.day-chip', function() {
+                $('.day-chip').removeClass('active').addClass('bg-brand-card border-brand-cardBorder text-gray-300');
+                $(this).addClass('active').removeClass('bg-brand-card border-brand-cardBorder text-gray-300');
+
+                selectedDateIso = $(this).data('iso');
+                selectedSlot = null;
+                updateSelectionSummary();
+                loadAvailability(selectedDateIso);
+            });
+
+            // Custom Date Input Trigger
+            $('#custom-date-input').change(function() {
+                const val = $(this).val();
+                if (val) {
+                    selectedDateIso = val;
+                    selectedSlot = null;
+
+                    // Update chips styling or custom label
+                    $('.day-chip').removeClass('active').addClass('bg-brand-card border-brand-cardBorder text-gray-300');
+                    const match = $(`.day-chip[data-iso="${val}"]`);
+                    if (match.length) {
+                        match.addClass('active').removeClass('bg-brand-card border-brand-cardBorder text-gray-300');
+                    }
+
+                    updateSelectionSummary();
+                    loadAvailability(selectedDateIso);
+                }
+            });
+
+            // ==========================================
+            // 3. Load Slot Availability
+            // ==========================================
+            function loadAvailability(dateIso) {
+                $('#active-date-display').text(formatDisplayDate(dateIso));
+                $('#form-selected-date').val(dateIso);
+
+                $('#slots-grid').html(`
+                    <div class="col-span-2 py-10 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-brand-gold"></i>
+                        <span class="text-xs font-medium">Aggiornamento fasce orarie...</span>
+                    </div>
+                `);
+                if (window.lucide) lucide.createIcons();
+
+                $.ajax({
+                    url: `/api/public/reservations/availability?date=${dateIso}`,
+                    type: 'GET',
+                    success: function(data) {
+                        availabilityCache[dateIso] = data;
+                        renderSlots(data.slots);
+                    },
+                    error: function() {
+                        $('#slots-grid').html(`
+                            <div class="col-span-2 py-6 text-center text-red-400 text-xs">
+                                Impossibile caricare le fasce orarie. Riprova tra poco.
+                            </div>
+                        `);
+                    }
+                });
+            }
+
+            $('#refresh-slots-btn').click(function() {
+                loadAvailability(selectedDateIso);
+                showToast('Disponibilità aggiornata!', 'success');
+            });
+
+            // ==========================================
+            // 4. Render Slots Grid
+            // ==========================================
+            function renderSlots(slots) {
+                const grid = $('#slots-grid');
+                grid.empty();
+
+                if (!slots || slots.length === 0) {
+                    grid.html('<p class="col-span-2 text-center text-xs text-gray-500 py-6">Nessuna fascia oraria disponibile per questa data.</p>');
+                    return;
+                }
+
+                slots.forEach(slot => {
+                    const isPast = slot.isPast || (slot.status === 'PAST');
+                    const isSelected = (!isPast && slot.timeSlot === selectedSlot);
+
+                    let statusDot = 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]';
+                    let badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    let statusText = 'Disponibile';
+                    let cardClasses = isSelected ? 'selected cursor-pointer' : 'hover:border-brand-cardBorder/80 cursor-pointer';
+
+                    if (isPast) {
+                        statusDot = 'bg-gray-600';
+                        badgeClass = 'bg-gray-800 text-gray-400 border border-gray-700';
+                        statusText = 'Trascorsa';
+                        cardClasses = 'opacity-35 cursor-not-allowed bg-brand-card/30 border-dashed border-gray-800 pointer-events-none';
+                    } else if (slot.status === 'MEDIUM') {
+                        statusDot = 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]';
+                        badgeClass = 'bg-amber-500/15 text-amber-300 border border-amber-500/30';
+                        statusText = 'Affluenza Media';
+                    } else if (slot.status === 'HIGH') {
+                        statusDot = 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,1)]';
+                        badgeClass = 'bg-red-500/20 text-red-300 border border-red-500/40';
+                        statusText = 'Picco Orario';
+                    }
+
+                    const card = $(`
+                        <div class="slot-card rounded-2xl bg-brand-card border border-brand-cardBorder p-3 select-none flex flex-col justify-between gap-2.5 relative overflow-hidden ${cardClasses}"
+                             data-slot="${slot.timeSlot}" data-label="${slot.timeSlotLabel}" data-past="${isPast ? 'true' : 'false'}">
+                            
+                            <!-- Header: Hour & Status Indicator -->
+                            <div class="flex items-center justify-between">
+                                <div class="font-mono font-black text-sm ${isPast ? 'text-gray-500 line-through' : 'text-white'} flex items-center gap-1.5">
+                                    <i data-lucide="${isPast ? 'clock-alert' : 'clock-3'}" class="w-3.5 h-3.5 ${isPast ? 'text-gray-600' : 'text-brand-gold opacity-80'}"></i>
+                                    <span>${slot.timeSlotLabel}</span>
+                                </div>
+                                <span class="w-2 h-2 rounded-full ${statusDot}"></span>
+                            </div>
+
+                            <!-- Footer: Presenze & Pill -->
+                            <div class="flex items-center justify-between gap-1 pt-1 border-t border-brand-cardBorder/50">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${badgeClass}">
+                                    ${statusText}
+                                </span>
+                                <span class="text-[10px] font-mono text-gray-500 font-semibold">
+                                    ${isPast ? 'Chiusa' : `${slot.count} presenze`}
+                                </span>
+                            </div>
+                        </div>
+                    `);
+
+                    grid.append(card);
+                });
+
+                if (window.lucide) lucide.createIcons();
+
+                // Select first available NON-PAST slot automatically if none selected
+                const availableSlots = slots.filter(s => !s.isPast && s.status !== 'PAST');
+                if (availableSlots.length > 0) {
+                    if (!selectedSlot || !availableSlots.some(s => s.timeSlot === selectedSlot)) {
+                        const firstAvail = availableSlots.find(s => s.status !== 'HIGH') || availableSlots[0];
+                        selectSlot(firstAvail.timeSlot, firstAvail.timeSlotLabel);
+                    }
+                } else {
+                    selectedSlot = null;
+                    $('#form-selected-slot').val('');
+                    $('#summary-slot-label').text('Nessuna fascia oraria disponibile');
+                    $('#summary-date-label').text('Tutte le fasce orarie per questa data sono già trascorse');
+                    $('#selected-summary-box').removeClass('bg-brand-gold/10 border-brand-gold/30').addClass('bg-red-500/10 border-red-500/30');
+                }
+            }
+
+            // Slot Click Event
+            $(document).on('click', '.slot-card', function() {
+                if ($(this).data('past') === true || $(this).data('past') === 'true') {
+                    return;
+                }
+                const slot = $(this).data('slot');
+                const label = $(this).data('label');
+                selectSlot(slot, label);
+
+                // Smooth scroll to form on mobile
+                $('html, body').animate({
+                    scrollTop: $("#booking-form-section").offset().top - 70
+                }, 300);
+            });
+
+            function selectSlot(slot, label) {
+                selectedSlot = slot;
+                $('.slot-card').removeClass('selected');
+                $(`.slot-card[data-slot="${slot}"]`).addClass('selected');
+
+                $('#form-selected-slot').val(slot);
+                updateSelectionSummary(label);
+            }
+
+            function updateSelectionSummary(slotLabel) {
+                $('#form-selected-date').val(selectedDateIso);
+
+                if (selectedSlot) {
+                    const formattedDate = formatDisplayDate(selectedDateIso);
+                    const label = slotLabel || `${selectedSlot} - ${getNextHour(selectedSlot)}`;
+                    $('#summary-slot-label').text(`Fascia ${label}`);
+                    $('#summary-date-label').text(`🗓️ ${formattedDate}`);
+                    $('#selected-summary-box').removeClass('bg-brand-card border-brand-cardBorder').addClass('bg-brand-gold/10 border-brand-gold/30');
+                } else {
+                    $('#summary-slot-label').text('Seleziona una fascia oraria');
+                    $('#summary-date-label').text('Tocca uno degli orari sopra per confermare');
+                }
+            }
+
+            function getNextHour(slot) {
+                try {
+                    const h = parseInt(slot.split(':')[0], 10);
+                    return `${(h + 1).toString().padStart(2, '0')}:00`;
+                } catch(e) {
+                    return slot;
+                }
+            }
+
+            // ==========================================
+            // 5. Submit Booking Form
+            // ==========================================
+            $('#public-booking-form').submit(function(e) {
+                e.preventDefault();
+
+                const date = $('#form-selected-date').val();
+                const slot = $('#form-selected-slot').val();
+                const fullName = $('#form-fullname').val().trim();
+                const phone = $('#form-phone').val().trim();
+                const email = $('#form-email').val().trim();
+                const notes = $('#form-notes').val().trim();
+
+                if (!date || !slot) {
+                    showToast('Seleziona una fascia oraria valida prima di confermare.', 'error');
+                    return;
+                }
+                if (!fullName || !phone) {
+                    showToast('Compila nome, cognome e recapito telefonico.', 'error');
+                    return;
+                }
+
+                const submitBtn = $('#submit-booking-btn');
+                submitBtn.prop('disabled', true).html(`
+                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                    <span>SALVATAGGIO IN CORSO...</span>
+                `);
+                if (window.lucide) lucide.createIcons();
+
+                const payload = {
+                    gymId: gymInfo ? gymInfo.id : null,
+                    fullName: fullName,
+                    phone: phone,
+                    email: email || null,
+                    reservationDate: date,
+                    timeSlot: slot,
+                    notes: notes || null
+                };
+
+                $.ajax({
+                    url: '/api/public/reservations',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    success: function(resp) {
+                        // Open Ticket Confirmation
+                        openSuccessModal(resp, payload);
+
+                        // Reload slots in background
+                        loadAvailability(selectedDateIso);
+                    },
+                    error: function(xhr) {
+                        const msg = xhr.responseJSON && xhr.responseJSON.detail
+                            ? xhr.responseJSON.detail
+                            : (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Errore durante la registrazione. Verifica i dati.');
+                        showToast(msg, 'error');
+                    },
+                    complete: function() {
+                        submitBtn.prop('disabled', false).html(`
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            <span>CONFERMA PRENOTAZIONE</span>
+                        `);
+                        if (window.lucide) lucide.createIcons();
+                    }
+                });
+            });
+
+            // ==========================================
+            // 6. Success Modal & Ticket
+            // ==========================================
+            function openSuccessModal(resp, payload) {
+                $('#ticket-name').text(payload.fullName);
+                $('#ticket-date').text(formatDisplayDate(payload.reservationDate));
+                $('#ticket-slot').text(`${payload.timeSlot} - ${getNextHour(payload.timeSlot)}`);
+                $('#ticket-phone').text(payload.phone);
+
+                // Google Calendar Link generator
+                const dateStr = payload.reservationDate.replace(/-/g, '');
+                const startH = payload.timeSlot.replace(':', '') + '00';
+                const nextHour = getNextHour(payload.timeSlot);
+                const endH = nextHour.replace(':', '') + '00';
+                
+                const gymTitle = gymInfo ? gymInfo.name : 'Palestra';
+                const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Allenamento in Palestra - ' + gymTitle)}&dates=${dateStr}T${startH}/${dateStr}T${endH}&details=${encodeURIComponent('Prenotazione confermata per ' + payload.fullName)}&location=${encodeURIComponent(gymInfo && gymInfo.address ? gymInfo.address : gymTitle)}`;
+                $('#ticket-gcal-btn').attr('href', gCalUrl);
+
+                $('#success-modal').removeClass('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
+
+            $('#book-another-btn').click(function() {
+                $('#success-modal').addClass('hidden');
+                $('#form-fullname').val('');
+                $('#form-phone').val('');
+                $('#form-email').val('');
+                $('#form-notes').val('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
