@@ -48,7 +48,7 @@ public class AuthController {
         String fullName = staffUserRepository.findByEmailIgnoreCaseAndActiveTrue(normalizedEmail)
             .map(StaffUser::getFullName).orElse("");
 
-        return ResponseEntity.ok(AuthResponse.of(accessToken, refreshToken, 86400000L, userDetails, fullName));
+        return ResponseEntity.ok(AuthResponse.of(accessToken, refreshToken, jwtService.getExpirationMs(), userDetails, fullName));
     }
 
     @PostMapping("/refresh")
@@ -63,7 +63,7 @@ public class AuthController {
         if (jwtService.isTokenValid(token, userDetails)) {
             String newAccess = jwtService.generateToken(userDetails);
             String newRefresh = jwtService.generateRefreshToken(userDetails);
-            return ResponseEntity.ok(AuthResponse.of(newAccess, newRefresh, 86400000L, userDetails, staffUser.getFullName()));
+            return ResponseEntity.ok(AuthResponse.of(newAccess, newRefresh, jwtService.getExpirationMs(), userDetails, staffUser.getFullName()));
         }
         return ResponseEntity.status(401).build();
     }

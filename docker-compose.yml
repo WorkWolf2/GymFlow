@@ -53,8 +53,8 @@ services:
       DB_USER: gymsaas
       DB_PASSWORD: ${DB_PASSWORD:-gymsaas_dev}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production-minimum-256-bits-long-secret-key}
-      JWT_EXPIRATION: 86400000
-      JWT_REFRESH_EXPIRATION: 604800000
+      JWT_EXPIRATION: 2592000000
+      JWT_REFRESH_EXPIRATION: 5184000000
       MINIO_URL: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_PASSWORD:-minioadmin123}
