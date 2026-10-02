@@ -51,7 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/access-bridge/**").permitAll()
-                        .requestMatchers("/ws/access-bridge").permitAll()
+                        .requestMatchers("/access-bridge").permitAll()
                         .requestMatchers("/api/**").authenticated()
 
                         // 🟢 UI COMPLETAMENTE APERTA (THYMELEAF)

@@ -36,7 +36,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(accessBridgeWebSocketHandler, "/ws/access-bridge")
+        // Keep this outside /ws/**: the SockJS endpoint above owns that path.
+        registry.addHandler(accessBridgeWebSocketHandler, "/access-bridge")
             .setAllowedOriginPatterns("*");
     }
 }

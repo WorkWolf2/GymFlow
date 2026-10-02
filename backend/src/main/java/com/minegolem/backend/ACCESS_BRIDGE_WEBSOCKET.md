@@ -2,7 +2,7 @@
 
 ## Architettura
 
-Il PC nella palestra apre una connessione WebSocket **in uscita** verso la VPS (`wss://.../ws/access-bridge`). La VPS non deve raggiungere direttamente la rete locale e non richiede porte inoltrate sul router.
+Il PC nella palestra apre una connessione WebSocket **in uscita** verso la VPS (`wss://.../access-bridge`). La VPS non deve raggiungere direttamente la rete locale e non richiede porte inoltrate sul router.
 
 ```text
 Lettore NFC -> bridge locale -> WebSocket sicuro -> VPS -> verifica accesso
@@ -25,7 +25,7 @@ nfc.tcp.enabled=false
 Il reverse proxy (Nginx, Caddy o equivalente) deve inoltrare gli upgrade WebSocket sulla stessa applicazione backend. Per Nginx:
 
 ```nginx
-location /ws/access-bridge {
+location /access-bridge {
     proxy_pass http://127.0.0.1:8080;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;

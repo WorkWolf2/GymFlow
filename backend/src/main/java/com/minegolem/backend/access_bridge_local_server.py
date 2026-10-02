@@ -25,7 +25,7 @@ RECONNECT_DELAY_SECONDS = 5
 
 def ws_url() -> str:
     base = VPS_URL.rstrip("/").replace("https://", "wss://", 1).replace("http://", "ws://", 1)
-    return base + "/ws/access-bridge"
+    return base + "/access-bridge"
 
 def normalize_tag(value: str) -> str:
     return re.sub(r"[^A-Fa-f0-9]", "", value or "").upper()
