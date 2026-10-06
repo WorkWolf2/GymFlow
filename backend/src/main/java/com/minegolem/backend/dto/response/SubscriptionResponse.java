@@ -20,9 +20,15 @@ public record SubscriptionResponse(
     boolean suspended,
     boolean stopAndGoApplied,
     boolean annual,
-    boolean canApplyStopAndGo
+    boolean canApplyStopAndGo,
+    UUID receiptId,
+    String receiptFormattedNumber
 ) {
     public static SubscriptionResponse from(Subscription subscription) {
+        return from(subscription, null, null);
+    }
+
+    public static SubscriptionResponse from(Subscription subscription, UUID receiptId, String receiptFormattedNumber) {
         boolean isAnnual = subscription.isAnnual();
         boolean notDeleted = subscription.getDeletedAt() == null;
         boolean notExpired = !subscription.isExpired();
@@ -42,7 +48,9 @@ public record SubscriptionResponse(
             subscription.isCurrentlySuspended(),
             subscription.isStopAndGoApplied(),
             isAnnual,
-            canApply
+            canApply,
+            receiptId,
+            receiptFormattedNumber
         );
     }
 }

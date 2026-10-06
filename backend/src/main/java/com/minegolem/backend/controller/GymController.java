@@ -66,17 +66,16 @@ public class GymController {
             smtpConfig.put("smtpStarttls", settings.getOrDefault("smtpStarttls", true));
             
             String pwd = (String) settings.get("smtpPassword");
-            if (pwd != null && !pwd.isBlank()) {
-                smtpConfig.put("smtpPassword", "********");
-            } else {
-                smtpConfig.put("smtpPassword", "");
-            }
+            boolean hasPassword = pwd != null && !pwd.isBlank();
+            smtpConfig.put("hasPassword", hasPassword);
+            smtpConfig.put("smtpPassword", "");
         } else {
             smtpConfig.put("smtpHost", "");
             smtpConfig.put("smtpPort", 587);
             smtpConfig.put("smtpUsername", "");
             smtpConfig.put("smtpPassword", "");
             smtpConfig.put("smtpStarttls", true);
+            smtpConfig.put("hasPassword", false);
         }
         return ResponseEntity.ok(smtpConfig);
     }
@@ -97,14 +96,19 @@ public class GymController {
         currentSettings.put("smtpStarttls", smtpSettings.get("smtpStarttls"));
         
         String newPassword = (String) smtpSettings.get("smtpPassword");
-        if (newPassword != null && !newPassword.equals("********")) {
-            currentSettings.put("smtpPassword", newPassword);
+        if (newPassword != null && !newPassword.isBlank() && !newPassword.equals("********")) {
+            currentSettings.put("smtpPassword", newPassword.trim());
         }
         
         gym.setSettings(currentSettings);
         gymRepository.save(gym);
         realtimeEventService.publish(userDetails.getGymId(), "SETTINGS", "SMTP_UPDATED");
-        return ResponseEntity.ok(gym.getSettings());
+
+        Map<String, Object> response = new HashMap<>(currentSettings);
+        String savedPwd = (String) currentSettings.get("smtpPassword");
+        response.put("hasPassword", savedPwd != null && !savedPwd.isBlank());
+        response.put("smtpPassword", "");
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/settings/smtp/test")
@@ -134,9 +138,9 @@ public class GymController {
         String password = (String) smtpSettings.get("smtpPassword");
         boolean starttls = Boolean.parseBoolean(String.valueOf(smtpSettings.getOrDefault("smtpStarttls", true)));
         
-        if ("********".equals(password)) {
+        if (password == null || password.isBlank() || "********".equals(password)) {
             Map<String, Object> current = gym.getSettings();
-            if (current != null) {
+            if (current != null && current.get("smtpPassword") != null) {
                 password = (String) current.get("smtpPassword");
             }
         }
@@ -153,7 +157,46 @@ public class GymController {
         }
     }
 
+    @PostMapping("/settings/smtp/send-test")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> sendTestEmail(
+            @AuthenticationPrincipal StaffUserDetails userDetails,
+            @RequestBody Map<String, Object> request) {
+        Gym gym = gymRepository.findById(userDetails.getGymId()).orElseThrow();
+        String to = (String) request.get("toEmail");
+        if (to == null || to.isBlank()) {
+            if (gym.getSettings() != null) {
+                to = (String) gym.getSettings().get("smtpUsername");
+            }
+        }
+        if (to == null || to.isBlank()) {
+            to = userDetails.getUsername(); // staff email
+        }
+        if (to == null || to.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Indirizzo email di destinazione mancante."));
+        }
 
+        try {
+            String subject = "Test Configurazione Email - " + gym.getName();
+            String body = "<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 8px;\">"
+                    + "<h2 style=\"color: #10b981; margin-top: 0;\">✓ Test Connessione & Invio Email Riuscito!</h2>"
+                    + "<p>Se stai leggendo questa email, il tuo server SMTP per <strong>" + gym.getName() + "</strong> è configurato e funzionante correttamente su GymFlow.</p>"
+                    + "<hr style=\"border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;\" />"
+                    + "<p style=\"font-size: 13px; color: #6b7280;\">Data e ora di invio: <strong>"
+                    + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
+                    + "</strong></p>"
+                    + "</div>";
+            
+            emailService.sendEmail(gym.getId(), to.trim(), subject, body);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Email di prova inviata con successo a " + to + "! Controlla la tua casella di posta (inclusa la cartella Spam)."));
+        } catch (Exception e) {
+            String errorMsg = e.getMessage();
+            if (e.getCause() != null && e.getCause().getMessage() != null) {
+                errorMsg += " (" + e.getCause().getMessage() + ")";
+            }
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", errorMsg));
+        }
+    }
 
     @PostMapping("/settings/email-templates")
     @PreAuthorize("hasRole('ADMIN')")
@@ -223,17 +266,23 @@ public class GymController {
         return ResponseEntity.ok(normalizedTemplates);
     }
 
+    private static final String WELCOME_TEMPLATE_ID = "client-welcome";
+
     private List<Map<String, Object>> normalizeExpirationTemplates(List<Map<String, Object>> templates) {
+        Map<String, Object> welcome = findExpirationTemplate(templates, WELCOME_TEMPLATE_ID, "benvenut");
         Map<String, Object> subscription = findExpirationTemplate(templates, SUBSCRIPTION_EXPIRATION_ID, "abbon");
         Map<String, Object> certificate = findExpirationTemplate(templates, CERTIFICATE_EXPIRATION_ID, "cert");
 
         return List.of(
-            normalizeExpirationTemplate(subscription, SUBSCRIPTION_EXPIRATION_ID, "Abbonamento in scadenza", "Abbonamento", "dumbbell",
-                "Avviso abbonamento in scadenza - GymSaaS",
-                "Ciao {name},<br><br>ti ricordiamo che il tuo abbonamento scadra il <strong>{expiryDate}</strong>.<br><br>Passa in reception per il rinnovo.<br><br>Lo staff di GymSaaS"),
-            normalizeExpirationTemplate(certificate, CERTIFICATE_EXPIRATION_ID, "Certificato in scadenza", "Certificato", "activity",
-                "Scadenza certificato medico - GymSaaS",
-                "Ciao {name},<br><br>ti ricordiamo che il tuo certificato medico scadra il <strong>{expiryDate}</strong>.<br><br>Consegna il certificato aggiornato in reception prima della scadenza.<br><br>Lo staff di GymSaaS")
+            normalizeSystemTemplate(welcome, WELCOME_TEMPLATE_ID, "Email di Benvenuto", "Nuovo Iscritto", "user-plus", "text-success",
+                "Benvenuto in {gymName}",
+                "Ciao {name},<br><br>benvenuto in <strong>{gymName}</strong>! La tua scheda cliente è stata registrata con successo.<br><br>Il tuo codice iscritto è: <strong>#{clientCode}</strong>.<br><br>A presto,<br>Lo staff di {gymName}", false),
+            normalizeSystemTemplate(subscription, SUBSCRIPTION_EXPIRATION_ID, "Abbonamento in scadenza", "Abbonamento", "dumbbell", "text-accent",
+                "Avviso abbonamento in scadenza - {gymName}",
+                "Ciao {name},<br><br>ti ricordiamo che il tuo abbonamento scadrà il <strong>{expiryDate}</strong>.<br><br>Passa in reception per il rinnovo.<br><br>Lo staff di {gymName}", true),
+            normalizeSystemTemplate(certificate, CERTIFICATE_EXPIRATION_ID, "Certificato in scadenza", "Certificato", "activity", "text-warning",
+                "Scadenza certificato medico - {gymName}",
+                "Ciao {name},<br><br>ti ricordiamo che il tuo certificato medico scadrà il <strong>{expiryDate}</strong>.<br><br>Consegna il certificato aggiornato in reception prima della scadenza.<br><br>Lo staff di {gymName}", true)
         );
     }
 
@@ -258,19 +307,21 @@ public class GymController {
             .orElse(null);
     }
 
-    private Map<String, Object> normalizeExpirationTemplate(
+    private Map<String, Object> normalizeSystemTemplate(
             Map<String, Object> source,
             String id,
             String name,
             String category,
             String icon,
+            String colorClass,
             String defaultSubject,
-            String defaultBody) {
+            String defaultBody,
+            boolean requiresExpiry) {
         Map<String, Object> template = new HashMap<>();
         template.put("id", id);
         template.put("name", name);
         template.put("category", category);
-        template.put("colorClass", CERTIFICATE_EXPIRATION_ID.equals(id) ? "text-warning" : "text-accent");
+        template.put("colorClass", colorClass);
         template.put("icon", icon);
         template.put("subject", defaultSubject);
         template.put("body", defaultBody);
@@ -282,7 +333,11 @@ public class GymController {
                 template.put("subject", subject.toString());
             }
             if (body != null && !body.toString().isBlank()) {
-                template.put("body", ensureExpiryPlaceholder(body.toString()));
+                String bodyStr = body.toString();
+                if (requiresExpiry) {
+                    bodyStr = ensureExpiryPlaceholder(bodyStr);
+                }
+                template.put("body", bodyStr);
             }
         }
 

@@ -45,6 +45,25 @@ public class FileStorageService {
         }
     }
 
+    public String storeBytes(byte[] data, String objectName, String contentType) {
+        try {
+            ensureBucketExists();
+
+            minioClient.putObject(PutObjectArgs.builder()
+                .bucket(bucket)
+                .object(objectName)
+                .stream(new java.io.ByteArrayInputStream(data), data.length, -1)
+                .contentType(contentType != null ? contentType : "application/pdf")
+                .build());
+
+            log.debug("Stored bytes file: {}", objectName);
+            return objectName;
+        } catch (Exception e) {
+            log.error("Failed to store bytes file: {}", objectName, e);
+            throw new RuntimeException("File storage failed: " + e.getMessage(), e);
+        }
+    }
+
     public String getPresignedUrl(String objectName) {
         try {
             return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()

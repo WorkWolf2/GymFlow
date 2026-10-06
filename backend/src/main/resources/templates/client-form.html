@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title=${title}, hideNav=false, content=~{::div.client-form-content})}">
 <body>
     <div class="client-form-content space-y-6">
@@ -51,6 +51,14 @@
                         <div>
                             <label class="block text-xs font-medium text-foreground-muted mb-1.5">Codice Fiscale</label>
                             <input type="text" id="fiscalCode" class="input uppercase" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Genitore / Tutore Legale (se minorenne)</label>
+                            <input type="text" id="parentName" class="input" placeholder="Nome e Cognome genitore" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Codice Fiscale Genitore / Pagatore</label>
+                            <input type="text" id="parentFiscalCode" class="input uppercase" placeholder="Codice Fiscale genitore" />
                         </div>
                     </div>
                 </div>
@@ -166,6 +174,8 @@
                         email: $('#email').val() || null,
                         phone: $('#phone').val() || null,
                         address: $('#address').val() || null,
+                        parentName: $('#parentName').val() ? $('#parentName').val().trim() : null,
+                        parentFiscalCode: $('#parentFiscalCode').val() ? $('#parentFiscalCode').val().trim().toUpperCase() : null,
                         notes: $('#notes').val() || null
                     };
 

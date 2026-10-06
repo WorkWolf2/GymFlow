@@ -65,13 +65,26 @@ public class NfcService {
     }
 
     @Transactional
-    public void unassignTag(String tagUid) {
+    public UUID unassignTag(String tagUid) {
         NfcTag tag = nfcTagRepository.findByTagUidAndActiveTrue(tagUid)
             .orElseThrow(() -> ResourceNotFoundException.of("NfcTag", tagUid));
+        UUID userId = tag.getUser() != null ? tag.getUser().getId() : null;
         tag.setUser(null);
         tag.setAssignedAt(null);
         nfcTagRepository.save(tag);
         auditService.log("NFC_TAG_UNASSIGNED", "NfcTag", tagUid);
+        return userId;
+    }
+
+    @Transactional
+    public void unassignUserTag(UUID userId) {
+        nfcTagRepository.findByUserIdAndActiveTrue(userId)
+            .ifPresent(tag -> {
+                tag.setUser(null);
+                tag.setAssignedAt(null);
+                nfcTagRepository.save(tag);
+                auditService.log("NFC_TAG_UNASSIGNED", "NfcTag", tag.getTagUid());
+            });
     }
 
     @Transactional

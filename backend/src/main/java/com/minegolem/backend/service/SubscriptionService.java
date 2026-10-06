@@ -31,6 +31,8 @@ public class SubscriptionService {
     private final PaymentRepository paymentRepository;
     private final GymRepository gymRepository;
     private final StaffUserRepository staffUserRepository;
+    private final ReceiptRepository receiptRepository;
+    private final ReceiptService receiptService;
     private final AuditService auditService;
 
     @Transactional
@@ -85,10 +87,26 @@ public class SubscriptionService {
             .notes("Incasso automatico per abbonamento: " + type.getName())
             .createdBy(staffUser)
             .build();
-        paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
+
+        // Auto-generate ASD receipt and upload to MinIO
+        try {
+            receiptService.createReceiptForSubscription(saved, savedPayment);
+        } catch (Exception e) {
+            log.error("Errore durante la generazione della ricevuta per l'abbonamento {}", saved.getId(), e);
+        }
 
         auditService.log("SUBSCRIPTION_CREATED", "Subscription", saved.getId().toString());
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public com.minegolem.backend.dto.response.SubscriptionResponse toResponse(Subscription subscription) {
+        if (subscription == null) return null;
+        Receipt receipt = receiptRepository.findFirstBySubscriptionIdAndDeletedAtIsNullOrderByCreatedAtDesc(subscription.getId()).orElse(null);
+        UUID receiptId = receipt != null ? receipt.getId() : null;
+        String formattedNumber = receipt != null ? receipt.getReceiptFormattedNumber() : null;
+        return com.minegolem.backend.dto.response.SubscriptionResponse.from(subscription, receiptId, formattedNumber);
     }
 
     @Transactional(readOnly = true)

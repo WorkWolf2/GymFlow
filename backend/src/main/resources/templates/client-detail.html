@@ -950,6 +950,16 @@
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Indirizzo</label>
                         <input type="text" id="edit-address" class="input" />
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Genitore / Tutore (se minorenne)</label>
+                            <input type="text" id="edit-parent-name" class="input" placeholder="Nome e Cognome genitore" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Codice Fiscale Genitore / Pagatore</label>
+                            <input type="text" id="edit-parent-fiscal-code" class="input uppercase" placeholder="Codice Fiscale genitore" />
+                        </div>
+                    </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note</label>
                         <textarea id="edit-notes" class="input min-h-[80px]"></textarea>
@@ -1139,6 +1149,8 @@
                             $('#edit-sex').val(user.sex || '');
                             $('#edit-fiscal-code').val(user.fiscalCode || '');
                             $('#edit-address').val(user.address);
+                            $('#edit-parent-name').val(user.parentName || '');
+                            $('#edit-parent-fiscal-code').val(user.parentFiscalCode || '');
                             $('#edit-notes').val(user.notes);
                             if (!user.fiscalCode) {
                                 refreshFiscalCode();
@@ -1380,6 +1392,13 @@
                                         <div class="flex items-center gap-2 shrink-0">
                                             ${stopGoBtn}
                                             <button type="button"
+                                                class="view-receipt-btn shrink-0 p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-accent transition-colors"
+                                                data-id="${s.id}"
+                                                data-receipt-id="${s.receiptId || ''}"
+                                                title="Visualizza / Stampa Ricevuta ASD">
+                                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button type="button"
                                                 class="edit-sub-btn shrink-0 p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-accent transition-colors"
                                                 data-id="${s.id}"
                                                 title="Modifica abbonamento">
@@ -1526,18 +1545,41 @@
                     });
                 }
 
+                function openReceiptPopup(receiptId) {
+                    if (!receiptId) return;
+                    const token = localStorage.getItem('jwt_token');
+                    let url = '/api/receipts/' + receiptId + '/pdf';
+                    if (token) {
+                        url += '?token=' + encodeURIComponent(token);
+                    }
+                    const w = 920;
+                    const h = 950;
+                    const left = Math.max(0, Math.floor((window.screen.width - w) / 2));
+                    const top = Math.max(0, Math.floor((window.screen.height - h) / 2));
+                    const features = `width=${w},height=${h},top=${top},left=${left},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`;
+                    const win = window.open(url, 'Ricevuta_' + receiptId, features);
+                    if (!win || win.closed || typeof win.closed === 'undefined') {
+                        // In caso di blocco popup dal browser, apri in nuova scheda
+                        window.open(url, '_blank');
+                    }
+                }
+
                 function createSubscription(req) {
                     return $.ajax({
                         url: '/api/subscriptions',
                         type: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify(req),
-                        success: function () {
+                        success: function (res) {
                             $('#sub-modal').addClass('hidden');
                             loadData();
+                            loadUser();
+                            if (res && res.receiptId) {
+                                openReceiptPopup(res.receiptId);
+                            }
                         },
                         error: function () {
-                            alert('Errore durante la creazione');
+                            alert('Errore durante la creazione dell\'abbonamento');
                         },
                         complete: function () {
                             $('#submit-sub-btn')
@@ -1546,6 +1588,29 @@
                         }
                     });
                 }
+
+                $(document).on('click', '.view-receipt-btn', function () {
+                    const receiptId = $(this).data('receipt-id');
+                    const subId = $(this).data('id');
+                    if (receiptId) {
+                        openReceiptPopup(receiptId);
+                    } else if (subId) {
+                        $.ajax({
+                            url: '/api/receipts/subscription/' + subId,
+                            type: 'GET',
+                            success: function(r) {
+                                if (r && r.id) {
+                                    openReceiptPopup(r.id);
+                                } else {
+                                    alert('Nessuna ricevuta trovata per questo abbonamento.');
+                                }
+                            },
+                            error: function() {
+                                alert('Nessuna ricevuta trovata per questo abbonamento.');
+                            }
+                        });
+                    }
+                });
 
                 loadUser();
                 loadData();
@@ -2072,6 +2137,8 @@
                         sex: $('#edit-sex').val() || null,
                         fiscalCode: ($('#edit-fiscal-code').val().trim().toUpperCase() || null),
                         address: $('#edit-address').val(),
+                        parentName: $('#edit-parent-name').val() ? $('#edit-parent-name').val().trim() : null,
+                        parentFiscalCode: $('#edit-parent-fiscal-code').val() ? $('#edit-parent-fiscal-code').val().trim().toUpperCase() : null,
                         notes: $('#edit-notes').val()
                     };
 

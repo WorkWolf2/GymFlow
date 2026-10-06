@@ -17,5 +17,7 @@ public record UserRequest(
     @Pattern(regexp = "^[MmFf]?$", message = "Il sesso deve essere M o F") String sex,
     @Size(max = 20) String fiscalCode,
     String address,
+    @Size(max = 150) String parentName,
+    @Size(max = 20) String parentFiscalCode,
     String notes
 ) {}

@@ -185,16 +185,19 @@ public class EmailNotificationService {
     }
 
     private EmailTemplate resolveWelcomeTemplate(Gym gym) {
-        Map<String, Object> source = findTemplate(gym.getSettings(), "emailTemplates", WELCOME_TEMPLATE_ID, "benvenuto");
+        Map<String, Object> source = findTemplate(gym.getSettings(), "expirationTemplates", WELCOME_TEMPLATE_ID, "benvenuto");
+        if (source == null) {
+            source = findTemplate(gym.getSettings(), "emailTemplates", WELCOME_TEMPLATE_ID, "benvenuto");
+        }
         if (source == null) {
             return new EmailTemplate(
                 "Benvenuto in {gymName}",
-                "Ciao {name},<br><br>benvenuto in {gymName}. La tua scheda cliente e stata creata correttamente.<br><br>A presto!"
+                "Ciao {name},<br><br>benvenuto in <strong>{gymName}</strong>! La tua scheda cliente è stata creata con successo.<br><br>Il tuo codice iscritto è: <strong>#{clientCode}</strong>.<br><br>A presto,<br>Lo staff di {gymName}"
             );
         }
         return new EmailTemplate(
             value(source.get("subject"), "Benvenuto in {gymName}"),
-            value(source.get("body"), "Ciao {name},<br><br>benvenuto in {gymName}.")
+            value(source.get("body"), "Ciao {name},<br><br>benvenuto in <strong>{gymName}</strong>!")
         );
     }
 

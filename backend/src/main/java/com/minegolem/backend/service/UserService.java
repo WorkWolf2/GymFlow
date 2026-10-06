@@ -67,6 +67,8 @@ public class UserService {
             .sex(fiscalCodeService.normalizeSex(request.sex()))
             .fiscalCode(resolveFiscalCode(request, null))
             .address(request.address())
+            .parentName(request.parentName())
+            .parentFiscalCode(request.parentFiscalCode() != null ? request.parentFiscalCode().trim().toUpperCase() : null)
             .notes(request.notes())
             .build();
 
@@ -93,6 +95,8 @@ public class UserService {
         user.setSex(fiscalCodeService.normalizeSex(request.sex()));
         user.setFiscalCode(resolveFiscalCode(request, user));
         user.setAddress(request.address());
+        user.setParentName(request.parentName());
+        user.setParentFiscalCode(request.parentFiscalCode() != null ? request.parentFiscalCode().trim().toUpperCase() : null);
         user.setNotes(request.notes());
         auditService.log("USER_UPDATED", "User", id.toString());
         return toResponse(userRepository.save(user));
@@ -221,7 +225,8 @@ public class UserService {
         return new UserResponse(
             u.getId(), u.getClientCode(), u.getFirstName(), u.getLastName(), u.getFullName(),
             u.getEmail(), u.getPhone(), u.getBirthDate(), u.getBirthPlace(), u.getBirthProvince(), u.getSex(), u.getFiscalCode(),
-            u.getAddress(), u.getNotes(), fileUrl(u.getAvatarPath()), fileUrl(u.getDocFrontPath()), fileUrl(u.getDocBackPath()), u.isActive(),
+            u.getAddress(), u.getParentName(), u.getParentFiscalCode(), u.isMinor(),
+            u.getNotes(), fileUrl(u.getAvatarPath()), fileUrl(u.getDocFrontPath()), fileUrl(u.getDocBackPath()), u.isActive(),
             u.getCreatedAt(), hasActiveSub, certStatus, hasCertificate,
             certOpt.map(MedicalCertificate::getIssuedDate).orElse(null),
             certOpt.map(MedicalCertificate::getExpiryDate).orElse(null),

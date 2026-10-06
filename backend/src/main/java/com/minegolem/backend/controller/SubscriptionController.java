@@ -36,13 +36,13 @@ public class SubscriptionController {
         Subscription subscription = subscriptionService.create(request);
         realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "CREATED", subscription.getId());
         realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", subscription.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(SubscriptionResponse.from(subscription));
+        return ResponseEntity.status(HttpStatus.CREATED).body(subscriptionService.toResponse(subscription));
     }
 
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
     public ResponseEntity<List<SubscriptionResponse>> listByUser(@PathVariable UUID userId) {
-        return ResponseEntity.ok(subscriptionService.listByUser(userId).stream().map(SubscriptionResponse::from).toList());
+        return ResponseEntity.ok(subscriptionService.listByUser(userId).stream().map(subscriptionService::toResponse).toList());
     }
 
     @PutMapping("/{id}")
@@ -55,7 +55,7 @@ public class SubscriptionController {
         Subscription subscription = subscriptionService.update(id, request);
         realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "UPDATED", subscription.getId());
         realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", subscription.getId());
-        return ResponseEntity.ok(SubscriptionResponse.from(subscription));
+        return ResponseEntity.ok(subscriptionService.toResponse(subscription));
     }
 
     @DeleteMapping("/{id}")
@@ -80,7 +80,7 @@ public class SubscriptionController {
         Subscription subscription = subscriptionService.applyStopAndGo(id, request);
         realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "UPDATED", subscription.getId());
         realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", subscription.getId());
-        return ResponseEntity.ok(SubscriptionResponse.from(subscription));
+        return ResponseEntity.ok(subscriptionService.toResponse(subscription));
     }
 }
 

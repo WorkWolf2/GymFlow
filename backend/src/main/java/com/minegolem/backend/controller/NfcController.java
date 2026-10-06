@@ -42,8 +42,23 @@ public class NfcController {
         @AuthenticationPrincipal StaffUserDetails userDetails,
         @PathVariable String tagUid
     ) {
-        nfcService.unassignTag(tagUid);
+        UUID userId = nfcService.unassignTag(tagUid);
         realtimeEventService.publish(userDetails.getGymId(), "NFC", "UNASSIGNED", tagUid, java.util.Map.of());
+        if (userId != null) {
+            realtimeEventService.publish(userDetails.getGymId(), "USER", "NFC_UPDATED", userId);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('USER_WRITE')")
+    public ResponseEntity<Void> unassignByUser(
+        @AuthenticationPrincipal StaffUserDetails userDetails,
+        @PathVariable UUID userId
+    ) {
+        nfcService.unassignUserTag(userId);
+        realtimeEventService.publish(userDetails.getGymId(), "NFC", "UNASSIGNED", "USER_" + userId, java.util.Map.of("userId", userId.toString()));
+        realtimeEventService.publish(userDetails.getGymId(), "USER", "NFC_UPDATED", userId);
         return ResponseEntity.noContent().build();
     }
 

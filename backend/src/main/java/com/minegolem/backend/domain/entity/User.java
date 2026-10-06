@@ -52,6 +52,12 @@ public class User extends BaseEntity {
 
     private String address;
 
+    @Column(name = "parent_name")
+    private String parentName;
+
+    @Column(name = "parent_fiscal_code")
+    private String parentFiscalCode;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 
@@ -80,5 +86,9 @@ public class User extends BaseEntity {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public boolean isMinor() {
+        return birthDate != null && birthDate.plusYears(18).isAfter(LocalDate.now());
     }
 }
