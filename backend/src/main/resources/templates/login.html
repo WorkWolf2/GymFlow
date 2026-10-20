@@ -101,7 +101,7 @@
                                 localStorage.setItem('user_full_name', response.fullName || '');
                                 localStorage.setItem('user_role', response.role || '');
                                 localStorage.setItem('user_permissions', JSON.stringify(response.permissions || []));
-                                window.location.href = '/dashboard';
+                                window.location.href = response.role === 'TRAINER' ? '/clients' : '/dashboard';
 
                             } else {
                                 showError("Token non ricevuto dal server");

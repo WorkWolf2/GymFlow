@@ -130,238 +130,264 @@
 <body class="min-h-screen flex flex-col justify-between selection:bg-brand-gold selection:text-black">
 
     <!-- Top Sticky Navigation Bar -->
-    <header class="sticky top-0 z-40 border-b border-brand-cardBorder/80 glass-header px-4 py-3">
-        <div class="max-w-md mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl text-black flex items-center justify-center font-black shadow-glow-sm shrink-0">
+    <header class="sticky top-0 z-40 border-b border-brand-cardBorder/80 glass-header px-4 lg:px-8 py-3.5">
+        <div class="max-w-md lg:max-w-6xl xl:max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 lg:w-11 lg:h-11 rounded-xl text-black flex items-center justify-center font-black shadow-glow-sm shrink-0 bg-brand-card border border-brand-cardBorder p-1">
                     <img th:src="@{/images/logo.png}" alt="Logo" class="w-full h-full object-contain rounded-sm">
                 </div>
                 <div>
-                    <h1 id="gym-name-header" class="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5 leading-tight">
+                    <h1 id="gym-name-header" class="text-sm lg:text-base font-extrabold text-white tracking-tight flex items-center gap-2 leading-tight">
                         <span>Legion GymFlow</span>
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Live
+                        </span>
                     </h1>
-                    <p class="text-[11px] font-medium text-gray-400 flex items-center gap-1">
-                        <i data-lucide="calendar-check" class="w-3 h-3 text-brand-gold"></i>
+                    <p class="text-[11px] lg:text-xs font-medium text-gray-400 flex items-center gap-1.5 mt-0.5">
+                        <i data-lucide="calendar-check" class="w-3.5 h-3.5 text-brand-gold"></i>
                         Prenotazione Allenamento Libero
                     </p>
                 </div>
             </div>
 
-            <!-- Direct Refresh Button -->
-            <button id="refresh-slots-btn" type="button" class="w-9 h-9 rounded-xl bg-brand-card border border-brand-cardBorder text-gray-300 hover:text-brand-gold active:rotate-180 transition-all duration-300 flex items-center justify-center shrink-0" title="Aggiorna disponibilità">
-                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-            </button>
+            <!-- Direct Refresh Button & Live Status -->
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-card border border-brand-cardBorder text-xs text-gray-400">
+                    <i data-lucide="activity" class="w-3.5 h-3.5 text-brand-gold"></i>
+                    <span>Aggiornato in tempo reale</span>
+                </div>
+                <button id="refresh-slots-btn" type="button" class="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-brand-card border border-brand-cardBorder text-gray-300 hover:text-brand-gold hover:border-brand-gold/40 active:rotate-180 transition-all duration-300 flex items-center justify-center shrink-0 shadow-sm" title="Aggiorna disponibilità">
+                    <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                </button>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content Container (Mobile-First Centered) -->
-    <main class="flex-1 max-w-md w-full mx-auto px-4 py-4 space-y-4">
+    <!-- Main Content Container (Mobile-First Centered, 2-Column Dashboard on Desktop) -->
+    <main class="flex-1 max-w-md lg:max-w-6xl xl:max-w-7xl w-full mx-auto px-4 lg:px-8 py-5 lg:py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-        <!-- Welcome & Info Banner -->
-        <div class="rounded-2xl bg-gradient-to-b from-brand-card to-[#121215] border border-brand-cardBorder p-4 shadow-inner-card relative overflow-hidden">
-            <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-brand-gold/10 rounded-full blur-2xl pointer-events-none"></div>
+            <!-- LEFT COLUMN: Welcome Banner, Step 1 (Dates), Step 2 (Time Slots) -->
+            <div class="lg:col-span-7 xl:col-span-7 space-y-6">
 
-            <div class="flex items-start justify-between gap-3 relative z-10">
-                <div>
-        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-gold/15 border border-brand-gold/30 text-brand-gold text-[10px] font-black uppercase tracking-wider mb-1.5">
-            Accesso Rapido
-        </span>
+                <!-- Welcome & Info Banner -->
+                <div class="rounded-2xl bg-gradient-to-br from-brand-card via-[#16161a] to-[#101013] border border-brand-cardBorder p-5 lg:p-6 shadow-inner-card relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 w-36 h-36 bg-brand-gold/10 rounded-full blur-3xl pointer-events-none"></div>
 
-                    <h2 class="text-base font-extrabold text-white">Scegli il tuo turno</h2>
+                    <div class="flex items-start justify-between gap-4 relative z-10">
+                        <div class="space-y-2">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-gold/15 border border-brand-gold/30 text-brand-gold text-[10px] font-black uppercase tracking-wider">
+                                <i data-lucide="zap" class="w-3 h-3"></i>
+                                Accesso Rapido
+                            </span>
 
-                    <p class="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                        Prenota la tua sessione in palestra in 30 secondi. Non serve registrazione o password.
-                    </p>
+                            <h2 class="text-base lg:text-xl font-black text-white tracking-tight">Scegli il tuo turno di allenamento</h2>
 
-                    <p class="text-[10px] text-gray-500 mt-1.5 leading-relaxed flex items-start gap-1">
-                        <i data-lucide="info" class="w-3 h-3 shrink-0 mt-0.5"></i>
-                        <span>
-                La prenotazione è indicativa e non limita la permanenza in palestra a un'ora.
-            </span>
-                    </p>
+                            <p class="text-xs lg:text-sm text-gray-400 leading-relaxed">
+                                Prenota la tua sessione in palestra in 30 secondi. Non serve registrazione o password.
+                            </p>
+
+                            <div class="flex flex-wrap items-center gap-2.5 pt-1.5 text-[11px] text-gray-400">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-brand-gold"></i>
+                                    Permanenza libera
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                                    <i data-lucide="badge-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                    Conferma istantanea
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-300"></i>
+                                    Posto garantito
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="hidden sm:flex w-12 h-12 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 items-center justify-center text-brand-gold shrink-0 shadow-glow-sm">
+                            <i data-lucide="sparkles" class="w-6 h-6"></i>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="w-10 h-10 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center text-brand-gold shrink-0">
-                    <i data-lucide="sparkles" class="w-5 h-5"></i>
-                </div>
+                <!-- ========================================== -->
+                <!-- STEP 1: DATE SELECTION                     -->
+                <!-- ========================================== -->
+                <section class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs lg:text-sm font-bold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-brand-gold text-black flex items-center justify-center text-[11px] font-black shadow-glow-sm">1</span>
+                            Seleziona la Data
+                        </label>
+                        <!-- Custom Date Picker Trigger -->
+                        <label for="custom-date-input" class="cursor-pointer text-xs font-bold text-brand-gold hover:text-brand-goldLight flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-gold/10 border border-brand-gold/25 hover:bg-brand-gold/20 transition-all">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                            <span>Altra Data</span>
+                            <input type="date" id="custom-date-input" class="sr-only">
+                        </label>
+                    </div>
+
+                    <!-- Horizontal Day Selector Carousel on Mobile, Grid on Desktop -->
+                    <div id="day-chips-container" class="flex lg:grid lg:grid-cols-7 items-stretch gap-2 lg:gap-2.5 overflow-x-auto lg:overflow-visible pb-1 pt-0.5 hide-scrollbar -mx-1 px-1 lg:mx-0 lg:px-0">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- STEP 2: TIME SLOTS SELECTION               -->
+                <!-- ========================================== -->
+                <section class="space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label class="text-xs lg:text-sm font-bold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-brand-gold text-black flex items-center justify-center text-[11px] font-black shadow-glow-sm">2</span>
+                            Scegli Fascia Oraria
+                        </label>
+                        <div id="active-date-display" class="text-xs font-mono font-bold text-brand-gold flex items-center gap-1.5">
+                            <!-- e.g. Oggi, 15 Set -->
+                        </div>
+                    </div>
+
+                    <!-- Capacity / Legend Pills -->
+                    <div class="flex items-center justify-between sm:justify-start gap-4 px-3.5 py-2 rounded-xl bg-brand-card/80 border border-brand-cardBorder/80 text-[11px]">
+                        <span class="text-gray-400 font-semibold text-[10px] uppercase tracking-wider mr-1 hidden sm:inline">Affluenza:</span>
+                        <div class="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"></span>
+                            <span>Libera (&lt;12)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-amber-300 font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.9)]"></span>
+                            <span>Media (12-16)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-red-400 font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(239,68,68,1)]"></span>
+                            <span>Picco (16+)</span>
+                        </div>
+                    </div>
+
+                    <!-- Slots Grid -->
+                    <div id="slots-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 lg:gap-3">
+                        <!-- Populated via JS -->
+                        <div class="col-span-full py-12 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                            <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-brand-gold"></i>
+                            <span class="text-xs font-medium">Caricamento fasce orarie...</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- RIGHT COLUMN: Sticky Booking Form Card on Desktop -->
+            <div class="lg:col-span-5 xl:col-span-5 lg:sticky lg:top-20 space-y-3">
+                <section id="booking-form-section" class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs lg:text-sm font-bold text-gray-200 uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-brand-gold text-black flex items-center justify-center text-[11px] font-black shadow-glow-sm">3</span>
+                            Dati di Prenotazione
+                        </label>
+                        <span class="text-[10px] text-gray-400 font-medium hidden lg:inline">Conferma immediata</span>
+                    </div>
+
+                    <form id="public-booking-form" class="rounded-2xl bg-brand-card border border-brand-cardBorder p-5 lg:p-6 space-y-4 shadow-2xl relative overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-gold via-brand-goldLight to-brand-gold"></div>
+
+                        <!-- Selected Slot Summary Banner -->
+                        <div id="selected-summary-box" class="p-3.5 rounded-xl bg-brand-gold/10 border border-brand-gold/30 flex items-center justify-between transition-all duration-300">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-brand-gold text-black flex items-center justify-center font-black shrink-0 shadow-glow-sm">
+                                    <i data-lucide="clock" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div id="summary-slot-label" class="text-xs lg:text-sm font-extrabold text-white">Seleziona una fascia</div>
+                                    <div id="summary-date-label" class="text-[11px] font-medium text-brand-gold">Clicca uno degli orari a sinistra</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-mono font-bold px-2 py-1 rounded bg-brand-gold/20 text-brand-gold uppercase shrink-0">Selezionato</span>
+                        </div>
+
+                        <!-- Hidden Selected Fields -->
+                        <input type="hidden" id="form-selected-date" name="reservationDate" required>
+                        <input type="hidden" id="form-selected-slot" name="timeSlot" required>
+
+                        <!-- Full Name -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center gap-1">
+                                <span>Nome e Cognome</span>
+                                <span class="text-brand-gold">*</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none">
+                                    <i data-lucide="user" class="w-4 h-4"></i>
+                                </span>
+                                <input type="text" id="form-fullname" name="fullName" required placeholder="Es. Mario Rossi"
+                                       class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
+                            </div>
+                        </div>
+
+                        <!-- Phone -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center justify-between">
+                                <span class="flex items-center gap-1">
+                                    <span>Numero di Telefono</span>
+                                    <span class="text-brand-gold">*</span>
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-normal">Per conferme e orari</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none">
+                                    <i data-lucide="phone" class="w-4 h-4"></i>
+                                </span>
+                                <input type="tel" id="form-phone" name="phone" required placeholder="Es. 333 1234567"
+                                       class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm font-mono focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
+                            </div>
+                        </div>
+
+                        <!-- Email (Optional) -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center justify-between">
+                                <span>Email</span>
+                                <span class="text-[10px] text-gray-500 font-normal">Facoltativa</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none">
+                                    <i data-lucide="mail" class="w-4 h-4"></i>
+                                </span>
+                                <input type="email" id="form-email" name="email" placeholder="Es. mario.rossi@email.it"
+                                       class="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
+                            </div>
+                        </div>
+
+                        <!-- Notes (Optional) -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-300 mb-1.5 flex items-center justify-between">
+                                <span>Note o Richieste</span>
+                                <span class="text-[10px] text-gray-500 font-normal">Facoltativo</span>
+                            </label>
+                            <div class="relative">
+                                <textarea id="form-notes" name="notes" rows="2" placeholder="Eventuali annotazioni per la reception..."
+                                          class="w-full p-3 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-xs focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all resize-none"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Submit Action Button -->
+                        <div class="pt-2">
+                            <button type="submit" id="submit-booking-btn" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-gold to-brand-goldLight text-black font-extrabold text-sm tracking-wide shadow-glow hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                <span>CONFERMA PRENOTAZIONE</span>
+                            </button>
+                            <p class="text-[10px] text-center text-gray-500 mt-2.5 flex items-center justify-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                Prenotazione istantanea salvata sul registro palestra
+                            </p>
+                        </div>
+                    </form>
+                </section>
             </div>
         </div>
-
-        <!-- ========================================== -->
-        <!-- STEP 1: DATE SELECTION                     -->
-        <!-- ========================================== -->
-        <section class="space-y-2">
-            <div class="flex items-center justify-between">
-                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <span class="w-4 h-4 rounded-full bg-brand-gold/20 text-brand-gold flex items-center justify-center text-[10px] font-black">1</span>
-                    Seleziona la Data
-                </label>
-                <!-- Custom Date Picker Trigger -->
-                <label for="custom-date-input" class="cursor-pointer text-[11px] font-bold text-brand-gold hover:text-brand-goldLight flex items-center gap-1">
-                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                    <span>Altra Data</span>
-                    <input type="date" id="custom-date-input" class="sr-only">
-                </label>
-            </div>
-
-            <!-- Horizontal Day Selector Carousel -->
-            <div id="day-chips-container" class="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 hide-scrollbar -mx-1 px-1">
-                <!-- Populated via JS -->
-            </div>
-        </section>
-
-        <!-- ========================================== -->
-        <!-- STEP 2: TIME SLOTS SELECTION               -->
-        <!-- ========================================== -->
-        <section class="space-y-2">
-            <div class="flex items-center justify-between">
-                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <span class="w-4 h-4 rounded-full bg-brand-gold/20 text-brand-gold flex items-center justify-center text-[10px] font-black">2</span>
-                    Scegli Fascia Oraria
-                </label>
-                <div id="active-date-display" class="text-[11px] font-mono font-bold text-gray-400">
-                    <!-- e.g. Oggi, 15 Set -->
-                </div>
-            </div>
-
-            <!-- Capacity / Legend Pills -->
-            <div class="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-brand-card/60 border border-brand-cardBorder/60 text-[10px]">
-                <div class="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span>Libera (&lt;12)</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-amber-300 font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                    <span>Media (12-16)</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-red-400 font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
-                    <span>Picco (16+)</span>
-                </div>
-            </div>
-
-            <!-- Slots Grid -->
-            <div id="slots-grid" class="grid grid-cols-2 sm:grid-cols-2 gap-2.5">
-                <!-- Populated via JS -->
-                <div class="col-span-2 py-10 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
-                    <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-brand-gold"></i>
-                    <span class="text-xs font-medium">Caricamento fasce orarie...</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================== -->
-        <!-- STEP 3: BOOKING FORM CARD                  -->
-        <!-- ========================================== -->
-        <section id="booking-form-section" class="space-y-3 pt-2">
-            <div class="flex items-center justify-between">
-                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <span class="w-4 h-4 rounded-full bg-brand-gold/20 text-brand-gold flex items-center justify-center text-[10px] font-black">3</span>
-                    Dati di Prenotazione
-                </label>
-            </div>
-
-            <form id="public-booking-form" class="rounded-2xl bg-brand-card border border-brand-cardBorder p-4 space-y-3.5 shadow-xl">
-                
-                <!-- Selected Slot Summary Banner -->
-                <div id="selected-summary-box" class="p-3 rounded-xl bg-brand-gold/10 border border-brand-gold/30 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-brand-gold text-black flex items-center justify-center font-black">
-                            <i data-lucide="clock" class="w-4 h-4"></i>
-                        </div>
-                        <div>
-                            <div id="summary-slot-label" class="text-xs font-extrabold text-white">Seleziona una fascia</div>
-                            <div id="summary-date-label" class="text-[11px] font-medium text-brand-gold">Tocca uno degli orari sopra</div>
-                        </div>
-                    </div>
-                    <span class="text-[10px] font-mono font-bold px-2 py-1 rounded bg-brand-gold/20 text-brand-gold uppercase">Confermato</span>
-                </div>
-
-                <!-- Hidden Selected Fields -->
-                <input type="hidden" id="form-selected-date" name="reservationDate" required>
-                <input type="hidden" id="form-selected-slot" name="timeSlot" required>
-
-                <!-- Full Name -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center gap-1">
-                        <span>Nome e Cognome</span>
-                        <span class="text-brand-gold">*</span>
-                    </label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
-                            <i data-lucide="user" class="w-4 h-4"></i>
-                        </span>
-                        <input type="text" id="form-fullname" name="fullName" required placeholder="Es. Mario Rossi"
-                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
-                    </div>
-                </div>
-
-                <!-- Phone -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center justify-between">
-                        <span class="flex items-center gap-1">
-                            <span>Numero di Telefono</span>
-                            <span class="text-brand-gold">*</span>
-                        </span>
-                        <span class="text-[10px] text-gray-400 font-normal">Per conferme e orari</span>
-                    </label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
-                            <i data-lucide="phone" class="w-4 h-4"></i>
-                        </span>
-                        <input type="tel" id="form-phone" name="phone" required placeholder="Es. 333 1234567"
-                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm font-mono focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
-                    </div>
-                </div>
-
-                <!-- Email (Optional) -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center justify-between">
-                        <span>Email (Opzionale)</span>
-                        <span class="text-[10px] text-gray-500 font-normal">Facoltativa</span>
-                    </label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
-                            <i data-lucide="mail" class="w-4 h-4"></i>
-                        </span>
-                        <input type="email" id="form-email" name="email" placeholder="Es. mario.rossi@email.it"
-                               class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-sm focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all" />
-                    </div>
-                </div>
-
-                <!-- Notes (Optional) -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-300 mb-1 flex items-center justify-between">
-                        <span>Note o Richieste (Opzionale)</span>
-                        <span class="text-[10px] text-gray-500 font-normal">Es. Prima volta, Lezione prova</span>
-                    </label>
-                    <div class="relative">
-                        <textarea id="form-notes" name="notes" rows="2" placeholder="Eventuali annotazioni per la reception..."
-                                  class="w-full p-3 rounded-xl bg-brand-input border border-brand-cardBorder text-white placeholder-gray-500 text-xs focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold transition-all"></textarea>
-                    </div>
-                </div>
-
-                <!-- Submit Action Button -->
-                <div class="pt-2">
-                    <button type="submit" id="submit-booking-btn" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-brand-gold to-brand-goldLight text-black font-extrabold text-sm tracking-wide shadow-glow hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer">
-                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                        <span>CONFERMA PRENOTAZIONE</span>
-                    </button>
-                    <p class="text-[10px] text-center text-gray-500 mt-2 flex items-center justify-center gap-1">
-                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                        Prenotazione istantanea salvata sul registro palestra
-                    </p>
-                </div>
-            </form>
-        </section>
-
     </main>
 
     <!-- Footer -->
-    <footer class="mt-8 border-t border-brand-cardBorder/60 py-4 px-4 text-center text-xs text-gray-500 max-w-md mx-auto w-full">
-        <p class="font-bold text-gray-400" id="gym-name-footer">Legion GymFlow</p>
-        <p class="text-[11px] text-gray-600 mt-0.5">Powered by <a href="https://github.com/WorkWolf2">GymFlow System</a> &bull; Prenotazioni Aperte al Pubblico</p>
+    <footer class="mt-8 border-t border-brand-cardBorder/60 py-6 px-4 lg:px-8 text-center text-xs text-gray-500 max-w-md lg:max-w-6xl xl:max-w-7xl mx-auto w-full">
+        <p class="font-bold text-gray-300 text-sm" id="gym-name-footer">Legion GymFlow</p>
+        <p class="text-xs text-gray-600 mt-1">Powered by <a href="https://github.com/WorkWolf2" class="text-gray-400 hover:text-brand-gold transition-colors">GymFlow System</a> &bull; Prenotazioni Aperte al Pubblico</p>
     </footer>
 
     <!-- ========================================== -->
@@ -526,7 +552,7 @@
                     const isActive = (iso === selectedDateIso);
 
                     const chip = $(`
-                        <button type="button" class="day-chip flex-shrink-0 flex flex-col items-center justify-center px-3.5 py-2 rounded-2xl border transition-all duration-150 min-w-[72px] cursor-pointer ${isActive ? 'active' : 'bg-brand-card border-brand-cardBorder text-gray-300 hover:border-brand-gold/40'}"
+                        <button type="button" class="day-chip flex-1 shrink-0 lg:shrink flex flex-col items-center justify-center px-3 py-2.5 rounded-2xl border transition-all duration-150 min-w-[70px] lg:min-w-0 cursor-pointer ${isActive ? 'active' : 'bg-brand-card border-brand-cardBorder text-gray-300 hover:border-brand-gold/40'}"
                                 data-iso="${iso}">
                             <span class="text-xs font-black tracking-tight leading-tight">${title}</span>
                             <span class="day-subtitle text-[10px] font-mono text-gray-400 mt-0.5 leading-tight">${sub}</span>

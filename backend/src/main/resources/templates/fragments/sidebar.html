@@ -10,7 +10,7 @@
     <!-- Nav -->
     <nav class="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto" id="sidebar-nav">
         <!-- Dashboard -->
-        <a th:href="@{/}" data-nav="dashboard" class="flex min-h-10 items-center gap-3 px-2.5 py-2 rounded text-sm transition-[color,background-color] duration-100"
+        <a th:href="@{/}" data-nav="dashboard" data-exclude-role="TRAINER" class="flex min-h-10 items-center gap-3 px-2.5 py-2 rounded text-sm transition-[color,background-color] duration-100"
            th:classappend="${currentPath == '/' or currentPath == '/dashboard'} ? 'bg-accent-muted text-accent font-medium' : 'text-foreground-muted hover:text-foreground hover:bg-surface-hover'">
             <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i>
             <span class="sidebar-text">Dashboard</span>
@@ -160,6 +160,12 @@
                 $('#sidebar-nav a').each(function() {
                     const reqRole = $(this).data('role');
                     const reqPerm = $(this).data('perm');
+                    const excludedRole = $(this).data('exclude-role');
+
+                    if (excludedRole === role) {
+                        $(this).remove();
+                        return;
+                    }
 
                     if (isAdmin) {
                         $(this).removeClass('hidden');
@@ -179,6 +185,10 @@
 
                 // Page Route Guard: If on a restricted page without permission, redirect to dashboard
                 const currentPath = window.location.pathname;
+                if (role === 'TRAINER' && (currentPath === '/' || currentPath === '/dashboard')) {
+                    window.location.href = '/clients';
+                    return;
+                }
                 if (!isAdmin && currentPath !== '/' && currentPath !== '/dashboard' && currentPath !== '/login') {
                     if (currentPath.startsWith('/settings') && role !== 'ADMIN') {
                         window.location.href = '/dashboard';

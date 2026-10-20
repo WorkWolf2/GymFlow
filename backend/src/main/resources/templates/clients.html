@@ -63,9 +63,9 @@
         </div>
 
         <!-- Table Container -->
-        <div class="card overflow-hidden border border-surface-border rounded-xl shadow-sm stagger-item bg-surface">
+        <div class="card overflow-visible border border-surface-border rounded-xl shadow-sm stagger-item bg-surface">
             <!-- Table Sub-Header -->
-            <div class="grid grid-cols-[40px_1fr_auto] sm:grid-cols-[40px_2.2fr_1.4fr_90px] gap-3 sm:gap-5 px-6 py-3.5 border-b border-surface-border bg-surface-hover/20 text-[10px] font-bold text-foreground-subtle tracking-wider uppercase select-none">
+            <div class="grid grid-cols-[40px_1fr_auto] sm:grid-cols-[40px_2.2fr_1.4fr_90px] gap-3 sm:gap-5 px-6 py-3.5 border-b border-surface-border bg-surface-hover/20 text-[10px] font-bold text-foreground-subtle tracking-wider uppercase select-none rounded-t-xl">
                 <div class="w-10 shrink-0"></div>
                 <div class="flex items-center gap-1">
                     Cliente &amp; Info
@@ -306,10 +306,15 @@
                                                     <button class="dropdown-toggle p-2 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-active transition-all" title="Altre opzioni">
                                                         <i data-lucide="more-horizontal" class="w-4 h-4"></i>
                                                     </button>
-                                                    <div class="dropdown-menu absolute right-0 top-full mt-1.5 w-48 bg-surface border border-surface-border rounded-xl shadow-card z-20 py-1.5 hidden animate-slide-up">
+                                                    <div class="dropdown-menu absolute right-0 top-full mt-1.5 w-48 bg-surface border border-surface-border rounded-xl shadow-2xl z-50 py-1.5 hidden animate-slide-up">
                                                         <a href="/clients/${user.id}" class="flex items-center gap-2 px-3.5 py-2.5 text-xs text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors">
                                                             <i data-lucide="user-check" class="w-4 h-4 text-foreground-muted/80"></i> Vedi Scheda
                                                         </a>
+                                                        ${user.nfcTagUid ? `
+                                                        <button class="remove-client-nfc-btn flex items-center gap-2 px-3.5 py-2.5 text-xs text-danger hover:bg-danger-bg/50 w-full text-left transition-colors" data-id="${user.id}" data-name="${user.fullName}" data-nfc="${user.nfcTagUid}">
+                                                            <i data-lucide="tag" class="w-4 h-4 text-danger/80"></i> Cancella Tag NFC
+                                                        </button>
+                                                        ` : ''}
                                                         <button class="delete-btn flex items-center gap-2 px-3.5 py-2.5 text-xs text-danger hover:bg-danger-bg/50 w-full text-left transition-colors" data-id="${user.id}">
                                                             <i data-lucide="user-x" class="w-4 h-4 text-danger/80"></i> Disattiva Cliente
                                                         </button>
@@ -387,15 +392,36 @@
                 });
 ;
 
-                // Dropdown logic
+                // Dropdown logic with dynamic vertical positioning
                 $(document).on('click', '.dropdown-toggle', function(e) {
                     e.stopPropagation();
+                    const container = $(this).closest('.dropdown-container');
+                    const menu = $(this).siblings('.dropdown-menu');
+                    const isAlreadyOpen = !menu.hasClass('hidden');
+
                     $('.dropdown-menu').addClass('hidden');
-                    $(this).siblings('.dropdown-menu').removeClass('hidden');
+                    $('.dropdown-container').removeClass('z-50');
+
+                    if (isAlreadyOpen) return;
+
+                    // Calculate available space below in viewport
+                    const btnRect = this.getBoundingClientRect();
+                    const spaceBelow = window.innerHeight - btnRect.bottom;
+                    const menuHeight = 160;
+
+                    if (spaceBelow < menuHeight && btnRect.top > menuHeight) {
+                        menu.removeClass('top-full mt-1.5').addClass('bottom-full mb-1.5');
+                    } else {
+                        menu.removeClass('bottom-full mb-1.5').addClass('top-full mt-1.5');
+                    }
+
+                    container.addClass('z-50');
+                    menu.removeClass('hidden');
                 });
 
                 $(document).on('click', function() {
                     $('.dropdown-menu').addClass('hidden');
+                    $('.dropdown-container').removeClass('z-50');
                 });
 
                 // Delete logic
@@ -407,6 +433,27 @@
                             type: 'DELETE',
                             success: function() {
                                 loadClients();
+                            }
+                        });
+                    }
+                });
+
+                // Remove NFC tag logic
+                $(document).on('click', '.remove-client-nfc-btn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const id = $(this).data('id');
+                    const name = $(this).data('name');
+                    const nfc = $(this).data('nfc');
+                    if (confirm(`Sei sicuro di voler cancellare e dissociare il tag NFC (${nfc}) per il cliente ${name}?`)) {
+                        $.ajax({
+                            url: `/api/nfc/user/${id}`,
+                            type: 'DELETE',
+                            success: function() {
+                                loadClients();
+                            },
+                            error: function() {
+                                alert('Errore durante la cancellazione del tag NFC');
                             }
                         });
                     }

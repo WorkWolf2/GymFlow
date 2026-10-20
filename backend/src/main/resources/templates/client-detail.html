@@ -37,7 +37,11 @@
                 </button>
                 <button id="assign-nfc-btn" class="btn-ghost flex items-center gap-2">
                     <i data-lucide="badge-check" class="w-[15px] h-[15px]"></i>
-                    Assegna NFC
+                    <span id="assign-nfc-label">Assegna NFC</span>
+                </button>
+                <button type="button" id="remove-nfc-btn" class="btn-ghost text-danger hover:bg-danger-bg flex items-center gap-2 hidden" title="Cancella il tag NFC assegnato">
+                    <i data-lucide="tag" class="w-[15px] h-[15px]"></i>
+                    Cancella NFC
                 </button>
                 <button id="new-sub-btn" class="btn-primary flex items-right gap-2">
                     <i data-lucide="plus" class="w-[15px] h-[15px]"></i>
@@ -140,7 +144,12 @@
                         <i data-lucide="door-open" class="w-4 h-4 text-accent"></i>
                         <h2 class="font-medium text-foreground">Accesso e Presenze</h2>
                     </div>
-                    <span class="text-xs text-foreground-muted text-right" id="current-nfc-tag">Nessun tag assegnato</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-foreground-muted text-right" id="current-nfc-tag">Nessun tag assegnato</span>
+                        <button type="button" id="card-remove-nfc-btn" class="p-1 rounded hover:bg-danger-bg text-foreground-muted hover:text-danger transition-colors hidden" title="Cancella / Rimuovi Tag NFC da questo utente">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="p-5 space-y-5">
@@ -772,6 +781,52 @@
             </div>
         </div>
 
+        <div id="insurance-confirm-modal" class="modal-overlay hidden" style="z-index: 60;">
+            <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-amber-500/5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                        </div>
+                        <h2 class="text-base font-semibold text-foreground">Assicurazione Non Presente</h2>
+                    </div>
+                    <button type="button" class="insurance-modal-choice text-foreground-muted hover:text-foreground transition-colors" data-action="cancel">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-foreground-muted leading-relaxed">
+                        Questo cliente <strong class="text-foreground">non possiede un'assicurazione attiva</strong>.<br>
+                        Vuoi aggiungere anche l'assicurazione?
+                    </p>
+
+                    <div class="p-3.5 rounded-lg bg-surface-hover/70 border border-surface-border space-y-2.5 text-xs">
+                        <div class="flex items-center justify-between gap-2" id="insurance-select-container">
+                            <span class="text-foreground-muted">Piano assicurazione:</span>
+                            <select id="insurance-modal-type-select" class="input text-xs py-1 px-2 h-8 w-48 text-right font-medium"></select>
+                            <span id="insurance-modal-single-name" class="font-medium text-foreground hidden"></span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-foreground-muted">Importo:</span>
+                            <span class="font-semibold text-accent text-sm" id="insurance-modal-price-display">25,00 €</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-foreground-muted">Metodo pagamento:</span>
+                            <span class="font-medium text-foreground" id="insurance-modal-method-display">Contanti</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2.5">
+                        <button type="button" class="insurance-modal-choice btn-ghost text-xs" data-action="no">No, solo abbonamento</button>
+                        <button type="button" class="insurance-modal-choice btn-primary text-xs flex items-center gap-1.5" data-action="yes">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            Sì, aggiungi assicurazione
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="voucher-modal" class="modal-overlay hidden">
             <div class="bg-surface border border-surface-border rounded shadow-card w-full max-w-md overflow-hidden animate-slide-up">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border">
@@ -870,8 +925,18 @@
                     </button>
                 </div>
                 <form id="nfc-form" class="p-6 space-y-4">
+                    <div id="modal-current-nfc-info" class="p-3 rounded-lg bg-surface-hover/70 border border-surface-border flex items-center justify-between hidden">
+                        <div>
+                            <span class="block text-[11px] text-foreground-muted">Tag attualmente assegnato</span>
+                            <span class="text-sm font-mono font-bold text-accent" id="modal-current-nfc-uid"></span>
+                        </div>
+                        <button type="button" id="modal-remove-nfc-btn" class="btn-ghost text-xs text-danger hover:bg-danger-bg flex items-center gap-1.5 py-1 px-2.5">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            Cancella Tag
+                        </button>
+                    </div>
                     <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Tag rilevato</label>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5" id="nfc-select-label">Seleziona Tag rilevato</label>
                         <select id="nfc-tag-uid" required class="input"></select>
                     </div>
                     <div class="pt-4 flex items-center justify-end gap-3">
@@ -1047,6 +1112,7 @@
                 let provincesLoaded = FiscalCode.loadProvinceSelect('#edit-birth-province');
 
                 let currentSubscriptions = [];
+                let currentUser = null;
 
                 const refreshFiscalCode = FiscalCode.bindAutofill('#edit-fiscal-code', {
                     firstName: '#edit-first-name',
@@ -1132,8 +1198,24 @@
 
                             if (window.lucide) lucide.createIcons();
 
-                            $('#edit-client-code').val(user.clientCode ? '#' + user.clientCode : '');
-                            $('#current-nfc-tag').text(user.nfcTagUid ? 'Tag NFC ' + user.nfcTagUid : (user.clientCode ? 'Accesso con ID #' + user.clientCode : 'Nessun tag assegnato'));
+                            currentUser = user;
+                            if (user.nfcTagUid) {
+                                $('#current-nfc-tag').text('Tag NFC ' + user.nfcTagUid);
+                                $('#remove-nfc-btn').removeClass('hidden');
+                                $('#card-remove-nfc-btn').removeClass('hidden');
+                                $('#modal-remove-nfc-btn').removeClass('hidden');
+                                $('#modal-current-nfc-info').removeClass('hidden');
+                                $('#modal-current-nfc-uid').text(user.nfcTagUid);
+                                $('#assign-nfc-label').text('Cambia NFC');
+                            } else {
+                                $('#current-nfc-tag').text(user.clientCode ? 'Accesso con ID #' + user.clientCode : 'Nessun tag assegnato');
+                                $('#remove-nfc-btn').addClass('hidden');
+                                $('#card-remove-nfc-btn').addClass('hidden');
+                                $('#modal-remove-nfc-btn').addClass('hidden');
+                                $('#modal-current-nfc-info').addClass('hidden');
+                                $('#modal-current-nfc-uid').text('');
+                                $('#assign-nfc-label').text('Assegna NFC');
+                            }
                             renderDocuments(user);
 
                             // Populate edit form
@@ -1564,18 +1646,140 @@
                     }
                 }
 
-                function createSubscription(req) {
+                function hasActiveInsurance() {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return (currentSubscriptions || []).some(function (s) {
+                        if (!s.subscriptionType || s.subscriptionType.type !== 'ASSICURAZIONE') {
+                            return false;
+                        }
+                        if (s.suspended) return false;
+                        const endDate = parseLocalDate(s.endDate);
+                        return endDate && endDate >= today;
+                    });
+                }
+
+                function askAddInsurance(insuranceTypes, subReq) {
+                    return new Promise(function (resolve) {
+                        if (!insuranceTypes || insuranceTypes.length === 0) {
+                            resolve({ add: false });
+                            return;
+                        }
+
+                        const select = $('#insurance-modal-type-select');
+                        select.empty();
+
+                        if (insuranceTypes.length > 1) {
+                            insuranceTypes.forEach(function (t) {
+                                const priceFormatted = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(t.defaultPrice || 0);
+                                select.append(`<option value="${t.id}">${t.name} (${priceFormatted})</option>`);
+                            });
+                            select.removeClass('hidden');
+                            $('#insurance-modal-single-name').addClass('hidden');
+                        } else {
+                            const single = insuranceTypes[0];
+                            select.append(`<option value="${single.id}">${single.name}</option>`);
+                            select.addClass('hidden');
+                            $('#insurance-modal-single-name').text(single.name).removeClass('hidden');
+                        }
+
+                        function updateSelectedInsuranceInfo() {
+                            const currentSelectedId = select.val();
+                            const selectedType = insuranceTypes.find(t => t.id === currentSelectedId) || insuranceTypes[0];
+                            const price = selectedType ? (selectedType.defaultPrice || 0) : 0;
+                            $('#insurance-modal-price-display').text(
+                                new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(price)
+                            );
+                        }
+
+                        select.off('change.ins').on('change.ins', updateSelectedInsuranceInfo);
+                        updateSelectedInsuranceInfo();
+
+                        const methodMap = {
+                            'CASH': 'Contanti',
+                            'POS': 'POS / Carta',
+                            'TRANSFER': 'Bonifico',
+                            'OTHER': 'Altro'
+                        };
+                        const methodText = methodMap[subReq.paymentMethod] || subReq.paymentMethod;
+                        $('#insurance-modal-method-display').text(methodText);
+
+                        $('#insurance-confirm-modal').removeClass('hidden');
+                        playWindowsLikePopupSound();
+                        if (window.lucide) lucide.createIcons();
+
+                        $('.insurance-modal-choice').off('click.insChoice').on('click.insChoice', function () {
+                            const action = $(this).data('action');
+                            $('#insurance-confirm-modal').addClass('hidden');
+
+                            if (action === 'cancel') {
+                                resolve('cancel');
+                            } else if (action === 'yes') {
+                                const selectedId = select.val();
+                                const selectedType = insuranceTypes.find(t => t.id === selectedId) || insuranceTypes[0];
+                                resolve({
+                                    add: true,
+                                    typeId: selectedType.id,
+                                    price: selectedType.defaultPrice || 0,
+                                    paymentMethod: subReq.paymentMethod
+                                });
+                            } else {
+                                resolve({ add: false });
+                            }
+                        });
+                    });
+                }
+
+                function createSubscriptionWithOptionalInsurance(req, insuranceToAdd) {
+                    $('#submit-sub-btn')
+                        .prop('disabled', true)
+                        .text('Elaborazione...');
+
                     return $.ajax({
                         url: '/api/subscriptions',
                         type: 'POST',
                         contentType: 'application/json',
                         data: JSON.stringify(req),
-                        success: function (res) {
+                        success: async function (res) {
                             $('#sub-modal').addClass('hidden');
+
+                            let insReceiptId = null;
+                            if (insuranceToAdd && insuranceToAdd.add) {
+                                const insReq = {
+                                    userId: clientId,
+                                    subscriptionTypeId: insuranceToAdd.typeId,
+                                    startDate: req.startDate,
+                                    price: insuranceToAdd.price,
+                                    discountAmount: 0,
+                                    paymentMethod: insuranceToAdd.paymentMethod || req.paymentMethod,
+                                    notes: 'Assicurazione aggiunta contestualmente'
+                                };
+                                try {
+                                    const insRes = await $.ajax({
+                                        url: '/api/subscriptions',
+                                        type: 'POST',
+                                        contentType: 'application/json',
+                                        data: JSON.stringify(insReq)
+                                    });
+                                    if (insRes && insRes.receiptId) {
+                                        insReceiptId = insRes.receiptId;
+                                    }
+                                } catch (err) {
+                                    console.error('Errore durante la creazione dell\'assicurazione:', err);
+                                    alert('Abbonamento creato con successo, ma si è verificato un errore durante l\'aggiunta dell\'assicurazione.');
+                                }
+                            }
+
                             loadData();
                             loadUser();
+
                             if (res && res.receiptId) {
                                 openReceiptPopup(res.receiptId);
+                            }
+                            if (insReceiptId && insReceiptId !== res?.receiptId) {
+                                setTimeout(function () {
+                                    openReceiptPopup(insReceiptId);
+                                }, 400);
                             }
                         },
                         error: function () {
@@ -1587,6 +1791,10 @@
                                 .text('Conferma ed Incassa');
                         }
                     });
+                }
+
+                function createSubscription(req) {
+                    return createSubscriptionWithOptionalInsurance(req, null);
                 }
 
                 $(document).on('click', '.view-receipt-btn', function () {
@@ -1716,13 +1924,13 @@
                 $('#sub-form').submit(async function (e) {
                     e.preventDefault();
 
-                    $('#submit-sub-btn')
-                        .prop('disabled', true)
-                        .text('Elaborazione...');
+                    const selectedTypeId = $('#sub-type-id').val();
+                    const selectedType = typesMap[selectedTypeId];
+                    const isAddingInsurance = selectedType && selectedType.type === 'ASSICURAZIONE';
 
                     const req = {
                         userId: clientId,
-                        subscriptionTypeId: $('#sub-type-id').val(),
+                        subscriptionTypeId: selectedTypeId,
                         startDate: $('#sub-start-date').val(),
                         price: parseFloat($('#sub-price').val()),
                         discountAmount: subscriptionDiscount(),
@@ -1739,7 +1947,25 @@
                         }
                     }
 
-                    createSubscription(req);
+                    let insuranceToAdd = null;
+                    if (!isAddingInsurance && !hasActiveInsurance()) {
+                        let availableInsuranceTypes = Object.values(typesMap).filter(t => t.type === 'ASSICURAZIONE' && t.active !== false);
+                        if (availableInsuranceTypes.length === 0) {
+                            const fetchedTypes = await fetchSubscriptionTypes();
+                            availableInsuranceTypes = (fetchedTypes || []).filter(t => t.type === 'ASSICURAZIONE' && t.active !== false);
+                        }
+
+                        if (availableInsuranceTypes.length > 0) {
+                            const choice = await askAddInsurance(availableInsuranceTypes, req);
+                            if (choice === 'cancel') {
+                                return;
+                            } else if (choice && choice.add) {
+                                insuranceToAdd = choice;
+                            }
+                        }
+                    }
+
+                    createSubscriptionWithOptionalInsurance(req, insuranceToAdd);
                 });
 
                 function fetchSubscriptionTypes() {
@@ -1858,6 +2084,16 @@
                 // =========================
 
                 $('#assign-nfc-btn').click(function () {
+                    if (currentUser && currentUser.nfcTagUid) {
+                        $('#modal-current-nfc-info').removeClass('hidden');
+                        $('#modal-current-nfc-uid').text(currentUser.nfcTagUid);
+                        $('#nfc-select-label').text('Sostituisci con Tag rilevato');
+                    } else {
+                        $('#modal-current-nfc-info').addClass('hidden');
+                        $('#modal-current-nfc-uid').text('');
+                        $('#nfc-select-label').text('Seleziona Tag rilevato');
+                    }
+
                     $.ajax({
                         url: '/api/nfc/unassigned',
                         type: 'GET',
@@ -1882,6 +2118,7 @@
                             }
 
                             $('#nfc-modal').removeClass('hidden');
+                            if (window.lucide) lucide.createIcons();
                         }
                     });
                 });
@@ -1907,11 +2144,11 @@
                             userId: clientId
                         },
                         success: function (tag) {
-                            $('#current-nfc-tag').text('Tag NFC ' + tag.tagUid);
                             $('#nfc-modal').addClass('hidden');
+                            loadUser();
                         },
                         error: function () {
-                            alert('Errore durante assegnazione NFC');
+                            alert('Errore durante l\'assegnazione del tag NFC');
                         },
                         complete: function () {
                             $('#submit-nfc-btn')
@@ -1919,6 +2156,31 @@
                                 .text('Assegna Tag');
                         }
                     });
+                });
+
+                function deleteUserNfcTag() {
+                    if (!currentUser || !currentUser.nfcTagUid) {
+                        alert('Nessun tag NFC associato a questo utente.');
+                        return;
+                    }
+                    if (!confirm('Sei sicuro di voler cancellare e dissociare il tag NFC (' + currentUser.nfcTagUid + ') da questo utente?')) {
+                        return;
+                    }
+                    $.ajax({
+                        url: '/api/nfc/user/' + clientId,
+                        type: 'DELETE',
+                        success: function () {
+                            $('#nfc-modal').addClass('hidden');
+                            loadUser();
+                        },
+                        error: function () {
+                            alert('Errore durante la cancellazione del tag NFC');
+                        }
+                    });
+                }
+
+                $(document).on('click', '#remove-nfc-btn, #card-remove-nfc-btn, #modal-remove-nfc-btn', function () {
+                    deleteUserNfcTag();
                 });
 
                 // =========================
