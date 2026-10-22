@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="it" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Attività', hideNav=false, content=~{::div.activity-content})}">
+<body>
+<div class="activity-content space-y-5">
+    <div>
+        <h1 class="text-xl font-semibold text-foreground">Attività account</h1>
+        <p class="text-sm text-foreground-muted mt-0.5">Cronologia delle operazioni effettuate dagli account della palestra.</p>
+    </div>
+
+    <div class="card overflow-hidden">
+        <div id="activity-loading" class="p-6 text-sm text-foreground-muted">Caricamento attività...</div>
+        <div id="activity-empty" class="hidden p-6 text-sm text-foreground-muted">Non sono ancora state registrate attività.</div>
+        <div id="activity-list" class="divide-y divide-surface-border"></div>
+        <div id="activity-pagination" class="hidden items-center justify-between border-t border-surface-border px-4 py-3 text-sm">
+            <button id="activity-prev" class="btn-ghost" disabled>Precedente</button>
+            <span id="activity-page" class="text-foreground-muted"></span>
+            <button id="activity-next" class="btn-ghost">Successiva</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let page = 0;
+            let totalPages = 0;
+            const labels = {
+                USER_CREATED: 'ha creato un cliente', USER_UPDATED: 'ha aggiornato un cliente', USER_DELETED: 'ha eliminato un cliente',
+                USER_AVATAR_UPDATED: 'ha aggiornato la foto cliente', USER_SIGNATURE_UPDATED: 'ha aggiornato una firma', USER_DOCUMENTS_UPDATED: 'ha aggiornato documenti cliente',
+                CERTIFICATE_SAVED: 'ha aggiornato un certificato', PAYMENT_CREATED: 'ha registrato un incasso',
+                PAYMENT_DELETED: 'ha eliminato un incasso', SUBSCRIPTION_CREATED: 'ha creato un abbonamento',
+                SUBSCRIPTION_UPDATED: 'ha aggiornato un abbonamento', SUBSCRIPTION_DELETED: 'ha eliminato un abbonamento',
+                STOP_AND_GO_APPLIED: 'ha applicato Stop & Go', NFC_TAG_ASSIGNED: 'ha assegnato un tag NFC',
+                NFC_TAG_UNASSIGNED: 'ha rimosso un tag NFC', NFC_TAG_DEACTIVATED: 'ha disattivato un tag NFC',
+                DOSSIER_PROFILE_SAVED: 'ha aggiornato un dossier', DOSSIER_PROGRESS_CREATED: 'ha aggiunto un progresso',
+                DOSSIER_PROGRESS_UPDATED: 'ha aggiornato un progresso', DOSSIER_PROGRESS_DELETED: 'ha eliminato un progresso',
+                DOSSIER_PROGRAM_CREATED: 'ha creato una scheda', DOSSIER_PROGRAM_DELETED: 'ha eliminato una scheda',
+                DOSSIER_NOTE_CREATED: 'ha aggiunto una nota', DOSSIER_NOTE_UPDATED: 'ha aggiornato una nota',
+                DOSSIER_NOTE_DELETED: 'ha eliminato una nota', DOSSIER_DOCUMENT_CREATED: 'ha aggiunto un documento',
+                DOSSIER_DOCUMENT_DELETED: 'ha eliminato un documento',
+                STAFF_USER_CREATED: 'ha creato un account', STAFF_USER_UPDATED: 'ha aggiornato un account', STAFF_USER_DELETED: 'ha eliminato un account'
+            };
+
+            function escapeHtml(value) {
+                return String(value || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+            }
+
+            function loadActivity() {
+                $('#activity-loading').removeClass('hidden');
+                $.get('/api/activity', { page: page, size: 50 })
+                    .done(function(result) {
+                        totalPages = result.totalPages;
+                        const items = result.content || [];
+                        $('#activity-list').empty();
+                        $('#activity-empty').toggleClass('hidden', items.length !== 0);
+                        items.forEach(function(item) {
+                            const date = item.createdAt ? new Date(item.createdAt).toLocaleString('it-IT') : 'Data non disponibile';
+                            const description = labels[item.action] || item.action.replaceAll('_', ' ').toLowerCase();
+                            $('#activity-list').append(
+                                '<div class="flex items-start gap-3 p-4">' +
+                                '<div class="mt-0.5 rounded-lg bg-accent-muted p-2 text-accent"><i data-lucide="activity" class="w-4 h-4"></i></div>' +
+                                '<div class="min-w-0 flex-1"><p class="text-sm text-foreground"><strong>' + escapeHtml(item.staffUserName) + '</strong> ' + escapeHtml(description) + '</p>' +
+                                '<p class="mt-1 text-xs text-foreground-muted">' + escapeHtml(item.entityType || 'Operazione') + ' · ' + escapeHtml(date) + '</p></div></div>'
+                            );
+                        });
+                        $('#activity-pagination').toggleClass('hidden', totalPages <= 1).toggleClass('flex', totalPages > 1);
+                        $('#activity-page').text('Pagina ' + (page + 1) + ' di ' + totalPages);
+                        $('#activity-prev').prop('disabled', page === 0);
+                        $('#activity-next').prop('disabled', page >= totalPages - 1);
+                        if (window.lucide) lucide.createIcons();
+                    })
+                    .always(function() { $('#activity-loading').addClass('hidden'); });
+            }
+
+            $('#activity-prev').click(function() { if (page > 0) { page--; loadActivity(); } });
+            $('#activity-next').click(function() { if (page < totalPages - 1) { page++; loadActivity(); } });
+            loadActivity();
+        });
+    </script>
+</div>
+</body>
+</html>

@@ -96,6 +96,12 @@ public class WebController {
         return "reports";
     }
 
+    @GetMapping("/activity")
+    public String activity(Model model) {
+        model.addAttribute("title", "Attività");
+        return "activity";
+    }
+
     @GetMapping("/settings")
     public String settings(Model model) {
         model.addAttribute("title", "Impostazioni");

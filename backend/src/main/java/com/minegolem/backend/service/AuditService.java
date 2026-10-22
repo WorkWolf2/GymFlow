@@ -7,7 +7,6 @@ import com.minegolem.backend.security.StaffUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -23,12 +22,10 @@ public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
 
-    @Async
     public void log(String action, String entityType, String entityId) {
         log(action, entityType, entityId, null, null);
     }
 
-    @Async
     public void log(String action, String entityType, String entityId,
                     Map<String, Object> oldValue, Map<String, Object> newValue) {
         try {

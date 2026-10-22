@@ -58,6 +58,13 @@
             <span class="sidebar-text">Report</span>
         </a>
 
+        <!-- Attività -->
+        <a th:href="@{/activity}" data-nav="activity" data-role="ADMIN" class="flex min-h-10 items-center gap-3 px-2.5 py-2 rounded text-sm transition-[color,background-color] duration-100"
+           th:classappend="${#strings.startsWith(currentPath, '/activity')} ? 'bg-accent-muted text-accent font-medium' : 'text-foreground-muted hover:text-foreground hover:bg-surface-hover'">
+            <i data-lucide="history" class="w-4 h-4 shrink-0"></i>
+            <span class="sidebar-text">Attività</span>
+        </a>
+
         <!-- Email -->
         <a th:href="@{/emails}" data-nav="emails" data-perm="USER_WRITE" class="flex min-h-10 items-center gap-3 px-2.5 py-2 rounded text-sm transition-[color,background-color] duration-100"
            th:classappend="${#strings.startsWith(currentPath, '/emails')} ? 'bg-accent-muted text-accent font-medium' : 'text-foreground-muted hover:text-foreground hover:bg-surface-hover'">
@@ -146,7 +153,7 @@
                     } else if (role === 'RECEPTION') {
                         permissions = ['ROLE_RECEPTION', 'USER_READ', 'USER_WRITE', 'SUBSCRIPTION_READ', 'SUBSCRIPTION_WRITE', 'PAYMENT_READ', 'PAYMENT_WRITE', 'ACCESS_READ', 'REPORT_EXPORT'];
                     } else if (role === 'TRAINER') {
-                        permissions = ['ROLE_TRAINER', 'USER_READ', 'ACCESS_READ'];
+                        permissions = ['ROLE_TRAINER', 'USER_READ', 'USER_WRITE', 'ACCESS_READ'];
                     }
                     localStorage.setItem('user_permissions', JSON.stringify(permissions));
                 }
@@ -192,6 +199,8 @@
                 if (!isAdmin && currentPath !== '/' && currentPath !== '/dashboard' && currentPath !== '/login') {
                     if (currentPath.startsWith('/settings') && role !== 'ADMIN') {
                         window.location.href = '/dashboard';
+                    } else if (currentPath.startsWith('/activity') && role !== 'ADMIN') {
+                        window.location.href = '/clients';
                     } else if (currentPath.startsWith('/payments') && !permissions.includes('PAYMENT_READ')) {
                         window.location.href = '/dashboard';
                     } else if (currentPath.startsWith('/reports') && !permissions.includes('REPORT_EXPORT')) {

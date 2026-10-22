@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -57,8 +58,8 @@ public class UserService {
         User user = User.builder()
             .clientCode(userRepository.nextClientCode())
             .gym(gym)
-            .firstName(request.firstName())
-            .lastName(request.lastName())
+            .firstName(normalizePersonName(request.firstName()))
+            .lastName(normalizePersonName(request.lastName()))
             .email(request.email())
             .phone(request.phone())
             .birthDate(request.birthDate())
@@ -85,8 +86,8 @@ public class UserService {
     @Transactional
     public UserResponse update(UUID id, UserRequest request) {
         User user = findUser(id);
-        user.setFirstName(request.firstName());
-        user.setLastName(request.lastName());
+        user.setFirstName(normalizePersonName(request.firstName()));
+        user.setLastName(normalizePersonName(request.lastName()));
         user.setEmail(request.email());
         user.setPhone(request.phone());
         user.setBirthDate(request.birthDate());
@@ -116,6 +117,7 @@ public class UserService {
         User user = findUser(id);
         String path = fileStorageService.store(file, "avatars/" + id);
         user.setAvatarPath(path);
+        auditService.log("USER_AVATAR_UPDATED", "User", id.toString());
         return toResponse(userRepository.save(user));
     }
 
@@ -124,6 +126,7 @@ public class UserService {
         User user = findUser(id);
         String path = fileStorageService.store(signaturePng, "signatures/" + id);
         user.setSignaturePath(path);
+        auditService.log("USER_SIGNATURE_UPDATED", "User", id.toString());
         return toResponse(userRepository.save(user));
     }
 
@@ -138,6 +141,7 @@ public class UserService {
             String path = fileStorageService.store(back, "documents/" + id + "/back");
             user.setDocBackPath(path);
         }
+        auditService.log("USER_DOCUMENTS_UPDATED", "User", id.toString());
         return toResponse(userRepository.save(user));
     }
 
@@ -188,6 +192,11 @@ public class UserService {
         UUID gymId = currentGymId();
         return userRepository.findByIdAndGymIdAndDeletedAtIsNull(id, gymId)
             .orElseThrow(() -> ResourceNotFoundException.of("User", id));
+    }
+
+    private String normalizePersonName(String value) {
+        String normalized = value.trim().toLowerCase(Locale.ITALIAN);
+        return normalized.substring(0, 1).toUpperCase(Locale.ITALIAN) + normalized.substring(1);
     }
 
     public UserResponse toResponse(User u) {

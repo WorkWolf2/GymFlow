@@ -27,6 +27,7 @@ public class StaffUserService {
     private final RoleRepository roleRepository;
     private final GymRepository gymRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public List<StaffUserResponse> listByGym(UUID gymId) {
@@ -73,6 +74,7 @@ public class StaffUserService {
             .build();
 
         StaffUser saved = staffUserRepository.save(staffUser);
+        auditService.log("STAFF_USER_CREATED", "StaffUser", saved.getId().toString());
         return toResponse(saved);
     }
 
@@ -107,6 +109,7 @@ public class StaffUserService {
         }
 
         StaffUser saved = staffUserRepository.save(staffUser);
+        auditService.log("STAFF_USER_UPDATED", "StaffUser", saved.getId().toString());
         return toResponse(saved);
     }
 
@@ -120,6 +123,7 @@ public class StaffUserService {
         }
 
         staffUserRepository.delete(staffUser);
+        auditService.log("STAFF_USER_DELETED", "StaffUser", staffUserId.toString());
     }
 
     private StaffUserResponse toResponse(StaffUser u) {
