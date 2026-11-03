@@ -48,26 +48,27 @@ public class EmailService {
         sender.setDefaultEncoding("UTF-8");
 
         java.util.Properties props = sender.getJavaMailProperties();
-        props.put("mail.transport.protocol", port == 465 ? "smtps" : "smtp");
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.ssl.trust", "*");
-        props.put("mail.smtp.connectiontimeout", "8000");
-        props.put("mail.smtp.timeout", "8000");
-        props.put("mail.smtp.writetimeout", "8000");
-        props.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
+        String protocol = port == 465 ? "smtps" : "smtp";
+        String propertyPrefix = "mail." + protocol + ".";
+        props.put("mail.transport.protocol", protocol);
+        props.put(propertyPrefix + "auth", "true");
+        props.put(propertyPrefix + "ssl.trust", "*");
+        // JavaMail keeps separate property namespaces for smtp and smtps. In
+        // particular, port 465 must use mail.smtps.* or a connect can wait forever.
+        props.put(propertyPrefix + "connectiontimeout", "8000");
+        props.put(propertyPrefix + "timeout", "8000");
+        props.put(propertyPrefix + "writetimeout", "8000");
+        props.put(propertyPrefix + "ssl.protocols", "TLSv1.2 TLSv1.3");
         if (username != null && !username.isBlank()) {
-            props.put("mail.smtp.from", username.trim());
+            props.put(propertyPrefix + "from", username.trim());
         }
 
         if (port == 465) {
-            props.put("mail.smtp.ssl.enable", "true");
-            props.put("mail.smtp.socketFactory.port", "465");
-            props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
-            props.put("mail.smtp.socketFactory.fallback", "false");
+            props.put(propertyPrefix + "ssl.enable", "true");
         } else {
-            props.put("mail.smtp.starttls.enable", String.valueOf(starttls));
+            props.put(propertyPrefix + "starttls.enable", String.valueOf(starttls));
             if (starttls) {
-                props.put("mail.smtp.starttls.required", "false");
+                props.put(propertyPrefix + "starttls.required", "false");
             }
         }
     }

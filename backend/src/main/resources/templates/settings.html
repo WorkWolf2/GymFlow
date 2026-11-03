@@ -966,6 +966,7 @@
                     url: '/api/gym/settings/smtp/test',
                     type: 'POST',
                     contentType: 'application/json',
+                        timeout: 12000,
                     data: JSON.stringify(payload),
                     success: function(response) {
                         showToast(response.message || 'SMTP connesso correttamente!', 'success');
