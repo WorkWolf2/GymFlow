@@ -1039,7 +1039,7 @@
                     $('#tmpl-color').val(tmpl.colorClass || 'text-accent');
                     $('#tmpl-icon').val(tmpl.icon || 'dumbbell');
                     $('#tmpl-subject').val(tmpl.subject || '');
-                    $('#tmpl-body').val(tmpl.body ? tmpl.body.replace(/<br\s*\/?>/gi, '\n') : '');
+                    $('#tmpl-body').val(tmpl.body || '');
                 } else {
                     $('#tmpl-id').val('');
                 }
@@ -1101,7 +1101,7 @@
                 if (type === 'expiration') {
                     const idx = expirationTemplates.findIndex(t => String(t.id) === String(id));
                     const currentTemplate = idx !== -1 ? expirationTemplates[idx] : {};
-                    const body = ($('#tmpl-body').val() || '').trim().replace(/\n/g, '<br>');
+                    const body = normalizeTemplateBody($('#tmpl-body').val());
 
                     const isWelcome = id === 'client-welcome';
                     if (!isWelcome && !hasExpiryPlaceholder(body)) {
@@ -1129,7 +1129,7 @@
                         colorClass: $('#tmpl-color').val(),
                         icon: $('#tmpl-icon').val(),
                         subject: ($('#tmpl-subject').val() || '').trim(),
-                        body: ($('#tmpl-body').val() || '').trim().replace(/\n/g, '<br>')
+                        body: normalizeTemplateBody($('#tmpl-body').val())
                     };
 
                     if (id) {
@@ -1142,6 +1142,11 @@
                     saveTemplates();
                 }
             });
+
+            function normalizeTemplateBody(body) {
+                const value = (body || '').trim();
+                return /<\s*[a-z][^>]*>/i.test(value) ? value : value.replace(/\n/g, '<br>');
+            }
 
             function hasExpiryPlaceholder(body) {
                 return body.includes('{expiryDate}')

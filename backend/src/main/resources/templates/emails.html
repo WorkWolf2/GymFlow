@@ -265,9 +265,9 @@
                 const body = $(this).attr('data-body');
                 
                 $('#email-subject').val(subject);
-                // Convert <br> tags back to newlines for textarea
-                const textareaBody = body.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, "");
-                $('#email-body').val(textareaBody);
+                // Keep complete HTML templates intact. Removing tags here used to
+                // turn table-based email layouts into plain text before sending.
+                $('#email-body').val(body);
                 
                 showToast('Template caricato nel compositore!', 'success');
             });
@@ -301,7 +301,7 @@
                     userId: clientId && clientId.trim() !== '' ? clientId : null,
                     email: clientId && clientId.trim() !== '' ? null : manualEmail,
                     subject: subject,
-                    body: body.replace(/\n/g, '<br>')
+                    body: formatEmailBody(body)
                 };
 
                 $.ajax({
@@ -377,7 +377,7 @@
 
                 const req = {
                     subject: subject,
-                    body: body.replace(/\n/g, '<br>')
+                    body: formatEmailBody(body)
                 };
 
                 $.ajax({
@@ -410,6 +410,12 @@
                     }
                 });
             });
+
+            function formatEmailBody(body) {
+                // A message typed as plain text keeps its line breaks; a complete
+                // HTML layout must instead be sent exactly as authored.
+                return /<\s*[a-z][^>]*>/i.test(body) ? body : body.replace(/\n/g, '<br>');
+            }
 
             // Toast helper function
             function showToast(message, type = 'success') {

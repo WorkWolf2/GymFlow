@@ -11,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.Map;
 import java.util.UUID;
@@ -162,7 +163,9 @@ public class EmailService {
 
             helper.setTo(to.trim());
             helper.setSubject(subject);
-            helper.setText(body, true);
+            // Send a multipart alternative: clients and spam filters receive a
+            // readable text version while capable clients render the HTML version.
+            helper.setText(toPlainText(body), body);
 
             sender.send(message);
             log.info("Email inviata con successo da <{}> a <{}> con oggetto: {}", fromEmail != null ? fromEmail : "default", to, subject);
@@ -179,6 +182,18 @@ public class EmailService {
     @Async("taskExecutor")
     public void sendEmailAsync(UUID gymId, String to, String subject, String body) {
         sendEmail(gymId, to, subject, body);
+    }
+
+    private String toPlainText(String html) {
+        if (html == null || html.isBlank()) {
+            return "";
+        }
+        String text = html
+            .replaceAll("(?i)<br\\s*/?>", "\\n")
+            .replaceAll("(?i)</p\\s*>", "\\n")
+            .replaceAll("(?i)</div\\s*>", "\\n")
+            .replaceAll("<[^>]+>", "");
+        return HtmlUtils.htmlUnescape(text).replace('\u00A0', ' ').trim();
     }
 
     public java.util.Map<String, Object> testSmtpConnection(String host, int port, String username, String password, boolean starttls) {
