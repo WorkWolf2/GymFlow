@@ -194,7 +194,10 @@ function ensureNfcUi() {
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-foreground-muted mb-1.5">Cliente</label>
-                            <select id="global-nfc-user" required class="input"></select>
+                            <input id="global-nfc-user-search" type="search" autocomplete="off" class="input" placeholder="Cerca cliente per nome..." />
+                            <input id="global-nfc-user" type="hidden" required />
+                            <div id="global-nfc-user-results" class="mt-2 max-h-48 overflow-y-auto rounded border border-surface-border bg-surface hidden"></div>
+                            <p id="global-nfc-user-selected" class="mt-2 text-xs text-foreground-muted hidden"></p>
                         </div>
                         <div class="pt-4 flex items-center justify-end gap-3">
                             <button type="button" id="global-nfc-cancel" class="btn-ghost">Annulla</button>
@@ -207,6 +210,25 @@ function ensureNfcUi() {
 
         $('#global-nfc-close, #global-nfc-cancel').on('click', function() {
             $('#global-nfc-assign-modal').addClass('hidden');
+        });
+
+        $('#global-nfc-user-search').on('input', function() {
+            const query = $(this).val().trim();
+            $('#global-nfc-user').val('');
+            $('#global-nfc-user-selected').addClass('hidden').text('');
+            if (query.length < 2) {
+                $('#global-nfc-user-results').addClass('hidden').empty();
+                return;
+            }
+            searchNfcUsers(query);
+        });
+
+        $('#global-nfc-user-results').on('click', 'button[data-user-id]', function() {
+            const button = $(this);
+            $('#global-nfc-user').val(button.data('user-id'));
+            $('#global-nfc-user-search').val(button.data('user-name'));
+            $('#global-nfc-user-selected').text('Cliente selezionato: ' + button.data('user-name')).removeClass('hidden');
+            $('#global-nfc-user-results').addClass('hidden').empty();
         });
 
         $('#global-nfc-form').on('submit', function(e) {
@@ -295,23 +317,34 @@ function escapeNfcText(value) {
 function openNfcAssignModal(tagUid) {
     if (!tagUid) return;
     $('#global-nfc-tag').val(tagUid);
-    $('#global-nfc-user').html('<option value="">Caricamento...</option>');
+    $('#global-nfc-user').val('');
+    $('#global-nfc-user-search').val('').focus();
+    $('#global-nfc-user-selected').addClass('hidden').text('');
+    $('#global-nfc-user-results').addClass('hidden').empty();
     $('#global-nfc-assign-modal').removeClass('hidden');
+}
 
+function searchNfcUsers(query) {
     $.ajax({
-        url: '/api/users?size=200',
+        url: '/api/users',
         type: 'GET',
+        data: { search: query, size: 10, sort: 'lastName,asc' },
         success: function(data) {
             const users = data.content || [];
-            const select = $('#global-nfc-user');
-            select.empty();
+            const results = $('#global-nfc-user-results').empty();
             if (users.length === 0) {
-                select.append('<option value="">Nessun cliente disponibile</option>');
+                results.append('<p class="px-3 py-2 text-sm text-foreground-muted">Nessun cliente trovato</p>').removeClass('hidden');
                 return;
             }
             users.forEach(user => {
-                select.append(`<option value="${user.id}">#${user.clientCode || '-'} - ${user.fullName} ${user.email ? '- ' + user.email : ''}</option>`);
+                const name = escapeNfcText(user.fullName || 'Cliente');
+                const email = user.email ? ' · ' + escapeNfcText(user.email) : '';
+                results.append(`<button type="button" class="block w-full px-3 py-2 text-left text-sm hover:bg-surface-hover" data-user-id="${user.id}" data-user-name="${name}">#${escapeNfcText(user.clientCode || '-')} - ${name}${email}</button>`);
             });
+            results.removeClass('hidden');
+        },
+        error: function() {
+            $('#global-nfc-user-results').empty().append('<p class="px-3 py-2 text-sm text-danger">Impossibile cercare i clienti</p>').removeClass('hidden');
         }
     });
 }

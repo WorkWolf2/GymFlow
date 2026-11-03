@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -168,6 +169,15 @@ public class EmailService {
             log.error("Errore durante l'invio della mail da <" + fromEmail + "> a <" + to + ">: " + e.getMessage(), e);
             throw new RuntimeException("Impossibile inviare la mail: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * SMTP can take several seconds (or fail only after a network timeout). Do not
+     * keep an operator's HTTP request and UI action open while it responds.
+     */
+    @Async("taskExecutor")
+    public void sendEmailAsync(UUID gymId, String to, String subject, String body) {
+        sendEmail(gymId, to, subject, body);
     }
 
     public java.util.Map<String, Object> testSmtpConnection(String host, int port, String username, String password, boolean starttls) {

@@ -71,7 +71,7 @@ public class EmailNotificationService {
         validateRecipient(user);
 
         EmailTemplate template = resolveWelcomeTemplate(gym);
-        emailService.sendEmail(
+        emailService.sendEmailAsync(
             gymId,
             user.getEmail(),
             applyPlaceholders(template.subject(), user, gym, null),

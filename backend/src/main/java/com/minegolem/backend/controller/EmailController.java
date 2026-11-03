@@ -60,7 +60,7 @@ public class EmailController {
         String customizedSubject = applyPlaceholders(request.subject(), recipientName, expiryDate);
         String customizedBody = applyPlaceholders(request.body(), recipientName, expiryDate);
             
-        emailService.sendEmail(userDetails.getGymId(), recipientEmail, customizedSubject, customizedBody);
+        emailService.sendEmailAsync(userDetails.getGymId(), recipientEmail, customizedSubject, customizedBody);
         realtimeEventService.publish(userDetails.getGymId(), "EMAIL", "SENT", request.userId());
         return ResponseEntity.ok().build();
     }
