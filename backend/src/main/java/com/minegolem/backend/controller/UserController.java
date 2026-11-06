@@ -38,9 +38,10 @@ public class UserController {
     @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<Page<UserResponse>> list(
         @RequestParam(required = false) String search,
+        @RequestParam(required = false) Boolean withoutNfc,
         @PageableDefault(size = 10, sort = "lastName") Pageable pageable
     ) {
-        return ResponseEntity.ok(userService.list(search, pageable));
+        return ResponseEntity.ok(userService.list(search, withoutNfc, pageable));
     }
 
     @PostMapping

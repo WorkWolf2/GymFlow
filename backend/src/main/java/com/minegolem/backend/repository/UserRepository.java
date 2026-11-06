@@ -20,6 +20,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         SELECT u FROM User u
         WHERE u.gym.id = :gymId
           AND u.deletedAt IS NULL
+          AND (:withoutNfc IS NULL OR :withoutNfc = false OR NOT EXISTS (
+               SELECT n.id FROM NfcTag n
+               WHERE n.user.id = u.id AND n.active = true
+          ))
           AND (:search IS NULL OR :search = '' OR
                LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%')) OR
                LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%')) OR
@@ -39,6 +43,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         """)
     Page<User> searchByGym(@Param("gymId") UUID gymId,
                            @Param("search") String search,
+                           @Param("withoutNfc") Boolean withoutNfc,
                            Pageable pageable);
 
 

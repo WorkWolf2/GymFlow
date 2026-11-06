@@ -16,7 +16,15 @@ public interface NfcTagRepository extends JpaRepository<NfcTag, UUID> {
 
     @EntityGraph(attributePaths = {"user", "gym"})
     Optional<NfcTag> findByTagUidAndActiveTrue(String tagUid);
-    Optional<NfcTag> findByUserIdAndActiveTrue(UUID userId);
+
+    Optional<NfcTag> findFirstByUserIdAndActiveTrueOrderByCreatedAtDesc(UUID userId);
+
+    List<NfcTag> findAllByUserIdAndActiveTrue(UUID userId);
+
+    default Optional<NfcTag> findByUserIdAndActiveTrue(UUID userId) {
+        return findFirstByUserIdAndActiveTrueOrderByCreatedAtDesc(userId);
+    }
+
     List<NfcTag> findByGymIdAndUserIsNullAndActiveTrue(UUID gymId);
     boolean existsByTagUid(String tagUid);
 }

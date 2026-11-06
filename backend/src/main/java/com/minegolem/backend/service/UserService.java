@@ -44,10 +44,23 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserResponse> list(String search, Pageable pageable) {
+        return list(search, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> list(String search, Boolean withoutNfc, Pageable pageable) {
         UUID gymId = currentGymId();
         String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
-        return userRepository.searchByGym(gymId, cleanSearch, pageable)
-            .map(this::toResponse);
+        return userRepository.searchByGym(gymId, cleanSearch, withoutNfc, pageable)
+            .map(u -> {
+                try {
+                    return toResponse(u);
+                } catch (Exception ex) {
+                    log.error("Errore critico durante la mappatura dell'utente {} (ID: {}) in UserResponse: {}",
+                        u.getFullName(), u.getId(), ex.getMessage(), ex);
+                    throw ex;
+                }
+            });
     }
 
     @Transactional
@@ -201,9 +214,14 @@ public class UserService {
     }
 
     public UserResponse toResponse(User u) {
-        boolean hasActiveSub = !subscriptionRepository
-            .findActiveByUserAndType(u.getId(), SubscriptionTypeEnum.ABBONAMENTO, LocalDate.now())
-            .isEmpty();
+        boolean hasActiveSub = false;
+        try {
+            hasActiveSub = !subscriptionRepository
+                .findActiveByUserAndType(u.getId(), SubscriptionTypeEnum.ABBONAMENTO, LocalDate.now())
+                .isEmpty();
+        } catch (Exception ex) {
+            log.warn("Impossibile verificare abbonamento attivo per utente {}: {}", u.getId(), ex.getMessage());
+        }
 
         var certOpt = medicalCertificateRepository
             .findFirstByUser_IdAndDeletedAtIsNullOrderByExpiryDateDesc(u.getId());
@@ -214,23 +232,29 @@ public class UserService {
 
         boolean hasCertificate = certOpt.isPresent();
 
-        String nfcUid = nfcTagRepository.findByUserIdAndActiveTrue(u.getId())
+        String nfcUid = nfcTagRepository.findFirstByUserIdAndActiveTrueOrderByCreatedAtDesc(u.getId())
             .map(NfcTag::getTagUid)
             .orElse(null);
 
         var prediction = computeReturnPrediction(u, hasActiveSub, certStatus);
 
-        List<com.minegolem.backend.dto.response.UserPackageInfo> activePackages = subscriptionRepository
-            .findActiveByUserAndType(u.getId(), SubscriptionTypeEnum.PACCHETTO, LocalDate.now())
-            .stream()
-            .map(s -> new com.minegolem.backend.dto.response.UserPackageInfo(
-                s.getId(),
-                s.getSubscriptionType().getName(),
-                s.getSubscriptionType().getColor() != null ? s.getSubscriptionType().getColor() : "#6366f1",
-                s.getStartDate(),
-                s.getEndDate()
-            ))
-            .toList();
+        List<com.minegolem.backend.dto.response.UserPackageInfo> activePackages = java.util.Collections.emptyList();
+        try {
+            activePackages = subscriptionRepository
+                .findActiveByUserAndType(u.getId(), SubscriptionTypeEnum.PACCHETTO, LocalDate.now())
+                .stream()
+                .filter(s -> s != null && s.getSubscriptionType() != null)
+                .map(s -> new com.minegolem.backend.dto.response.UserPackageInfo(
+                    s.getId(),
+                    s.getSubscriptionType().getName() != null ? s.getSubscriptionType().getName() : "Pacchetto",
+                    s.getSubscriptionType().getColor() != null ? s.getSubscriptionType().getColor() : "#6366f1",
+                    s.getStartDate(),
+                    s.getEndDate()
+                ))
+                .toList();
+        } catch (Exception ex) {
+            log.warn("Impossibile caricare pacchetti per utente {}: {}", u.getId(), ex.getMessage());
+        }
 
         return new UserResponse(
             u.getId(), u.getClientCode(), u.getFirstName(), u.getLastName(), u.getFullName(),

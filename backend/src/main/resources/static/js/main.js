@@ -328,12 +328,12 @@ function searchNfcUsers(query) {
     $.ajax({
         url: '/api/users',
         type: 'GET',
-        data: { search: query, size: 10, sort: 'lastName,asc' },
+        data: { search: query, withoutNfc: true, size: 10, sort: 'lastName,asc' },
         success: function(data) {
-            const users = data.content || [];
+            const users = (data.content || []).filter(user => !user.nfcTagUid);
             const results = $('#global-nfc-user-results').empty();
             if (users.length === 0) {
-                results.append('<p class="px-3 py-2 text-sm text-foreground-muted">Nessun cliente trovato</p>').removeClass('hidden');
+                results.append('<p class="px-3 py-2 text-sm text-foreground-muted">Nessun cliente trovato (o ha già un tag)</p>').removeClass('hidden');
                 return;
             }
             users.forEach(user => {

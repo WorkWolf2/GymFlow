@@ -32,12 +32,11 @@ public class NfcService {
     public NfcTag assignTag(String tagUid, UUID userId) {
         UUID gymId = currentGymId();
 
-        // deactivate existing tag on this user
-        nfcTagRepository.findByUserIdAndActiveTrue(userId)
-            .ifPresent(existing -> {
-                existing.setActive(false);
-                nfcTagRepository.save(existing);
-            });
+        // deactivate existing tags on this user
+        nfcTagRepository.findAllByUserIdAndActiveTrue(userId).forEach(existing -> {
+            existing.setActive(false);
+            nfcTagRepository.save(existing);
+        });
 
         User user = userRepository.findByIdAndGymIdAndDeletedAtIsNull(userId, gymId)
             .orElseThrow(() -> ResourceNotFoundException.of("User", userId));
@@ -78,13 +77,13 @@ public class NfcService {
 
     @Transactional
     public void unassignUserTag(UUID userId) {
-        nfcTagRepository.findByUserIdAndActiveTrue(userId)
-            .ifPresent(tag -> {
-                tag.setUser(null);
-                tag.setAssignedAt(null);
-                nfcTagRepository.save(tag);
-                auditService.log("NFC_TAG_UNASSIGNED", "NfcTag", tag.getTagUid());
-            });
+        List<NfcTag> tags = nfcTagRepository.findAllByUserIdAndActiveTrue(userId);
+        for (NfcTag tag : tags) {
+            tag.setUser(null);
+            tag.setAssignedAt(null);
+            nfcTagRepository.save(tag);
+            auditService.log("NFC_TAG_UNASSIGNED", "NfcTag", tag.getTagUid());
+        }
     }
 
     @Transactional
