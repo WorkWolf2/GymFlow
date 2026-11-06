@@ -48,39 +48,114 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                WHERE mc.user.id = u.id AND mc.deletedAt IS NULL 
                  AND mc.expiryDate >= :today
           ))
+        ORDER BY u.lastName ASC, u.firstName ASC
+        """,
+        countQuery = """
+        SELECT COUNT(u) FROM User u
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
+          AND (:hasNfc IS NULL OR :hasNfc = false OR EXISTS (
+               SELECT n.id FROM NfcTag n WHERE n.user.id = u.id AND n.active = true
+          ))
+          AND (:withoutNfc IS NULL OR :withoutNfc = false OR NOT EXISTS (
+               SELECT n.id FROM NfcTag n WHERE n.user.id = u.id AND n.active = true
+          ))
+          AND (:activeSubOnly IS NULL OR :activeSubOnly = false OR EXISTS (
+               SELECT s.id FROM Subscription s 
+               WHERE s.user.id = u.id AND s.deletedAt IS NULL 
+                 AND s.startDate <= :today AND s.endDate >= :today
+                 AND (s.suspendedFrom IS NULL OR :today < s.suspendedFrom OR :today > s.suspendedTo)
+          ))
+          AND (:expiredSubOnly IS NULL OR :expiredSubOnly = false OR NOT EXISTS (
+               SELECT s.id FROM Subscription s 
+               WHERE s.user.id = u.id AND s.deletedAt IS NULL 
+                 AND s.startDate <= :today AND s.endDate >= :today
+                 AND (s.suspendedFrom IS NULL OR :today < s.suspendedFrom OR :today > s.suspendedTo)
+          ))
+          AND (:validCertOnly IS NULL OR :validCertOnly = false OR EXISTS (
+               SELECT mc.id FROM MedicalCertificate mc 
+               WHERE mc.user.id = u.id AND mc.deletedAt IS NULL 
+                 AND mc.expiryDate >= :today
+          ))
+          AND (:expiredCertOnly IS NULL OR :expiredCertOnly = false OR NOT EXISTS (
+               SELECT mc.id FROM MedicalCertificate mc 
+               WHERE mc.user.id = u.id AND mc.deletedAt IS NULL 
+                 AND mc.expiryDate >= :today
+          ))
+        """)
+    Page<User> findAllByGymFiltered(@Param("gymId") UUID gymId,
+                                    @Param("hasNfc") Boolean hasNfc,
+                                    @Param("withoutNfc") Boolean withoutNfc,
+                                    @Param("activeSubOnly") Boolean activeSubOnly,
+                                    @Param("expiredSubOnly") Boolean expiredSubOnly,
+                                    @Param("validCertOnly") Boolean validCertOnly,
+                                    @Param("expiredCertOnly") Boolean expiredCertOnly,
+                                    @Param("today") java.time.LocalDate today,
+                                    Pageable pageable);
+
+    @Query(value = """
+        SELECT u FROM User u
+        WHERE u.gym.id = :gymId
+          AND u.deletedAt IS NULL
+          AND (:hasNfc IS NULL OR :hasNfc = false OR EXISTS (
+               SELECT n.id FROM NfcTag n WHERE n.user.id = u.id AND n.active = true
+          ))
+          AND (:withoutNfc IS NULL OR :withoutNfc = false OR NOT EXISTS (
+               SELECT n.id FROM NfcTag n WHERE n.user.id = u.id AND n.active = true
+          ))
+          AND (:activeSubOnly IS NULL OR :activeSubOnly = false OR EXISTS (
+               SELECT s.id FROM Subscription s 
+               WHERE s.user.id = u.id AND s.deletedAt IS NULL 
+                 AND s.startDate <= :today AND s.endDate >= :today
+                 AND (s.suspendedFrom IS NULL OR :today < s.suspendedFrom OR :today > s.suspendedTo)
+          ))
+          AND (:expiredSubOnly IS NULL OR :expiredSubOnly = false OR NOT EXISTS (
+               SELECT s.id FROM Subscription s 
+               WHERE s.user.id = u.id AND s.deletedAt IS NULL 
+                 AND s.startDate <= :today AND s.endDate >= :today
+                 AND (s.suspendedFrom IS NULL OR :today < s.suspendedFrom OR :today > s.suspendedTo)
+          ))
+          AND (:validCertOnly IS NULL OR :validCertOnly = false OR EXISTS (
+               SELECT mc.id FROM MedicalCertificate mc 
+               WHERE mc.user.id = u.id AND mc.deletedAt IS NULL 
+                 AND mc.expiryDate >= :today
+          ))
+          AND (:expiredCertOnly IS NULL OR :expiredCertOnly = false OR NOT EXISTS (
+               SELECT mc.id FROM MedicalCertificate mc 
+               WHERE mc.user.id = u.id AND mc.deletedAt IS NULL 
+                 AND mc.expiryDate >= :today
+          ))
           AND (
-              :searchLower IS NULL OR :searchLower = '' OR (
-                  (:exactCode IS NOT NULL AND u.clientCode = :exactCode)
-                  OR (u.clientCode IS NOT NULL AND CAST(u.clientCode AS string) LIKE CONCAT(:searchLower, '%'))
-                  OR LOWER(u.firstName) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(u.lastName) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(CONCAT(u.lastName, ' ', u.firstName)) LIKE CONCAT('%', :searchLower, '%')
-                  OR (:word1 IS NOT NULL AND :word2 IS NOT NULL AND (
-                      (LOWER(u.firstName) LIKE CONCAT('%', :word1, '%') AND LOWER(u.lastName) LIKE CONCAT('%', :word2, '%'))
-                      OR
-                      (LOWER(u.firstName) LIKE CONCAT('%', :word2, '%') AND LOWER(u.lastName) LIKE CONCAT('%', :word1, '%'))
-                  ))
-                  OR LOWER(u.email) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(u.fiscalCode) LIKE CONCAT('%', :searchLower, '%')
-                  OR (:searchPhone IS NOT NULL AND LOWER(u.phone) LIKE CONCAT('%', :searchPhone, '%'))
-                  OR EXISTS (
-                      SELECT t.id FROM NfcTag t WHERE t.user.id = u.id AND t.active = true AND LOWER(t.tagUid) LIKE CONCAT('%', :searchLower, '%')
-                  )
-                  OR EXISTS (
-                      SELECT sub.id FROM Subscription sub
-                      WHERE sub.user.id = u.id
-                        AND sub.deletedAt IS NULL
-                        AND LOWER(sub.subscriptionType.name) LIKE CONCAT('%', :searchLower, '%')
-                  )
+              (:exactCode IS NOT NULL AND u.clientCode = :exactCode)
+              OR (u.clientCode IS NOT NULL AND CAST(u.clientCode AS string) LIKE :codePrefixPattern)
+              OR LOWER(u.firstName) LIKE :searchPattern
+              OR LOWER(u.lastName) LIKE :searchPattern
+              OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE :searchPattern
+              OR LOWER(CONCAT(u.lastName, ' ', u.firstName)) LIKE :searchPattern
+              OR (:hasWords = true AND (
+                  (LOWER(u.firstName) LIKE :w1Pattern AND LOWER(u.lastName) LIKE :w2Pattern)
+                  OR
+                  (LOWER(u.firstName) LIKE :w2Pattern AND LOWER(u.lastName) LIKE :w1Pattern)
+              ))
+              OR LOWER(u.email) LIKE :searchPattern
+              OR LOWER(u.fiscalCode) LIKE :searchPattern
+              OR (:hasPhone = true AND LOWER(u.phone) LIKE :phonePattern)
+              OR EXISTS (
+                  SELECT t.id FROM NfcTag t WHERE t.user.id = u.id AND t.active = true AND LOWER(t.tagUid) LIKE :searchPattern
+              )
+              OR EXISTS (
+                  SELECT sub.id FROM Subscription sub
+                  WHERE sub.user.id = u.id
+                    AND sub.deletedAt IS NULL
+                    AND LOWER(sub.subscriptionType.name) LIKE :searchPattern
               )
           )
         ORDER BY
           CASE
             WHEN :exactCode IS NOT NULL AND u.clientCode = :exactCode THEN 0
-            WHEN :searchLower IS NOT NULL AND (LOWER(u.lastName) = :searchLower OR LOWER(u.firstName) = :searchLower) THEN 1
-            WHEN :searchLower IS NOT NULL AND (LOWER(u.lastName) LIKE CONCAT(:searchLower, '%') OR LOWER(u.firstName) LIKE CONCAT(:searchLower, '%')) THEN 2
-            WHEN :searchLower IS NOT NULL AND CAST(u.clientCode AS string) LIKE CONCAT(:searchLower, '%') THEN 3
+            WHEN LOWER(u.lastName) = :searchLower OR LOWER(u.firstName) = :searchLower THEN 1
+            WHEN LOWER(u.lastName) LIKE :namePrefixPattern OR LOWER(u.firstName) LIKE :namePrefixPattern THEN 2
+            WHEN u.clientCode IS NOT NULL AND CAST(u.clientCode AS string) LIKE :codePrefixPattern THEN 3
             ELSE 10
           END ASC,
           u.lastName ASC,
@@ -119,39 +194,42 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                  AND mc.expiryDate >= :today
           ))
           AND (
-              :searchLower IS NULL OR :searchLower = '' OR (
-                  (:exactCode IS NOT NULL AND u.clientCode = :exactCode)
-                  OR (u.clientCode IS NOT NULL AND CAST(u.clientCode AS string) LIKE CONCAT(:searchLower, '%'))
-                  OR LOWER(u.firstName) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(u.lastName) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(CONCAT(u.lastName, ' ', u.firstName)) LIKE CONCAT('%', :searchLower, '%')
-                  OR (:word1 IS NOT NULL AND :word2 IS NOT NULL AND (
-                      (LOWER(u.firstName) LIKE CONCAT('%', :word1, '%') AND LOWER(u.lastName) LIKE CONCAT('%', :word2, '%'))
-                      OR
-                      (LOWER(u.firstName) LIKE CONCAT('%', :word2, '%') AND LOWER(u.lastName) LIKE CONCAT('%', :word1, '%'))
-                  ))
-                  OR LOWER(u.email) LIKE CONCAT('%', :searchLower, '%')
-                  OR LOWER(u.fiscalCode) LIKE CONCAT('%', :searchLower, '%')
-                  OR (:searchPhone IS NOT NULL AND LOWER(u.phone) LIKE CONCAT('%', :searchPhone, '%'))
-                  OR EXISTS (
-                      SELECT t.id FROM NfcTag t WHERE t.user.id = u.id AND t.active = true AND LOWER(t.tagUid) LIKE CONCAT('%', :searchLower, '%')
-                  )
-                  OR EXISTS (
-                      SELECT sub.id FROM Subscription sub
-                      WHERE sub.user.id = u.id
-                        AND sub.deletedAt IS NULL
-                        AND LOWER(sub.subscriptionType.name) LIKE CONCAT('%', :searchLower, '%')
-                  )
+              (:exactCode IS NOT NULL AND u.clientCode = :exactCode)
+              OR (u.clientCode IS NOT NULL AND CAST(u.clientCode AS string) LIKE :codePrefixPattern)
+              OR LOWER(u.firstName) LIKE :searchPattern
+              OR LOWER(u.lastName) LIKE :searchPattern
+              OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE :searchPattern
+              OR LOWER(CONCAT(u.lastName, ' ', u.firstName)) LIKE :searchPattern
+              OR (:hasWords = true AND (
+                  (LOWER(u.firstName) LIKE :w1Pattern AND LOWER(u.lastName) LIKE :w2Pattern)
+                  OR
+                  (LOWER(u.firstName) LIKE :w2Pattern AND LOWER(u.lastName) LIKE :w1Pattern)
+              ))
+              OR LOWER(u.email) LIKE :searchPattern
+              OR LOWER(u.fiscalCode) LIKE :searchPattern
+              OR (:hasPhone = true AND LOWER(u.phone) LIKE :phonePattern)
+              OR EXISTS (
+                  SELECT t.id FROM NfcTag t WHERE t.user.id = u.id AND t.active = true AND LOWER(t.tagUid) LIKE :searchPattern
+              )
+              OR EXISTS (
+                  SELECT sub.id FROM Subscription sub
+                  WHERE sub.user.id = u.id
+                    AND sub.deletedAt IS NULL
+                    AND LOWER(sub.subscriptionType.name) LIKE :searchPattern
               )
           )
         """)
-    Page<User> searchByGymAdvanced(@Param("gymId") UUID gymId,
+    Page<User> searchByGymFiltered(@Param("gymId") UUID gymId,
                                    @Param("searchLower") String searchLower,
+                                   @Param("searchPattern") String searchPattern,
+                                   @Param("namePrefixPattern") String namePrefixPattern,
+                                   @Param("codePrefixPattern") String codePrefixPattern,
                                    @Param("exactCode") Long exactCode,
-                                   @Param("searchPhone") String searchPhone,
-                                   @Param("word1") String word1,
-                                   @Param("word2") String word2,
+                                   @Param("hasPhone") boolean hasPhone,
+                                   @Param("phonePattern") String phonePattern,
+                                   @Param("hasWords") boolean hasWords,
+                                   @Param("w1Pattern") String w1Pattern,
+                                   @Param("w2Pattern") String w2Pattern,
                                    @Param("hasNfc") Boolean hasNfc,
                                    @Param("withoutNfc") Boolean withoutNfc,
                                    @Param("activeSubOnly") Boolean activeSubOnly,
@@ -162,8 +240,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                                    Pageable pageable);
 
     default Page<User> searchByGym(UUID gymId, String search, Boolean withoutNfc, Pageable pageable) {
-        return searchByGymAdvanced(gymId, search != null ? search.toLowerCase() : null, null, null, null, null,
-            null, withoutNfc, null, null, null, null, java.time.LocalDate.now(), pageable);
+        String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
+        if (cleanSearch == null) {
+            return findAllByGymFiltered(gymId, null, withoutNfc, null, null, null, null, java.time.LocalDate.now(), pageable);
+        }
+        String lower = cleanSearch.toLowerCase();
+        return searchByGymFiltered(
+            gymId, lower, "%" + lower + "%", lower + "%", cleanSearch + "%",
+            null, false, "", false, "", "",
+            null, withoutNfc, null, null, null, null,
+            java.time.LocalDate.now(), pageable
+        );
     }
 
 

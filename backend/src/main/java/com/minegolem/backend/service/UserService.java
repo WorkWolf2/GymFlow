@@ -58,14 +58,26 @@ public class UserService {
         UUID gymId = currentGymId();
         String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
 
-        Long exactCode = null;
-        String searchPhone = null;
-        String searchLower = null;
-        String word1 = null;
-        String word2 = null;
+        // Map status filter
+        Boolean filterWithoutNfc = Boolean.TRUE.equals(withoutNfc) || "WITHOUT_NFC".equalsIgnoreCase(status);
+        Boolean filterHasNfc = "HAS_NFC".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterActiveSub = "ACTIVE_SUB".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterExpiredSub = "EXPIRED_SUB".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterValidCert = "VALID_CERT".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterExpiredCert = "EXPIRED_CERT".equalsIgnoreCase(status) ? Boolean.TRUE : null;
 
-        if (cleanSearch != null) {
+        LocalDate today = LocalDate.now();
+        Page<User> usersPage;
+
+        if (cleanSearch == null) {
+            // When no search query is specified, use the direct query without any LIKE conditions
+            usersPage = userRepository.findAllByGymFiltered(
+                gymId, filterHasNfc, filterWithoutNfc, filterActiveSub, filterExpiredSub, filterValidCert, filterExpiredCert,
+                today, pageable
+            );
+        } else {
             String s = cleanSearch;
+            Long exactCode = null;
             // Support explicit prefixes: #34, id:34, id: 34, cod: 34, codice: 34
             String strippedPrefix = s.replaceAll("^(?i)(id:|cod:|codice:|#)\\s*", "").trim();
             if (strippedPrefix.matches("^\\d+$")) {
@@ -78,44 +90,49 @@ public class UserService {
             // 1. Explicit phone prefix (tel:, phone:)
             // 2. Starts with '+'
             // 3. Digits >= 5 (so "34" or "12" NEVER matches phone numbers)
+            boolean hasPhone = false;
+            String phonePattern = "";
             String digitsOnly = s.replaceAll("\\D", "");
             if (s.toLowerCase().startsWith("tel:") || s.toLowerCase().startsWith("phone:")) {
-                searchPhone = s.replaceAll("^(?i)(tel:|phone:)\\s*", "").replaceAll("[\\s\\-\\(\\)]", "");
+                hasPhone = true;
+                phonePattern = "%" + s.replaceAll("^(?i)(tel:|phone:)\\s*", "").replaceAll("[\\s\\-\\(\\)]", "").toLowerCase() + "%";
             } else if (s.startsWith("+")) {
-                searchPhone = s.replaceAll("[\\s\\-\\(\\)]", "");
+                hasPhone = true;
+                phonePattern = "%" + s.replaceAll("[\\s\\-\\(\\)]", "").toLowerCase() + "%";
             } else if (digitsOnly.length() >= 5) {
-                searchPhone = digitsOnly;
-            } else {
-                searchPhone = null;
+                hasPhone = true;
+                phonePattern = "%" + digitsOnly + "%";
             }
 
             // Lowercase string for generic text search (names, email, CF, etc.)
-            searchLower = strippedPrefix.isEmpty() ? s.toLowerCase() : (s.startsWith("#") || s.toLowerCase().startsWith("id:") ? strippedPrefix.toLowerCase() : s.toLowerCase());
+            String searchLower = strippedPrefix.isEmpty() ? s.toLowerCase() : (s.startsWith("#") || s.toLowerCase().startsWith("id:") ? strippedPrefix.toLowerCase() : s.toLowerCase());
+            String searchPattern = "%" + searchLower + "%";
+            String namePrefixPattern = searchLower + "%";
+            String codePrefixPattern = (exactCode != null ? exactCode.toString() : s) + "%";
 
             // Multi-word name search (e.g. "Mario Rossi" or "Rossi Mario")
+            boolean hasWords = false;
+            String w1Pattern = "";
+            String w2Pattern = "";
             String[] words = s.split("\\s+");
             if (words.length >= 2) {
-                word1 = words[0].toLowerCase();
-                word2 = words[words.length - 1].toLowerCase();
+                hasWords = true;
+                w1Pattern = "%" + words[0].toLowerCase() + "%";
+                w2Pattern = "%" + words[words.length - 1].toLowerCase() + "%";
             }
+
+            // Strip incoming sort so the JPQL relevance sorting takes priority
+            Pageable queryPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+            usersPage = userRepository.searchByGymFiltered(
+                gymId, searchLower, searchPattern, namePrefixPattern, codePrefixPattern, exactCode,
+                hasPhone, phonePattern, hasWords, w1Pattern, w2Pattern,
+                filterHasNfc, filterWithoutNfc, filterActiveSub, filterExpiredSub, filterValidCert, filterExpiredCert,
+                today, queryPageable
+            );
         }
 
-        // Map status filter
-        Boolean filterWithoutNfc = Boolean.TRUE.equals(withoutNfc) || "WITHOUT_NFC".equalsIgnoreCase(status);
-        Boolean filterHasNfc = "HAS_NFC".equalsIgnoreCase(status) ? Boolean.TRUE : null;
-        Boolean filterActiveSub = "ACTIVE_SUB".equalsIgnoreCase(status) ? Boolean.TRUE : null;
-        Boolean filterExpiredSub = "EXPIRED_SUB".equalsIgnoreCase(status) ? Boolean.TRUE : null;
-        Boolean filterValidCert = "VALID_CERT".equalsIgnoreCase(status) ? Boolean.TRUE : null;
-        Boolean filterExpiredCert = "EXPIRED_CERT".equalsIgnoreCase(status) ? Boolean.TRUE : null;
-
-        // Strip incoming sort so the JPQL relevance sorting takes priority
-        Pageable queryPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-
-        return userRepository.searchByGymAdvanced(
-            gymId, searchLower, exactCode, searchPhone, word1, word2,
-            filterHasNfc, filterWithoutNfc, filterActiveSub, filterExpiredSub, filterValidCert, filterExpiredCert,
-            LocalDate.now(), queryPageable
-        ).map(u -> {
+        return usersPage.map(u -> {
             try {
                 return toResponse(u);
             } catch (Exception ex) {
