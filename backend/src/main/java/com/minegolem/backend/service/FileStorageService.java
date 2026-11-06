@@ -9,6 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -22,12 +28,15 @@ public class FileStorageService {
     @Value("${minio.bucket}")
     private String bucket;
 
+    @Value("${storage.local.dir:uploads}")
+    private String localDir;
+
     public String store(MultipartFile file, String prefix) {
+        String ext = getExtension(file.getOriginalFilename());
+        String objectName = prefix + "/" + UUID.randomUUID() + ext;
+
         try {
             ensureBucketExists();
-
-            String ext = getExtension(file.getOriginalFilename());
-            String objectName = prefix + "/" + UUID.randomUUID() + ext;
 
             minioClient.putObject(PutObjectArgs.builder()
                 .bucket(bucket)
@@ -36,12 +45,12 @@ public class FileStorageService {
                 .contentType(file.getContentType())
                 .build());
 
-            log.debug("Stored file: {}", objectName);
+            log.debug("Stored file in MinIO: {}", objectName);
             return objectName;
 
         } catch (Exception e) {
-            log.error("Failed to store file", e);
-            throw new RuntimeException("File storage failed: " + e.getMessage(), e);
+            log.warn("MinIO upload non disponibile o fallito ({}), fallback su storage disco locale: {}", e.getMessage(), objectName);
+            return storeLocally(file, objectName);
         }
     }
 
@@ -56,47 +65,95 @@ public class FileStorageService {
                 .contentType(contentType != null ? contentType : "application/pdf")
                 .build());
 
-            log.debug("Stored bytes file: {}", objectName);
+            log.debug("Stored bytes file in MinIO: {}", objectName);
             return objectName;
         } catch (Exception e) {
-            log.error("Failed to store bytes file: {}", objectName, e);
-            throw new RuntimeException("File storage failed: " + e.getMessage(), e);
+            log.warn("MinIO storeBytes non disponibile o fallito ({}), fallback su storage disco locale: {}", e.getMessage(), objectName);
+            return storeBytesLocally(data, objectName);
+        }
+    }
+
+    private String storeLocally(MultipartFile file, String objectName) {
+        try {
+            Path target = Paths.get(localDir).resolve(objectName).normalize();
+            Files.createDirectories(target.getParent());
+            try (InputStream is = file.getInputStream()) {
+                Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            log.info("File memorizzato localmente con successo: {}", target.toAbsolutePath());
+            return "local:" + objectName;
+        } catch (Exception ex) {
+            log.error("Impossibile salvare il file localmente: {}", objectName, ex);
+            throw new RuntimeException("File storage failed on both MinIO and local disk: " + ex.getMessage(), ex);
+        }
+    }
+
+    private String storeBytesLocally(byte[] data, String objectName) {
+        try {
+            Path target = Paths.get(localDir).resolve(objectName).normalize();
+            Files.createDirectories(target.getParent());
+            Files.write(target, data);
+            log.info("Bytes memorizzati localmente con successo: {}", target.toAbsolutePath());
+            return "local:" + objectName;
+        } catch (Exception ex) {
+            log.error("Impossibile salvare i bytes localmente: {}", objectName, ex);
+            throw new RuntimeException("File storage failed on both MinIO and local disk: " + ex.getMessage(), ex);
         }
     }
 
     public String getPresignedUrl(String objectName) {
-        try {
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
-                .bucket(bucket)
-                .object(objectName)
-                .method(Method.GET)
-                .expiry(1, TimeUnit.HOURS)
-                .build());
-        } catch (Exception e) {
-            log.error("Failed to generate presigned URL for: {}", objectName, e);
+        if (objectName == null || objectName.isBlank()) {
             return null;
         }
+        return "/api/files/download?path=" + URLEncoder.encode(objectName, StandardCharsets.UTF_8);
     }
 
     public InputStream get(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return null;
+        }
+
+        String cleanPath = objectName.startsWith("local:") ? objectName.substring(6) : objectName;
+        Path localFile = Paths.get(localDir).resolve(cleanPath).normalize();
+        if (Files.exists(localFile)) {
+            try {
+                return Files.newInputStream(localFile);
+            } catch (Exception e) {
+                log.error("Errore lettura file locale: {}", localFile, e);
+            }
+        }
+
         try {
             return minioClient.getObject(GetObjectArgs.builder()
                 .bucket(bucket)
-                .object(objectName)
+                .object(cleanPath)
                 .build());
         } catch (Exception e) {
+            log.error("Impossibile recuperare il file da MinIO: {}", cleanPath, e);
             throw new RuntimeException("Failed to retrieve file: " + objectName, e);
         }
     }
 
     public void delete(String objectName) {
+        if (objectName == null || objectName.isBlank()) {
+            return;
+        }
+        String cleanPath = objectName.startsWith("local:") ? objectName.substring(6) : objectName;
+        Path localFile = Paths.get(localDir).resolve(cleanPath).normalize();
+        if (Files.exists(localFile)) {
+            try {
+                Files.deleteIfExists(localFile);
+            } catch (Exception e) {
+                log.warn("Errore eliminazione file locale: {}", localFile, e);
+            }
+        }
         try {
             minioClient.removeObject(RemoveObjectArgs.builder()
                 .bucket(bucket)
-                .object(objectName)
+                .object(cleanPath)
                 .build());
         } catch (Exception e) {
-            log.error("Failed to delete file: {}", objectName, e);
+            log.debug("MinIO delete file ignorato o fallito: {}", cleanPath);
         }
     }
 

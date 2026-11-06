@@ -18,6 +18,8 @@ public interface ReceiptRepository extends JpaRepository<Receipt, UUID> {
 
     Optional<Receipt> findFirstBySubscriptionIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID subscriptionId);
 
+    List<Receipt> findBySubscriptionIdAndDeletedAtIsNull(UUID subscriptionId);
+
     List<Receipt> findByUserIdAndDeletedAtIsNullOrderByIssueDateDescReceiptNumberDesc(UUID userId);
 
     Optional<Receipt> findByIdAndGymIdAndDeletedAtIsNull(UUID id, UUID gymId);

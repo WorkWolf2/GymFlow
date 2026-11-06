@@ -157,8 +157,8 @@
             return $birthProvince.length ? $birthProvince.val() : '';
         }
 
-        function run() {
-            if ($fiscal.val().trim()) {
+        function run(force) {
+            if (!force && $fiscal.val().trim()) {
                 return Promise.resolve();
             }
             return resolveBirthPlaceCode($birthPlace.val(), provinceValue())
@@ -179,12 +179,14 @@
 
         function scheduleRun() {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(run, 350);
+            debounceTimer = setTimeout(function () {
+                run(true);
+            }, 300);
         }
 
         $first.add($last).add($birthDate).add($sex).on('input change', scheduleRun);
         $birthPlace.on('input change', scheduleRun);
-        $birthProvince.on('change', scheduleRun);
+        $birthProvince.on('input change', scheduleRun);
         return run;
     }
 

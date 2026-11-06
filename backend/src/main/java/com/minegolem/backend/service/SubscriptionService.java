@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -47,7 +48,13 @@ public class SubscriptionService {
             .orElseThrow(() -> ResourceNotFoundException.of("SubscriptionType", request.subscriptionTypeId()));
 
         // calculate end date
-        LocalDate endDate = calculateEndDate(type, request.startDate());
+        LocalDate endDate = request.endDate() != null
+            ? request.endDate()
+            : calculateEndDate(type, request.startDate());
+
+        if (endDate.isBefore(request.startDate())) {
+            throw new BusinessException("La data di scadenza non può essere precedente alla data di inizio");
+        }
 
         StaffUser staffUser = staffUserRepository.findById(staffId).orElse(null);
 
@@ -152,6 +159,11 @@ public class SubscriptionService {
 
     @Transactional
     public void delete(UUID id) {
+        delete(id, false);
+    }
+
+    @Transactional
+    public void delete(UUID id, boolean deletePayment) {
         UUID gymId = currentGymId();
         Subscription sub = subscriptionRepository.findById(id)
             .orElseThrow(() -> ResourceNotFoundException.of("Subscription", id));
@@ -163,9 +175,26 @@ public class SubscriptionService {
             return;
         }
 
-        sub.setDeletedAt(java.time.LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        sub.setDeletedAt(now);
         subscriptionRepository.save(sub);
         auditService.log("SUBSCRIPTION_DELETED", "Subscription", id.toString());
+
+        if (deletePayment) {
+            List<Payment> payments = paymentRepository.findBySubscriptionIdAndDeletedAtIsNull(id);
+            for (Payment p : payments) {
+                p.setDeletedAt(now);
+                paymentRepository.save(p);
+                auditService.log("PAYMENT_DELETED", "Payment", p.getId().toString());
+            }
+
+            List<Receipt> receipts = receiptRepository.findBySubscriptionIdAndDeletedAtIsNull(id);
+            for (Receipt r : receipts) {
+                r.setDeletedAt(now);
+                receiptRepository.save(r);
+                auditService.log("RECEIPT_DELETED", "Receipt", r.getId().toString());
+            }
+        }
     }
 
     @Transactional

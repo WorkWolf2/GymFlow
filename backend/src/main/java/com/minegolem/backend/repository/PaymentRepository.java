@@ -33,6 +33,8 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     List<Payment> findByUserIdAndDeletedAtIsNullOrderByPaymentDateDesc(UUID userId);
 
+    List<Payment> findBySubscriptionIdAndDeletedAtIsNull(UUID subscriptionId);
+
     @Query("""
         SELECT COALESCE(SUM(p.amount), 0)
         FROM Payment p

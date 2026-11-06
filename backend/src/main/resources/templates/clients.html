@@ -130,9 +130,12 @@
 
         <script>
             $(document).ready(function() {
+                const skeletonHtml = $('#loading-skeleton')[0] ? $('#loading-skeleton')[0].outerHTML : '';
                 let currentPage = 0;
                 let currentSearch = "";
                 let totalPages = 0;
+                let currentRequest = null;
+                let isLoading = false;
 
                 function loadPackageFilterOptions() {
                     $.ajax({
@@ -150,23 +153,40 @@
                 loadPackageFilterOptions();
 
                 function loadClients() {
-                    const list = $('#clients-list');
-                    list.html($('#loading-skeleton').html());
+                    if (currentRequest && currentRequest.readyState !== 4) {
+                        currentRequest.abort();
+                    }
 
-                    $.ajax({
+                    isLoading = true;
+                    $('#prev-page, #next-page').prop('disabled', true);
+
+                    const list = $('#clients-list');
+                    if (skeletonHtml) {
+                        list.html(skeletonHtml);
+                    }
+
+                    currentRequest = $.ajax({
                         url: `/api/users?page=${currentPage}&size=10&search=${encodeURIComponent(currentSearch)}`,
                         type: 'GET',
                         success: function(data) {
                             list.empty();
 
+                            const totalElements = data.totalElements != null 
+                                ? data.totalElements 
+                                : (data.page && data.page.totalElements != null ? data.page.totalElements : (data.content ? data.content.length : 0));
+
+                            totalPages = data.totalPages != null 
+                                ? data.totalPages 
+                                : (data.page && data.page.totalPages != null ? data.page.totalPages : (totalElements > 0 ? Math.ceil(totalElements / 10) : 0));
+
+                            const users = data.content || [];
+
                             $('#total-clients-text').html(`
                                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                <strong>${data.page.totalElements}</strong> clienti registrati in totale
+                                <strong>${totalElements}</strong> clienti registrati in totale
                             `);
                             
-                            totalPages = data.page.totalPages;
-                            
-                            if (data.content.length === 0) {
+                            if (users.length === 0) {
                                 list.html(`
                                     <div class="flex flex-col items-center justify-center px-6 py-16 text-center space-y-4">
                                         <div class="flex items-center justify-center w-12 h-12 rounded-full bg-surface-active border border-surface-border text-foreground-subtle">
@@ -184,7 +204,7 @@
                                 `);
                                 if (window.lucide) lucide.createIcons();
                             } else {
-                                data.content.forEach(function(user) {
+                                users.forEach(function(user) {
                                     const avatar = user.avatarPath 
                                         ? `<img src="${user.avatarPath}" alt="" class="w-10 h-10 rounded-full object-cover" />`
                                         : `<span class="text-xs font-bold text-foreground-muted uppercase">${(user.firstName || 'C')[0]}${(user.lastName || '')[0]}</span>`;
@@ -337,18 +357,34 @@
                             } else {
                                 $('#pagination-controls').addClass('hidden');
                             }
+                        },
+                        error: function(xhr, status) {
+                            if (status !== 'abort') {
+                                list.html(`
+                                    <div class="flex flex-col items-center justify-center px-6 py-12 text-center text-rose-400">
+                                        <p class="text-sm font-medium">Errore durante il caricamento dei clienti. Riprova.</p>
+                                    </div>
+                                `);
+                            }
+                        },
+                        complete: function(xhr, status) {
+                            isLoading = false;
+                            if (status !== 'abort') {
+                                $('#prev-page').prop('disabled', currentPage === 0);
+                                $('#next-page').prop('disabled', currentPage >= totalPages - 1);
+                            }
                         }
                     });
                 }
- 
+
                 // Initial Load
                 window.LegionAsdRefreshClients = loadClients;
                 loadClients();
                 if (window.lucide) lucide.createIcons();
- 
+
                 // Search Events
                 let searchTimeout;
-                function performSearch() {
+                function performSearch(immediate = false) {
                     currentSearch = $('#search-input').val().trim();
                     currentPage = 0;
                     if (currentSearch.length > 0) {
@@ -358,39 +394,53 @@
                     }
                     if (window.lucide) lucide.createIcons();
                     clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(loadClients, 250);
+                    if (immediate) {
+                        loadClients();
+                    } else {
+                        searchTimeout = setTimeout(loadClients, 250);
+                    }
                 }
 
-                $('#search-input').on('input', performSearch);
+                $('#search-input').on('input', function() {
+                    performSearch(false);
+                });
+
+                $('#search-input').on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        performSearch(true);
+                    }
+                });
 
                 $('#clear-search-btn').on('click', function() {
                     $('#search-input').val('').focus();
                     $('#package-filter').val('');
-                    performSearch();
+                    performSearch(true);
                 });
 
                 // Package Filter Event
                 $('#package-filter').on('change', function() {
                     const val = $(this).val();
                     $('#search-input').val(val);
-                    performSearch();
+                    performSearch(true);
                 });
- 
+
                 // Pagination Events
-                $('#prev-page').click(function() {
-                    if (currentPage > 0) {
+                $('#prev-page').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    if (!isLoading && currentPage > 0) {
                         currentPage--;
                         loadClients();
                     }
                 });
- 
-                $('#next-page').click(function() {
-                    if (currentPage < totalPages - 1) {
+
+                $('#next-page').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    if (!isLoading && currentPage < totalPages - 1) {
                         currentPage++;
                         loadClients();
                     }
                 });
-;
 
                 // Dropdown logic with dynamic vertical positioning
                 $(document).on('click', '.dropdown-toggle', function(e) {

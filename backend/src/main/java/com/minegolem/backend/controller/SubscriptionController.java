@@ -62,10 +62,14 @@ public class SubscriptionController {
     @PreAuthorize("hasAuthority('SUBSCRIPTION_WRITE')")
     public ResponseEntity<Void> delete(
         @AuthenticationPrincipal StaffUserDetails userDetails,
-        @PathVariable UUID id
+        @PathVariable UUID id,
+        @RequestParam(value = "deletePayment", defaultValue = "false") boolean deletePayment
     ) {
-        subscriptionService.delete(id);
+        subscriptionService.delete(id, deletePayment);
         realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "DELETED", id);
+        if (deletePayment) {
+            realtimeEventService.publish(userDetails.getGymId(), "PAYMENT", "DELETED", id);
+        }
         realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", id);
         return ResponseEntity.noContent().build();
     }

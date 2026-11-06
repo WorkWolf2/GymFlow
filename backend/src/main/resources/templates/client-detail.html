@@ -503,9 +503,15 @@
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Piano</label>
                         <select id="sub-type-id" required class="input"></select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio</label>
-                        <input type="date" id="sub-start-date" required class="input" />
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio</label>
+                            <input type="date" id="sub-start-date" required class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Scadenza</label>
+                            <input type="date" id="sub-end-date" required class="input" />
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo di listino (€)</label>
@@ -781,6 +787,49 @@
             </div>
         </div>
 
+        <!-- Recalculate Subscription Price Modal -->
+        <div id="recalculate-sub-modal" class="modal-overlay hidden" style="z-index: 60;">
+            <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-accent/5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                            <i data-lucide="calculator" class="w-4 h-4"></i>
+                        </div>
+                        <h2 class="text-base font-semibold text-foreground">Rivaluta Prezzo Abbonamento</h2>
+                    </div>
+                    <button type="button" class="recalculate-sub-choice text-foreground-muted hover:text-foreground transition-colors" data-confirm="false">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-foreground-muted leading-relaxed" id="recalculate-sub-message"></p>
+
+                    <div class="p-3.5 rounded-lg bg-surface-hover/70 border border-surface-border space-y-2 text-xs">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-foreground-muted">Nuova durata:</span>
+                            <span class="font-medium text-foreground" id="recalculate-sub-duration-display">0 giorni</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-foreground-muted">Prezzo di listino base:</span>
+                            <span class="font-medium text-foreground" id="recalculate-sub-base-price-display">€ 0,00</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2 pt-1 border-t border-surface-border">
+                            <span class="font-medium text-foreground">Prezzo ricalcolato:</span>
+                            <span class="font-bold text-accent text-sm" id="recalculate-sub-new-price">€ 0,00</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2.5">
+                        <button type="button" class="recalculate-sub-choice btn-ghost text-xs" data-confirm="false">No, mantieni attuale</button>
+                        <button type="button" class="recalculate-sub-choice btn-primary text-xs flex items-center gap-1.5" data-confirm="true">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                            Sì, rivaluta prezzo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="insurance-confirm-modal" class="modal-overlay hidden" style="z-index: 60;">
             <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-md overflow-hidden animate-slide-up">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-amber-500/5">
@@ -821,6 +870,49 @@
                         <button type="button" class="insurance-modal-choice btn-primary text-xs flex items-center gap-1.5" data-action="yes">
                             <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
                             Sì, aggiungi assicurazione
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Conferma Eliminazione Abbonamento ed Incasso -->
+        <div id="delete-sub-modal" class="modal-overlay hidden" style="z-index: 60;">
+            <div class="bg-surface border border-surface-border rounded-xl shadow-card w-full max-w-md overflow-hidden animate-slide-up">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-danger/5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-danger/10 text-danger flex items-center justify-center shrink-0">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </div>
+                        <h2 class="text-base font-semibold text-foreground">Elimina Abbonamento</h2>
+                    </div>
+                    <button type="button" class="close-delete-sub-modal text-foreground-muted hover:text-foreground transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <p class="text-sm text-foreground-muted leading-relaxed">
+                        Stai per eliminare l'abbonamento <strong id="delete-sub-plan-name" class="text-foreground"></strong>.
+                        <span id="delete-sub-dates-info" class="text-xs text-foreground-muted block mt-1"></span>
+                    </p>
+
+                    <div class="p-3.5 rounded-lg bg-surface-hover/70 border border-surface-border space-y-2">
+                        <label class="flex items-start gap-3 cursor-pointer select-none">
+                            <input type="checkbox" id="delete-sub-with-payment" class="mt-0.5 rounded border-surface-border text-danger focus:ring-danger" checked>
+                            <div class="text-xs">
+                                <span class="font-medium text-foreground block">Elimina anche l'incasso registrato (<span id="delete-sub-amount-preview" class="text-accent font-semibold"></span>) e la ricevuta</span>
+                                <span class="text-foreground-muted block mt-1 leading-normal">
+                                    Se deselezionato, l'abbonamento verrà cancellato ma l'incasso rimarrà attivo nella contabilità e nello storico del cliente.
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2.5">
+                        <button type="button" class="close-delete-sub-modal btn-ghost text-xs">Annulla</button>
+                        <button type="button" id="confirm-delete-sub-btn" class="btn-primary bg-danger hover:bg-danger/90 text-white border-none text-xs flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span id="confirm-delete-sub-btn-text">Elimina Abbonamento e Incasso</span>
                         </button>
                     </div>
                 </div>
@@ -1234,6 +1326,9 @@
                             $('#edit-parent-name').val(user.parentName || '');
                             $('#edit-parent-fiscal-code').val(user.parentFiscalCode || '');
                             $('#edit-notes').val(user.notes);
+                            if (user.birthPlace) {
+                                FiscalCode.resolveBirthPlaceCode(user.birthPlace, user.birthProvince);
+                            }
                             if (!user.fiscalCode) {
                                 refreshFiscalCode();
                             }
@@ -1829,24 +1924,69 @@
                 loadDossierNotes();
                 loadDossierDocuments();
 
+                let subToDeleteId = null;
+
                 $(document).on('click', '.delete-sub-btn', function () {
                     const id = $(this).data('id');
-                    if (!confirm(
-                        'Rimuovere questo abbonamento dalla scheda cliente?\n\n' +
-                        'Gli incassi già registrati resteranno visibili nella sezione Incassi e nello storico pagamenti.'
-                    )) {
-                        return;
+                    subToDeleteId = id;
+                    const sub = (currentSubscriptions || []).find(function (s) { return s.id === id; });
+
+                    const subName = sub && sub.subscriptionType ? sub.subscriptionType.name : 'Selezionato';
+                    const datesText = sub && sub.startDate && sub.endDate
+                        ? `Periodo: dal ${formatDate(sub.startDate)} al ${formatDate(sub.endDate)}`
+                        : '';
+                    const priceFormatted = sub && sub.price != null
+                        ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(sub.price)
+                        : '—';
+
+                    $('#delete-sub-plan-name').text(subName);
+                    $('#delete-sub-dates-info').text(datesText);
+                    $('#delete-sub-amount-preview').text(priceFormatted);
+                    $('#delete-sub-with-payment').prop('checked', true);
+                    $('#confirm-delete-sub-btn-text').text('Elimina Abbonamento e Incasso');
+
+                    $('#delete-sub-modal').removeClass('hidden');
+                    playWindowsLikePopupSound();
+                    if (window.lucide) lucide.createIcons();
+                });
+
+                $('#delete-sub-with-payment').on('change', function () {
+                    const withPayment = $(this).is(':checked');
+                    if (withPayment) {
+                        $('#confirm-delete-sub-btn-text').text('Elimina Abbonamento e Incasso');
+                    } else {
+                        $('#confirm-delete-sub-btn-text').text('Elimina Solo Abbonamento');
                     }
+                });
+
+                $('.close-delete-sub-modal').click(function () {
+                    $('#delete-sub-modal').addClass('hidden');
+                    subToDeleteId = null;
+                });
+
+                $('#confirm-delete-sub-btn').click(function () {
+                    if (!subToDeleteId) return;
+
+                    const deletePayment = $('#delete-sub-with-payment').is(':checked');
+                    const btn = $(this);
+                    btn.prop('disabled', true).text('Eliminazione...');
 
                     $.ajax({
-                        url: '/api/subscriptions/' + id,
+                        url: '/api/subscriptions/' + subToDeleteId + '?deletePayment=' + deletePayment,
                         type: 'DELETE',
                         success: function () {
+                            $('#delete-sub-modal').addClass('hidden');
+                            subToDeleteId = null;
                             loadData();
                             loadUser();
                         },
                         error: function () {
                             alert('Errore durante la rimozione dell\'abbonamento');
+                        },
+                        complete: function () {
+                            btn.prop('disabled', false).html('<i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span id="confirm-delete-sub-btn-text">' +
+                                (deletePayment ? 'Elimina Abbonamento e Incasso' : 'Elimina Solo Abbonamento') + '</span>');
+                            if (window.lucide) lucide.createIcons();
                         }
                     });
                 });
@@ -1856,6 +1996,47 @@
                 // =========================
 
                 let typesMap = {};
+                let subPreviousEndDate = null;
+
+                function daysBetween(startDateStr, endDateStr) {
+                    if (!startDateStr || !endDateStr) return 0;
+                    const p1 = startDateStr.split('-').map(Number);
+                    const p2 = endDateStr.split('-').map(Number);
+                    const d1 = new Date(p1[0], p1[1] - 1, p1[2]);
+                    const d2 = new Date(p2[0], p2[1] - 1, p2[2]);
+                    const diffTime = d2.getTime() - d1.getTime();
+                    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+                }
+
+                function askRecalculatePrice(data) {
+                    return new Promise(function (resolve) {
+                        const formattedNewPrice = new Intl.NumberFormat('it-IT', {
+                            style: 'currency', currency: 'EUR'
+                        }).format(data.recalculatedPrice);
+
+                        const formattedBasePrice = new Intl.NumberFormat('it-IT', {
+                            style: 'currency', currency: 'EUR'
+                        }).format(data.basePrice);
+
+                        $('#recalculate-sub-message').html(
+                            `È stata modificata la data di scadenza al <strong>${formatDate(data.newEndDate)}</strong>.<br>` +
+                            `Desideri rivalutare il prezzo dell'abbonamento in base alla nuova durata?`
+                        );
+                        $('#recalculate-sub-duration-display').text(`${data.newDays} giorni (anziché ${data.baseDays})`);
+                        $('#recalculate-sub-base-price-display').text(formattedBasePrice);
+                        $('#recalculate-sub-new-price').text(formattedNewPrice);
+
+                        $('#recalculate-sub-modal').removeClass('hidden');
+                        playWindowsLikePopupSound();
+                        if (window.lucide) lucide.createIcons();
+
+                        $('.recalculate-sub-choice').off('click.recalc').on('click.recalc', function () {
+                            $('#recalculate-sub-modal').addClass('hidden');
+                            const confirmed = $(this).data('confirm') === true;
+                            resolve(confirmed);
+                        });
+                    });
+                }
 
                 function subscriptionGross() {
                     return Math.max(parseFloat($('#sub-price').val() || 0), 0);
@@ -1893,13 +2074,25 @@
                                 `);
                             });
 
+                            const today = new Date();
+                            const y = today.getFullYear();
+                            const m = String(today.getMonth() + 1).padStart(2, '0');
+                            const d = String(today.getDate()).padStart(2, '0');
+                            const todayStr = `${y}-${m}-${d}`;
+                            $('#sub-start-date').val(todayStr);
+
                             if (types.length > 0) {
                                 $('#sub-price').val(types[0].defaultPrice);
                                 $('#sub-discount').val('');
                                 updateSubscriptionNet();
+                                const calcEnd = calculateEndDateForType(types[0], todayStr);
+                                $('#sub-end-date').val(calcEnd || '');
+                                subPreviousEndDate = calcEnd || '';
+                            } else {
+                                $('#sub-end-date').val('');
+                                subPreviousEndDate = '';
                             }
 
-                            $('#sub-start-date')[0].valueAsDate = new Date();
                             $('#sub-modal').removeClass('hidden');
                         }
                     });
@@ -1911,12 +2104,75 @@
                         $('#sub-price').val(typesMap[id].defaultPrice);
                         $('#sub-discount').val('');
                         updateSubscriptionNet();
+                        const calcEnd = calculateEndDateForType(typesMap[id], $('#sub-start-date').val());
+                        if (calcEnd) {
+                            $('#sub-end-date').val(calcEnd);
+                            subPreviousEndDate = calcEnd;
+                        }
                     }
+                });
+
+                $('#sub-start-date').change(function () {
+                    const id = $('#sub-type-id').val();
+                    if (typesMap[id]) {
+                        const calcEnd = calculateEndDateForType(typesMap[id], $(this).val());
+                        if (calcEnd) {
+                            $('#sub-end-date').val(calcEnd);
+                            subPreviousEndDate = calcEnd;
+                        }
+                    }
+                });
+
+                $('#sub-end-date').change(async function () {
+                    const newEndStr = $(this).val();
+                    if (!newEndStr || newEndStr === subPreviousEndDate) return;
+
+                    const startStr = $('#sub-start-date').val();
+                    if (!startStr) return;
+
+                    const newDays = daysBetween(startStr, newEndStr);
+                    if (newDays <= 0) {
+                        alert("La data di scadenza deve essere successiva alla data di inizio.");
+                        $(this).val(subPreviousEndDate || '');
+                        return;
+                    }
+
+                    const selectedType = typesMap[$('#sub-type-id').val()];
+                    let baseDays = selectedType ? selectedType.validityDays : null;
+                    const basePrice = selectedType && selectedType.defaultPrice != null
+                        ? Number(selectedType.defaultPrice)
+                        : parseFloat($('#sub-price').val() || 0);
+
+                    if ((!baseDays || baseDays <= 0) && selectedType && selectedType.forcedExpiry) {
+                        baseDays = daysBetween(startStr, selectedType.forcedExpiry);
+                    }
+                    if ((!baseDays || baseDays <= 0) && subPreviousEndDate) {
+                        baseDays = daysBetween(startStr, subPreviousEndDate);
+                    }
+
+                    if (baseDays && baseDays > 0 && basePrice > 0 && newDays !== baseDays) {
+                        const recalculatedPrice = Math.round(((basePrice / baseDays) * newDays) * 100) / 100;
+                        const wantsRecalculate = await askRecalculatePrice({
+                            newEndDate: newEndStr,
+                            baseDays: baseDays,
+                            newDays: newDays,
+                            basePrice: basePrice,
+                            recalculatedPrice: recalculatedPrice
+                        });
+
+                        if (wantsRecalculate) {
+                            $('#sub-price').val(recalculatedPrice.toFixed(2));
+                            updateSubscriptionNet();
+                        }
+                    }
+
+                    subPreviousEndDate = newEndStr;
                 });
 
                 $('.close-sub-modal').click(function () {
                     $('#sub-modal').addClass('hidden');
                     $('#sub-discount').val('');
+                    subPreviousEndDate = null;
                 });
 
                 $('#sub-price, #sub-discount').on('input', updateSubscriptionNet);
@@ -1932,6 +2188,7 @@
                         userId: clientId,
                         subscriptionTypeId: selectedTypeId,
                         startDate: $('#sub-start-date').val(),
+                        endDate: $('#sub-end-date').val() || null,
                         price: parseFloat($('#sub-price').val()),
                         discountAmount: subscriptionDiscount(),
                         paymentMethod: $('#sub-payment-method').val(),
@@ -1944,6 +2201,12 @@
                         if (useOldDate) {
                             req.startDate = expiredSubscription.endDate;
                             $('#sub-start-date').val(expiredSubscription.endDate);
+                            const calcEnd = calculateEndDateForType(selectedType, req.startDate);
+                            if (calcEnd) {
+                                req.endDate = calcEnd;
+                                $('#sub-end-date').val(calcEnd);
+                                subPreviousEndDate = calcEnd;
+                            }
                         }
                     }
 
@@ -2382,7 +2645,7 @@
                         .text('Salvataggio...');
 
                     Promise.resolve()
-                        .then(function () { return refreshFiscalCode(); })
+                        .then(function () { return refreshFiscalCode(true); })
                         .catch(function () { /* CF opzionale: procedi comunque */ })
                         .finally(function () { submitClientEdit(); });
                 });

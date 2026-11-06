@@ -157,7 +157,7 @@
                     btn.prop('disabled', true).text('Salvataggio...');
 
                     Promise.resolve()
-                        .then(function () { return refreshFiscalCode(); })
+                        .then(function () { return refreshFiscalCode(true); })
                         .catch(function () { /* CF opzionale: procedi comunque */ })
                         .finally(function () { submitNewClient(btn); });
                 });

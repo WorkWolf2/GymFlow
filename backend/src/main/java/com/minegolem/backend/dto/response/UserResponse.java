@@ -36,6 +36,7 @@ public record UserResponse(
     boolean hasCertificate,
     LocalDate certIssuedDate,
     LocalDate certExpiryDate,
+    String certFilePath,
     String nfcTagUid,
     LocalDateTime lastAccessTime,
     Long daysSinceLastAccess,

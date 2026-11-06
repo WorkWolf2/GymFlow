@@ -45,7 +45,8 @@ public class UserService {
     @Transactional(readOnly = true)
     public Page<UserResponse> list(String search, Pageable pageable) {
         UUID gymId = currentGymId();
-        return userRepository.searchByGym(gymId, search, pageable)
+        String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
+        return userRepository.searchByGym(gymId, cleanSearch, pageable)
             .map(this::toResponse);
     }
 
@@ -239,6 +240,7 @@ public class UserService {
             u.getCreatedAt(), hasActiveSub, certStatus, hasCertificate,
             certOpt.map(MedicalCertificate::getIssuedDate).orElse(null),
             certOpt.map(MedicalCertificate::getExpiryDate).orElse(null),
+            certOpt.map(MedicalCertificate::getFilePath).map(this::fileUrl).orElse(null),
             nfcUid,
             prediction.lastAccessTime(),
             prediction.daysSinceLastAccess(),
