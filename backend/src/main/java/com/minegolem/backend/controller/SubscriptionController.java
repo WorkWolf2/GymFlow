@@ -40,7 +40,7 @@ public class SubscriptionController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasRole('TRAINER')")
     public ResponseEntity<List<SubscriptionResponse>> listByUser(@PathVariable UUID userId) {
         return ResponseEntity.ok(subscriptionService.listByUser(userId).stream().map(subscriptionService::toResponse).toList());
     }

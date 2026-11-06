@@ -1203,6 +1203,15 @@
 
                 let provincesLoaded = FiscalCode.loadProvinceSelect('#edit-birth-province');
 
+                const userRole = localStorage.getItem('user_role') || '';
+                let userPerms = [];
+                try { userPerms = JSON.parse(localStorage.getItem('user_permissions') || '[]'); } catch(e) {}
+                const canWriteSub = userRole === 'ADMIN' || userRole === 'RECEPTION' || userPerms.includes('SUBSCRIPTION_WRITE');
+
+                if (!canWriteSub) {
+                    $('#new-sub-btn').addClass('hidden');
+                }
+
                 let currentSubscriptions = [];
                 let currentUser = null;
 
@@ -1567,7 +1576,7 @@
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2 shrink-0">
-                                            ${stopGoBtn}
+                                            ${canWriteSub ? stopGoBtn : ''}
                                             <button type="button"
                                                 class="view-receipt-btn shrink-0 p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-accent transition-colors"
                                                 data-id="${s.id}"
@@ -1575,6 +1584,7 @@
                                                 title="Visualizza / Stampa Ricevuta ASD">
                                                 <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                                             </button>
+                                            ${canWriteSub ? `
                                             <button type="button"
                                                 class="edit-sub-btn shrink-0 p-1.5 rounded hover:bg-surface-active text-foreground-muted hover:text-accent transition-colors"
                                                 data-id="${s.id}"
@@ -1587,6 +1597,7 @@
                                                 title="Rimuovi abbonamento">
                                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                             </button>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 `);

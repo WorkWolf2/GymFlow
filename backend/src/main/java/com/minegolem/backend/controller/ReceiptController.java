@@ -21,14 +21,14 @@ public class ReceiptController {
     private final ReceiptService receiptService;
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasRole('TRAINER')")
     public ResponseEntity<ReceiptResponse> getById(@PathVariable UUID id) {
         Receipt receipt = receiptService.getById(id);
         return ResponseEntity.ok(ReceiptResponse.from(receipt, "/api/receipts/" + id + "/pdf"));
     }
 
     @GetMapping("/{id}/pdf")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasRole('TRAINER')")
     public ResponseEntity<byte[]> viewPdf(@PathVariable UUID id) {
         Receipt receipt = receiptService.getById(id);
         byte[] pdfBytes = receiptService.getReceiptPdfBytes(id);
@@ -42,7 +42,7 @@ public class ReceiptController {
     }
 
     @GetMapping("/{id}/download")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasRole('TRAINER')")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable UUID id) {
         Receipt receipt = receiptService.getById(id);
         byte[] pdfBytes = receiptService.getReceiptPdfBytes(id);
@@ -56,7 +56,7 @@ public class ReceiptController {
     }
 
     @GetMapping("/subscription/{subscriptionId}")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasRole('TRAINER')")
     public ResponseEntity<ReceiptResponse> getBySubscription(@PathVariable UUID subscriptionId) {
         return receiptService.getBySubscriptionId(subscriptionId)
             .map(r -> ResponseEntity.ok(ReceiptResponse.from(r, "/api/receipts/" + r.getId() + "/pdf")))
@@ -64,7 +64,7 @@ public class ReceiptController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ')")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_READ') or hasRole('TRAINER')")
     public ResponseEntity<List<ReceiptResponse>> listByUser(@PathVariable UUID userId) {
         List<ReceiptResponse> responses = receiptService.listByUser(userId).stream()
             .map(r -> ReceiptResponse.from(r, "/api/receipts/" + r.getId() + "/pdf"))
