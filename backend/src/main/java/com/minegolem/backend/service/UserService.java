@@ -15,6 +15,7 @@ import com.minegolem.backend.security.StaffUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -44,23 +45,85 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserResponse> list(String search, Pageable pageable) {
-        return list(search, null, pageable);
+        return list(search, null, null, pageable);
     }
 
     @Transactional(readOnly = true)
     public Page<UserResponse> list(String search, Boolean withoutNfc, Pageable pageable) {
+        return list(search, withoutNfc, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> list(String search, Boolean withoutNfc, String status, Pageable pageable) {
         UUID gymId = currentGymId();
         String cleanSearch = (search != null && !search.isBlank()) ? search.trim() : null;
-        return userRepository.searchByGym(gymId, cleanSearch, withoutNfc, pageable)
-            .map(u -> {
+
+        Long exactCode = null;
+        String searchPhone = null;
+        String searchLower = null;
+        String word1 = null;
+        String word2 = null;
+
+        if (cleanSearch != null) {
+            String s = cleanSearch;
+            // Support explicit prefixes: #34, id:34, id: 34, cod: 34, codice: 34
+            String strippedPrefix = s.replaceAll("^(?i)(id:|cod:|codice:|#)\\s*", "").trim();
+            if (strippedPrefix.matches("^\\d+$")) {
                 try {
-                    return toResponse(u);
-                } catch (Exception ex) {
-                    log.error("Errore critico durante la mappatura dell'utente {} (ID: {}) in UserResponse: {}",
-                        u.getFullName(), u.getId(), ex.getMessage(), ex);
-                    throw ex;
-                }
-            });
+                    exactCode = Long.parseLong(strippedPrefix);
+                } catch (NumberFormatException ignored) {}
+            }
+
+            // Phone search rules:
+            // 1. Explicit phone prefix (tel:, phone:)
+            // 2. Starts with '+'
+            // 3. Digits >= 5 (so "34" or "12" NEVER matches phone numbers)
+            String digitsOnly = s.replaceAll("\\D", "");
+            if (s.toLowerCase().startsWith("tel:") || s.toLowerCase().startsWith("phone:")) {
+                searchPhone = s.replaceAll("^(?i)(tel:|phone:)\\s*", "").replaceAll("[\\s\\-\\(\\)]", "");
+            } else if (s.startsWith("+")) {
+                searchPhone = s.replaceAll("[\\s\\-\\(\\)]", "");
+            } else if (digitsOnly.length() >= 5) {
+                searchPhone = digitsOnly;
+            } else {
+                searchPhone = null;
+            }
+
+            // Lowercase string for generic text search (names, email, CF, etc.)
+            searchLower = strippedPrefix.isEmpty() ? s.toLowerCase() : (s.startsWith("#") || s.toLowerCase().startsWith("id:") ? strippedPrefix.toLowerCase() : s.toLowerCase());
+
+            // Multi-word name search (e.g. "Mario Rossi" or "Rossi Mario")
+            String[] words = s.split("\\s+");
+            if (words.length >= 2) {
+                word1 = words[0].toLowerCase();
+                word2 = words[words.length - 1].toLowerCase();
+            }
+        }
+
+        // Map status filter
+        Boolean filterWithoutNfc = Boolean.TRUE.equals(withoutNfc) || "WITHOUT_NFC".equalsIgnoreCase(status);
+        Boolean filterHasNfc = "HAS_NFC".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterActiveSub = "ACTIVE_SUB".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterExpiredSub = "EXPIRED_SUB".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterValidCert = "VALID_CERT".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+        Boolean filterExpiredCert = "EXPIRED_CERT".equalsIgnoreCase(status) ? Boolean.TRUE : null;
+
+        // Strip incoming sort so the JPQL relevance sorting takes priority
+        Pageable queryPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+
+        return userRepository.searchByGymAdvanced(
+            gymId, searchLower, exactCode, searchPhone, word1, word2,
+            filterHasNfc, filterWithoutNfc, filterActiveSub, filterExpiredSub, filterValidCert, filterExpiredCert,
+            LocalDate.now(), queryPageable
+        ).map(u -> {
+            try {
+                return toResponse(u);
+            } catch (Exception ex) {
+                log.error("Errore critico durante la mappatura dell'utente {} (ID: {}) in UserResponse: {}",
+                    u.getFullName(), u.getId(), ex.getMessage(), ex);
+                throw ex;
+            }
+        });
     }
 
     @Transactional

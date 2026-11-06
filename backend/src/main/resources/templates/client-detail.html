@@ -223,7 +223,16 @@
                             class="text-accent hover:text-accent-hover text-sm font-medium">Gestisci</button>
                     </div>
                 </div>
-                <p id="cert-dates-info" class="px-5 py-3 text-sm text-foreground-muted"></p>
+                <div class="px-5 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+                    <p id="cert-dates-info" class="text-sm text-foreground-muted"></p>
+                    <div id="cert-file-container" class="hidden">
+                        <a id="view-cert-file-btn" href="#" target="_blank" rel="noopener"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent/10 text-accent hover:bg-accent/20 border border-accent/25 transition-all">
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span>Visualizza Certificato</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -965,6 +974,16 @@
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">File (opzionale)</label>
                         <input type="file" id="cert-file" accept=".pdf,image/*" class="input" />
+                        <div id="modal-current-cert-file" class="mt-2 text-xs flex items-center justify-between p-2.5 rounded-lg bg-surface-active border border-surface-border hidden">
+                            <div class="flex items-center gap-2 text-foreground truncate min-w-0">
+                                <i data-lucide="file-check" class="w-4 h-4 text-accent shrink-0"></i>
+                                <span class="truncate font-medium">Un file è già caricato</span>
+                            </div>
+                            <a id="modal-view-cert-link" href="#" target="_blank" rel="noopener" class="text-accent hover:underline shrink-0 font-medium text-xs flex items-center gap-1">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                Apri attuale
+                            </a>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note (opzionale)</label>
@@ -1360,6 +1379,14 @@
                                 datesInfo.text('Nessun certificato registrato');
                             }
 
+                            if (user.certFilePath) {
+                                $('#cert-file-container').removeClass('hidden');
+                                $('#view-cert-file-btn').attr('href', user.certFilePath);
+                            } else {
+                                $('#cert-file-container').addClass('hidden');
+                                $('#view-cert-file-btn').attr('href', '#');
+                            }
+
                             if (!user.hasCertificate) {
                                 badge.text("ASSENTE");
                                 badge.addClass("bg-surface-border text-foreground-muted");
@@ -1463,7 +1490,8 @@
                     const list = $('#docs-list');
                     const docs = [
                         { label: 'Fronte documento', url: user.docFrontPath, icon: 'file-text' },
-                        { label: 'Retro documento', url: user.docBackPath, icon: 'files' }
+                        { label: 'Retro documento', url: user.docBackPath, icon: 'files' },
+                        { label: 'Certificato medico', url: user.certFilePath, icon: 'award' }
                     ].filter(function (doc) {
                         return !!doc.url;
                     });
@@ -2497,6 +2525,13 @@
                         $('#cert-expiry-date').val(user.certExpiryDate || '');
                         $('#cert-notes').val('');
                         $('#cert-file').val('');
+                        if (user.certFilePath) {
+                            $('#modal-current-cert-file').removeClass('hidden');
+                            $('#modal-view-cert-link').attr('href', user.certFilePath);
+                        } else {
+                            $('#modal-current-cert-file').addClass('hidden');
+                            $('#modal-view-cert-link').attr('href', '#');
+                        }
                         $('#cert-modal').removeClass('hidden');
                         if (window.lucide) lucide.createIcons();
                     });

@@ -19,18 +19,36 @@
 
         <!-- Controls: Search & Filter Bar -->
         <div class="flex items-center justify-between gap-4 stagger-item flex-wrap">
-            <div class="flex items-center gap-3 flex-1 max-w-md">
+            <div class="flex items-center gap-2.5 flex-1 max-w-2xl flex-wrap sm:flex-nowrap">
                 <!-- Search Box -->
-                <div class="client-search-box relative flex-1 rounded-xl flex items-center">
+                <div class="client-search-box relative flex-1 min-w-[220px] rounded-xl flex items-center">
                     <i data-lucide="search" class="search-icon absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted w-4 h-4 pointer-events-none transition-colors"></i>
                     <input type="text" id="search-input"
                         class="w-full h-10 pl-10 pr-9 text-sm font-medium rounded-xl bg-transparent text-white placeholder:text-foreground-muted placeholder:font-normal focus:outline-none"
                         style="color: #ffffff !important;"
-                        placeholder="Cerca per ID, nome, cognome, CF..."
+                        placeholder="Cerca per #ID, nome, cognome, CF, tel..."
                         autocomplete="off" spellcheck="false">
                     <button type="button" id="clear-search-btn" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-white p-1 rounded-md hover:bg-surface-active transition-colors hidden" title="Cancella ricerca">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
+                </div>
+
+                <!-- Status Filter Pill -->
+                <div class="client-filter-pill relative shrink-0 rounded-xl flex items-center">
+                    <i data-lucide="filter" class="absolute left-3 top-1/2 -translate-y-1/2 text-accent w-3.5 h-3.5 pointer-events-none"></i>
+                    <select id="status-filter"
+                        class="h-10 pl-8 pr-7 text-xs sm:text-sm font-medium rounded-xl bg-transparent text-white focus:outline-none w-auto max-w-[170px] cursor-pointer appearance-none"
+                        style="color: #ffffff !important;"
+                        title="Filtra per stato cliente">
+                        <option value="" style="background-color: #1b1b1d; color: #ffffff;">Tutti gli stati</option>
+                        <option value="ACTIVE_SUB" style="background-color: #1b1b1d; color: #ffffff;">Abbonamento attivo</option>
+                        <option value="EXPIRED_SUB" style="background-color: #1b1b1d; color: #ffffff;">Abbonamento scaduto</option>
+                        <option value="VALID_CERT" style="background-color: #1b1b1d; color: #ffffff;">Certificato valido</option>
+                        <option value="EXPIRED_CERT" style="background-color: #1b1b1d; color: #ffffff;">Certificato scaduto</option>
+                        <option value="HAS_NFC" style="background-color: #1b1b1d; color: #ffffff;">Con Tag NFC</option>
+                        <option value="WITHOUT_NFC" style="background-color: #1b1b1d; color: #ffffff;">Senza Tag NFC</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-muted w-3.5 h-3.5 pointer-events-none"></i>
                 </div>
 
                 <!-- Package Filter Pill -->
@@ -133,6 +151,7 @@
                 const skeletonHtml = $('#loading-skeleton')[0] ? $('#loading-skeleton')[0].outerHTML : '';
                 let currentPage = 0;
                 let currentSearch = "";
+                let currentStatus = "";
                 let totalPages = 0;
                 let currentRequest = null;
                 let isLoading = false;
@@ -165,8 +184,12 @@
                         list.html(skeletonHtml);
                     }
 
+                    let apiUrl = `/api/users?page=${currentPage}&size=10`;
+                    if (currentSearch) apiUrl += `&search=${encodeURIComponent(currentSearch)}`;
+                    if (currentStatus) apiUrl += `&status=${encodeURIComponent(currentStatus)}`;
+
                     currentRequest = $.ajax({
-                        url: `/api/users?page=${currentPage}&size=10&search=${encodeURIComponent(currentSearch)}`,
+                        url: apiUrl,
                         type: 'GET',
                         success: function(data) {
                             list.empty();
@@ -194,10 +217,10 @@
                                         </div>
                                         <div class="space-y-1">
                                             <p class="text-sm font-semibold text-foreground">
-                                                ${currentSearch ? "Nessun risultato trovato" : "Nessun cliente registrato"}
+                                                ${(currentSearch || currentStatus) ? "Nessun risultato trovato con i filtri correnti" : "Nessun cliente registrato"}
                                             </p>
                                             <p class="text-xs text-foreground-muted max-w-xs mx-auto">
-                                                ${currentSearch ? "Prova a controllare l'ortografia o a inserire termini diversi." : "Inizia registrando un nuovo utente cliccando sul pulsante in alto."}
+                                                ${(currentSearch || currentStatus) ? "Prova a controllare l'ortografia, azzerare i filtri o inserire termini diversi." : "Inizia registrando un nuovo utente cliccando sul pulsante in alto."}
                                             </p>
                                         </div>
                                     </div>
@@ -416,7 +439,16 @@
                 $('#clear-search-btn').on('click', function() {
                     $('#search-input').val('').focus();
                     $('#package-filter').val('');
+                    $('#status-filter').val('');
+                    currentStatus = '';
                     performSearch(true);
+                });
+
+                // Status Filter Event
+                $('#status-filter').on('change', function() {
+                    currentStatus = $(this).val();
+                    currentPage = 0;
+                    loadClients();
                 });
 
                 // Package Filter Event

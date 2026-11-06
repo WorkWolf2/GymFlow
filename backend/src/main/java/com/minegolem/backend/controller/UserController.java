@@ -39,9 +39,10 @@ public class UserController {
     public ResponseEntity<Page<UserResponse>> list(
         @RequestParam(required = false) String search,
         @RequestParam(required = false) Boolean withoutNfc,
+        @RequestParam(required = false) String status,
         @PageableDefault(size = 10, sort = "lastName") Pageable pageable
     ) {
-        return ResponseEntity.ok(userService.list(search, withoutNfc, pageable));
+        return ResponseEntity.ok(userService.list(search, withoutNfc, status, pageable));
     }
 
     @PostMapping
