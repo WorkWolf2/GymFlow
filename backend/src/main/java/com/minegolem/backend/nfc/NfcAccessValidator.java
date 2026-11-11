@@ -3,6 +3,7 @@ package com.minegolem.backend.nfc;
 
 import com.minegolem.backend.domain.entity.MedicalCertificate;
 import com.minegolem.backend.domain.entity.NfcTag;
+import com.minegolem.backend.domain.entity.Subscription;
 import com.minegolem.backend.domain.entity.User;
 import com.minegolem.backend.domain.enums.DenialReason;
 import com.minegolem.backend.domain.enums.SubscriptionTypeEnum;
@@ -10,12 +11,16 @@ import com.minegolem.backend.repository.MedicalCertificateRepository;
 import com.minegolem.backend.repository.NfcTagRepository;
 import com.minegolem.backend.repository.SubscriptionRepository;
 import com.minegolem.backend.repository.UserRepository;
+import com.minegolem.backend.service.RealtimeEventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,28 +33,36 @@ public class NfcAccessValidator {
     private final SubscriptionRepository subscriptionRepository;
     private final MedicalCertificateRepository medicalCertificateRepository;
     private final UserRepository userRepository;
+    private final RealtimeEventService realtimeEventService;
 
     public record ValidationResult(
         boolean granted,
         DenialReason denialReason,
         User user,
         String tagUid,
-        UUID gymId
+        UUID gymId,
+        Subscription packageUsed,
+        Integer remainingEntries,
+        String packageName
     ) {
         public static ValidationResult granted(User user, String tagUid, UUID gymId) {
-            return new ValidationResult(true, null, user, tagUid, gymId);
+            return new ValidationResult(true, null, user, tagUid, gymId, null, null, null);
+        }
+
+        public static ValidationResult granted(User user, String tagUid, UUID gymId, Subscription packageUsed, Integer remainingEntries, String packageName) {
+            return new ValidationResult(true, null, user, tagUid, gymId, packageUsed, remainingEntries, packageName);
         }
 
         public static ValidationResult denied(DenialReason reason, User user, String tagUid, UUID gymId) {
-            return new ValidationResult(false, reason, user, tagUid, gymId);
+            return new ValidationResult(false, reason, user, tagUid, gymId, null, null, null);
         }
 
         public static ValidationResult unknownTag(String tagUid) {
-            return new ValidationResult(false, DenialReason.TAG_UNKNOWN, null, tagUid, null);
+            return new ValidationResult(false, DenialReason.TAG_UNKNOWN, null, tagUid, null, null, null, null);
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public ValidationResult validate(String tagUid) {
         // 1. find NFC tag
         Optional<NfcTag> tagOpt = nfcTagRepository.findByTagUidAndActiveTrue(tagUid);
@@ -97,14 +110,34 @@ public class NfcAccessValidator {
             return ValidationResult.denied(DenialReason.USER_INACTIVE, user, tagUid, gymId);
         }
 
-        // 3. active ABBONAMENTO subscription?
+        // 3. active ABBONAMENTO or PACCHETTO?
         boolean hasActiveSub = !subscriptionRepository
             .findActiveByUserAndType(user.getId(), SubscriptionTypeEnum.ABBONAMENTO, LocalDate.now())
             .isEmpty();
 
+        Subscription packageToUse = null;
+
         if (!hasActiveSub) {
-            log.info("No active subscription for user: {}", user.getId());
-            return ValidationResult.denied(DenialReason.NO_ACTIVE_SUBSCRIPTION, user, tagUid, gymId);
+            List<Subscription> activePackages = subscriptionRepository
+                .findActiveByUserAndType(user.getId(), SubscriptionTypeEnum.PACCHETTO, LocalDate.now());
+
+            if (activePackages.isEmpty()) {
+                log.info("No active subscription or package for user: {}", user.getId());
+                return ValidationResult.denied(DenialReason.NO_ACTIVE_SUBSCRIPTION, user, tagUid, gymId);
+            }
+
+            List<Subscription> usablePackages = activePackages.stream()
+                .filter(s -> s.getRemainingEntries() == null || s.getRemainingEntries() > 0)
+                .sorted(Comparator.comparing(Subscription::getEndDate)
+                    .thenComparing(s -> s.getCreatedAt() != null ? s.getCreatedAt() : LocalDateTime.MIN))
+                .toList();
+
+            if (usablePackages.isEmpty()) {
+                log.info("User {} has package(s) but all entries are exhausted (0 entries left)", user.getId());
+                return ValidationResult.denied(DenialReason.PACKAGE_ENTRIES_EXHAUSTED, user, tagUid, gymId);
+            }
+
+            packageToUse = usablePackages.get(0);
         }
 
         boolean hasActiveInsurance = !subscriptionRepository
@@ -131,7 +164,33 @@ public class NfcAccessValidator {
             return ValidationResult.denied(DenialReason.CERT_EXPIRED, user, tagUid, gymId);
         }
 
+        // Decrement package entry if using a package with tracked entries (only on granted access)
+        Integer remainingAfterDeduction = null;
+        String packageName = null;
+
+        if (packageToUse != null) {
+            packageName = packageToUse.getSubscriptionType() != null
+                ? packageToUse.getSubscriptionType().getName()
+                : "Pacchetto";
+
+            if (packageToUse.getRemainingEntries() != null && packageToUse.getRemainingEntries() > 0) {
+                int newRemaining = packageToUse.getRemainingEntries() - 1;
+                packageToUse.setRemainingEntries(newRemaining);
+                subscriptionRepository.save(packageToUse);
+                remainingAfterDeduction = newRemaining;
+                log.info("Decremented 1 entry from package '{}' ({}) for user {}. Remaining entries: {}",
+                    packageName, packageToUse.getId(), user.getId(), newRemaining);
+
+                if (realtimeEventService != null) {
+                    realtimeEventService.publish(gymId, "SUBSCRIPTION", "UPDATED", packageToUse.getId());
+                    realtimeEventService.publish(gymId, "USER", "UPDATED", user.getId());
+                }
+            } else if (packageToUse.getRemainingEntries() != null) {
+                remainingAfterDeduction = packageToUse.getRemainingEntries();
+            }
+        }
+
         log.info("Access GRANTED for user: {} tag: {}", user.getFullName(), tagUid);
-        return ValidationResult.granted(user, tagUid, gymId);
+        return ValidationResult.granted(user, tagUid, gymId, packageToUse, remainingAfterDeduction, packageName);
     }
 }

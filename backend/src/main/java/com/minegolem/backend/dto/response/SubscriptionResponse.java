@@ -1,6 +1,7 @@
 package com.minegolem.backend.dto.response;
 
 import com.minegolem.backend.domain.entity.Subscription;
+import com.minegolem.backend.domain.enums.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,13 +23,23 @@ public record SubscriptionResponse(
     boolean annual,
     boolean canApplyStopAndGo,
     UUID receiptId,
-    String receiptFormattedNumber
+    String receiptFormattedNumber,
+    PaymentMethod paymentMethod,
+    LocalDate paymentDate,
+    Boolean canEditPaymentMethod,
+    Integer totalEntries,
+    Integer remainingEntries
 ) {
     public static SubscriptionResponse from(Subscription subscription) {
-        return from(subscription, null, null);
+        return from(subscription, null, null, null, null, null);
     }
 
     public static SubscriptionResponse from(Subscription subscription, UUID receiptId, String receiptFormattedNumber) {
+        return from(subscription, receiptId, receiptFormattedNumber, null, null, null);
+    }
+
+    public static SubscriptionResponse from(Subscription subscription, UUID receiptId, String receiptFormattedNumber,
+                                            PaymentMethod paymentMethod, LocalDate paymentDate, Boolean canEditPaymentMethod) {
         boolean isAnnual = subscription.isAnnual();
         boolean notDeleted = subscription.getDeletedAt() == null;
         boolean notExpired = !subscription.isExpired();
@@ -50,8 +61,12 @@ public record SubscriptionResponse(
             isAnnual,
             canApply,
             receiptId,
-            receiptFormattedNumber
+            receiptFormattedNumber,
+            paymentMethod,
+            paymentDate,
+            canEditPaymentMethod,
+            subscription.getTotalEntries(),
+            subscription.getRemainingEntries()
         );
     }
 }
-

@@ -7,6 +7,7 @@ import com.minegolem.backend.repository.StaffUserRepository;
 import com.minegolem.backend.security.StaffUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -32,18 +33,25 @@ public class AuditLogController {
     @GetMapping
     public ResponseEntity<Page<AuditLogResponse>> list(
         @AuthenticationPrincipal StaffUserDetails userDetails,
-        @PageableDefault(size = 50, sort = "createdAt") Pageable pageable
+        @PageableDefault(size = 20) Pageable pageable
     ) {
+        Pageable cleanPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         Map<UUID, String> staffNames = staffNames(userDetails.getGymId());
         Page<AuditLogResponse> logs = auditLogRepository
-            .findByGymIdOrderByCreatedAtDesc(userDetails.getGymId(), pageable)
+            .findByGymId(userDetails.getGymId(), cleanPageable)
             .map(log -> toResponse(log, staffNames));
         return ResponseEntity.ok(logs);
     }
 
     private Map<UUID, String> staffNames(UUID gymId) {
+        if (gymId == null) return Map.of();
         return staffUserRepository.findByGymId(gymId).stream()
-            .collect(Collectors.toMap(StaffUser::getId, StaffUser::getFullName));
+            .filter(s -> s.getId() != null)
+            .collect(Collectors.toMap(
+                StaffUser::getId,
+                s -> s.getFullName() != null ? s.getFullName() : "Staff",
+                (existing, replacement) -> existing
+            ));
     }
 
     private AuditLogResponse toResponse(com.minegolem.backend.domain.entity.AuditLog log,

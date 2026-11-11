@@ -232,9 +232,15 @@
                                         ? `<img src="${user.avatarPath}" alt="" class="w-10 h-10 rounded-full object-cover" />`
                                         : `<span class="text-xs font-bold text-foreground-muted uppercase">${(user.firstName || 'C')[0]}${(user.lastName || '')[0]}</span>`;
                                     
-                                    const subStatus = user.hasActiveSubscription
-                                        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow"></span>Abbonato</span>`
-                                        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Scaduto</span>`;
+                                    const hasPkg = user.activePackages && user.activePackages.length > 0;
+                                    let subStatus = '';
+                                    if (user.hasActiveSubscription) {
+                                        subStatus = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow"></span>Abbonato</span>`;
+                                    } else if (hasPkg) {
+                                        subStatus = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"><span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>Pacchetto</span>`;
+                                    } else {
+                                        subStatus = `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Scaduto</span>`;
+                                    }
                                     
                                     let certBadge = '';
                                     if (user.certStatus === 'VALID') {
@@ -251,15 +257,18 @@
  
                                     // Build Package Badges with Rounded Squares
                                     let packageBadgesHtml = '';
-                                    if (user.activePackages && user.activePackages.length > 0) {
+                                    if (hasPkg) {
                                         user.activePackages.forEach(function(pkg) {
                                             const color = pkg.color || '#6366f1';
+                                            const entriesText = pkg.remainingEntries != null ? ` (${pkg.remainingEntries}${pkg.totalEntries ? '/' + pkg.totalEntries : ''})` : '';
+                                            const titleText = `Pacchetto attivo: ${pkg.name}${pkg.remainingEntries != null ? ' - ' + pkg.remainingEntries + ' ingressi rimasti' : ''}`;
                                             packageBadgesHtml += `
                                                 <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border shadow-sm select-none"
                                                       style="background-color: ${color}18; border-color: ${color}44; color: ${color};"
-                                                      title="Pacchetto attivo: ${pkg.name}">
+                                                      title="${titleText}">
                                                     <span class="w-2.5 h-2.5 rounded-[3px] shrink-0 inline-block border border-white/20 shadow-sm" style="background-color: ${color};"></span>
                                                     <span class="font-medium">${pkg.name}</span>
+                                                    ${entriesText ? `<span class="font-bold opacity-90">${entriesText}</span>` : ''}
                                                 </span>
                                             `;
                                         });

@@ -8,5 +8,7 @@ public record UserPackageInfo(
     String name,
     String color,
     LocalDate startDate,
-    LocalDate endDate
+    LocalDate endDate,
+    Integer totalEntries,
+    Integer remainingEntries
 ) {}

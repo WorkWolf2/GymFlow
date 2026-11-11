@@ -67,6 +67,13 @@ public class SubscriptionService {
         }
         BigDecimal netAmount = grossAmount.subtract(discountAmount);
 
+        Integer totalEntries = null;
+        Integer remainingEntries = null;
+        if (type.getType() == com.minegolem.backend.domain.enums.SubscriptionTypeEnum.PACCHETTO) {
+            totalEntries = request.totalEntries() != null ? request.totalEntries() : type.getTotalEntries();
+            remainingEntries = totalEntries;
+        }
+
         Subscription subscription = Subscription.builder()
             .user(user)
             .subscriptionType(type)
@@ -75,6 +82,8 @@ public class SubscriptionService {
             .price(netAmount)
             .notes(request.notes())
             .createdBy(staffUser)
+            .totalEntries(totalEntries)
+            .remainingEntries(remainingEntries)
             .build();
 
         Subscription saved = subscriptionRepository.save(subscription);
@@ -113,7 +122,26 @@ public class SubscriptionService {
         Receipt receipt = receiptRepository.findFirstBySubscriptionIdAndDeletedAtIsNullOrderByCreatedAtDesc(subscription.getId()).orElse(null);
         UUID receiptId = receipt != null ? receipt.getId() : null;
         String formattedNumber = receipt != null ? receipt.getReceiptFormattedNumber() : null;
-        return com.minegolem.backend.dto.response.SubscriptionResponse.from(subscription, receiptId, formattedNumber);
+
+        List<Payment> payments = paymentRepository.findBySubscriptionIdAndDeletedAtIsNull(subscription.getId());
+        Payment payment = payments.stream()
+            .sorted((a, b) -> {
+                if (a.getPaymentDate() == null && b.getPaymentDate() == null) return 0;
+                if (a.getPaymentDate() == null) return 1;
+                if (b.getPaymentDate() == null) return -1;
+                return b.getPaymentDate().compareTo(a.getPaymentDate());
+            })
+            .findFirst()
+            .orElse(null);
+
+        com.minegolem.backend.domain.enums.PaymentMethod paymentMethod = payment != null ? payment.getMethod() : null;
+        LocalDate paymentDate = payment != null ? payment.getPaymentDate() : null;
+        Boolean canEditPaymentMethod = payment == null || payment.getPaymentDate() == null
+            || !payment.getPaymentDate().isBefore(LocalDate.now().minusDays(30));
+
+        return com.minegolem.backend.dto.response.SubscriptionResponse.from(
+            subscription, receiptId, formattedNumber, paymentMethod, paymentDate, canEditPaymentMethod
+        );
     }
 
     @Transactional(readOnly = true)
@@ -150,6 +178,32 @@ public class SubscriptionService {
         }
         if (request.notes() != null) {
             sub.setNotes(request.notes());
+        }
+        if (request.totalEntries() != null) {
+            sub.setTotalEntries(request.totalEntries());
+        }
+        if (request.remainingEntries() != null) {
+            sub.setRemainingEntries(request.remainingEntries());
+        }
+
+        if (request.paymentMethod() != null) {
+            List<Payment> payments = paymentRepository.findBySubscriptionIdAndDeletedAtIsNull(sub.getId());
+            for (Payment payment : payments) {
+                if (payment.getMethod() != request.paymentMethod()) {
+                    if (payment.getPaymentDate() != null && payment.getPaymentDate().isBefore(LocalDate.now().minusDays(30))) {
+                        throw new BusinessException("Non è possibile modificare il metodo di pagamento: il pagamento risale a più di 30 giorni fa (" + payment.getPaymentDate() + ").");
+                    }
+                    payment.setMethod(request.paymentMethod());
+                    paymentRepository.save(payment);
+                    auditService.log("PAYMENT_METHOD_UPDATED", "Payment", payment.getId().toString());
+                }
+            }
+
+            Receipt receipt = receiptRepository.findFirstBySubscriptionIdAndDeletedAtIsNullOrderByCreatedAtDesc(sub.getId()).orElse(null);
+            if (receipt != null && receipt.getPaymentMethod() != request.paymentMethod()) {
+                receipt.setPaymentMethod(request.paymentMethod());
+                receiptRepository.save(receipt);
+            }
         }
 
         Subscription saved = subscriptionRepository.save(sub);

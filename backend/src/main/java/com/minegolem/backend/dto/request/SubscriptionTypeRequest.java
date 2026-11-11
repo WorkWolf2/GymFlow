@@ -13,6 +13,7 @@ public record SubscriptionTypeRequest(
     @DecimalMin("0.00") BigDecimal defaultPrice,
     Integer validityDays,
     LocalDate forcedExpiry,
+    Integer totalEntries,
     String description,
     String color,
     Boolean active

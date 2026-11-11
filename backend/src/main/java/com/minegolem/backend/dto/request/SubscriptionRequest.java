@@ -16,5 +16,6 @@ public record SubscriptionRequest(
     @NotNull @DecimalMin("0") BigDecimal price,
     @DecimalMin("0.00") BigDecimal discountAmount,
     @NotNull PaymentMethod paymentMethod,
-    String notes
+    String notes,
+    Integer totalEntries
 ) {}

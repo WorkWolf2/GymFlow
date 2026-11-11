@@ -14,6 +14,7 @@ public record SubscriptionTypeResponse(
     BigDecimal defaultPrice,
     Integer validityDays,
     LocalDate forcedExpiry,
+    Integer totalEntries,
     String description,
     String color,
     boolean active
@@ -26,6 +27,7 @@ public record SubscriptionTypeResponse(
             type.getBasePrice(),
             type.getValidityDays(),
             type.getForcedExpiry(),
+            type.getTotalEntries(),
             type.getDescription(),
             type.getColor(),
             type.isActive()

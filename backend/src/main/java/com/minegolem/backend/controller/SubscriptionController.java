@@ -54,6 +54,7 @@ public class SubscriptionController {
     ) {
         Subscription subscription = subscriptionService.update(id, request);
         realtimeEventService.publish(userDetails.getGymId(), "SUBSCRIPTION", "UPDATED", subscription.getId());
+        realtimeEventService.publish(userDetails.getGymId(), "PAYMENT", "UPDATED", subscription.getId());
         realtimeEventService.publish(userDetails.getGymId(), "DASHBOARD", "UPDATED", subscription.getId());
         return ResponseEntity.ok(subscriptionService.toResponse(subscription));
     }

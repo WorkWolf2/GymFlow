@@ -126,7 +126,7 @@ public class NfcConnectionHandler {
             saveUnknownTag(frame.tagUid(), gym);
             eventPublisher.publishUnknownTag(frame.tagUid(), frame.deviceId());
         } else {
-            eventPublisher.publishAccessEvent(access, result.user(), frame.deviceId());
+            eventPublisher.publishAccessEvent(access, result.user(), frame.deviceId(), result.remainingEntries(), result.packageName());
         }
 
         if (!result.granted()) {

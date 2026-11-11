@@ -151,6 +151,13 @@
                     sex: '#sex'
                 });
 
+                $('#certIssuedDate').on('input change', function() {
+                    const val = $(this).val();
+                    if (val && window.calculateCertificateExpiry) {
+                        $('#certExpiryDate').val(window.calculateCertificateExpiry(val));
+                    }
+                });
+
                 $('#new-client-form').submit(function(e) {
                     e.preventDefault();
                     const btn = $('#submit-btn');

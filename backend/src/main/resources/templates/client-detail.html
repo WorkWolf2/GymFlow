@@ -512,6 +512,11 @@
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Piano</label>
                         <select id="sub-type-id" required class="input"></select>
                     </div>
+                    <div id="sub-entries-container" class="hidden">
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Numero di Ingressi Inclusi</label>
+                        <input type="number" id="sub-total-entries" min="1" class="input" placeholder="es. 10" />
+                        <p class="text-[10px] text-foreground-subtle mt-1">Gli ingressi scaleranno di 1 a ogni passaggio del badge valido fino a 0.</p>
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio</label>
@@ -572,6 +577,16 @@
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Piano</label>
                         <select id="edit-sub-type-id" required class="input"></select>
                     </div>
+                    <div id="edit-sub-entries-container" class="hidden grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Ingressi Rimasti</label>
+                            <input type="number" id="edit-sub-remaining-entries" min="0" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-foreground-muted mb-1.5">Ingressi Totali</label>
+                            <input type="number" id="edit-sub-total-entries" min="1" class="input" />
+                        </div>
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-medium text-foreground-muted mb-1.5">Data Inizio</label>
@@ -585,6 +600,19 @@
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Prezzo (€)</label>
                         <input type="number" step="0.01" min="0" id="edit-sub-price" required class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Metodo di Pagamento</label>
+                        <select id="edit-sub-payment-method" class="input">
+                            <option value="CASH">Contanti</option>
+                            <option value="CARD">Carta / Bancomat</option>
+                            <option value="TRANSFER">Bonifico</option>
+                            <option value="VOUCHER">Voucher</option>
+                        </select>
+                        <p id="edit-sub-payment-method-warning" class="text-[11px] text-warning mt-1.5 hidden flex items-center gap-1.5">
+                            <i data-lucide="shield-alert" class="w-3.5 h-3.5 shrink-0"></i>
+                            <span id="edit-sub-payment-method-warning-text"></span>
+                        </p>
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Note</label>
@@ -1253,12 +1281,15 @@
                             if (user.activePackages && user.activePackages.length > 0) {
                                 user.activePackages.forEach(function(pkg) {
                                     const color = pkg.color || '#6366f1';
+                                    const entriesText = pkg.remainingEntries != null ? ` (${pkg.remainingEntries}${pkg.totalEntries ? '/' + pkg.totalEntries : ''})` : '';
+                                    const titleText = `Pacchetto attivo: ${pkg.name}${pkg.remainingEntries != null ? ' - ' + pkg.remainingEntries + ' ingressi rimasti' : ''}`;
                                     pkgBadges.append(`
                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium border shadow-sm select-none"
                                               style="background-color: ${color}18; border-color: ${color}44; color: ${color};"
-                                              title="Pacchetto attivo: ${pkg.name}">
+                                              title="${titleText}">
                                             <span class="w-2.5 h-2.5 rounded-[3px] shrink-0 inline-block border border-white/20 shadow-sm" style="background-color: ${color};"></span>
                                             <span class="font-medium">${pkg.name}</span>
+                                            ${entriesText ? `<span class="font-bold opacity-90">${entriesText}</span>` : ''}
                                         </span>
                                     `);
                                 });
@@ -1551,7 +1582,15 @@
                                 const color = subType.color || '#6366f1';
                                 let typeTag = '';
                                 if (subType.type === 'PACCHETTO') {
-                                    typeTag = `<span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold border" style="background-color: ${color}20; color: ${color}; border-color: ${color}40;">Pacchetto</span>`;
+                                    let entriesBadge = '';
+                                    if (s.remainingEntries !== null && s.remainingEntries !== undefined) {
+                                        if (s.remainingEntries <= 0) {
+                                            entriesBadge = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-danger/15 text-danger border border-danger/30">0/${s.totalEntries || 0} ingressi (Esaurito)</span>`;
+                                        } else {
+                                            entriesBadge = `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-accent/15 text-accent border border-accent/30">${s.remainingEntries}/${s.totalEntries || '?'} ingressi</span>`;
+                                        }
+                                    }
+                                    typeTag = `<span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold border" style="background-color: ${color}20; color: ${color}; border-color: ${color}40;">Pacchetto</span> ${entriesBadge}`;
                                 } else if (subType.type === 'ASSICURAZIONE') {
                                     typeTag = `<span class="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Assicurazione</span>`;
                                 }
@@ -1600,6 +1639,7 @@
                                                 <p class="text-xs text-foreground-muted">
                                                     Scade il
                                                     <span class="${activeClass} font-medium">${end}</span>
+                                                    ${subType.type === 'PACCHETTO' && s.remainingEntries !== null && s.remainingEntries <= 0 ? '&bull; <span class="text-danger font-semibold">Pacchetto Esaurito</span>' : ''}
                                                 </p>
                                             </div>
                                         </div>
@@ -2127,9 +2167,18 @@
                                 const calcEnd = calculateEndDateForType(types[0], todayStr);
                                 $('#sub-end-date').val(calcEnd || '');
                                 subPreviousEndDate = calcEnd || '';
+                                if (types[0].type === 'PACCHETTO') {
+                                    $('#sub-entries-container').removeClass('hidden');
+                                    $('#sub-total-entries').val(types[0].totalEntries || 10);
+                                } else {
+                                    $('#sub-entries-container').addClass('hidden');
+                                    $('#sub-total-entries').val('');
+                                }
                             } else {
                                 $('#sub-end-date').val('');
                                 subPreviousEndDate = '';
+                                $('#sub-entries-container').addClass('hidden');
+                                $('#sub-total-entries').val('');
                             }
 
                             $('#sub-modal').removeClass('hidden');
@@ -2147,6 +2196,13 @@
                         if (calcEnd) {
                             $('#sub-end-date').val(calcEnd);
                             subPreviousEndDate = calcEnd;
+                        }
+                        if (typesMap[id].type === 'PACCHETTO') {
+                            $('#sub-entries-container').removeClass('hidden');
+                            $('#sub-total-entries').val(typesMap[id].totalEntries || 10);
+                        } else {
+                            $('#sub-entries-container').addClass('hidden');
+                            $('#sub-total-entries').val('');
                         }
                     }
                 });
@@ -2211,6 +2267,8 @@
                 $('.close-sub-modal').click(function () {
                     $('#sub-modal').addClass('hidden');
                     $('#sub-discount').val('');
+                    $('#sub-entries-container').addClass('hidden');
+                    $('#sub-total-entries').val('');
                     subPreviousEndDate = null;
                 });
 
@@ -2222,6 +2280,7 @@
                     const selectedTypeId = $('#sub-type-id').val();
                     const selectedType = typesMap[selectedTypeId];
                     const isAddingInsurance = selectedType && selectedType.type === 'ASSICURAZIONE';
+                    const entriesVal = $('#sub-total-entries').val();
 
                     const req = {
                         userId: clientId,
@@ -2231,7 +2290,8 @@
                         price: parseFloat($('#sub-price').val()),
                         discountAmount: subscriptionDiscount(),
                         paymentMethod: $('#sub-payment-method').val(),
-                        notes: ''
+                        notes: '',
+                        totalEntries: (selectedType && selectedType.type === 'PACCHETTO' && entriesVal) ? parseInt(entriesVal, 10) : null
                     };
 
                     const expiredSubscription = latestExpiredSubscription();
@@ -2336,28 +2396,73 @@
                     $('#edit-sub-price').val(sub.price != null ? sub.price : '');
                     $('#edit-sub-notes').val(sub.notes || '');
 
+                    const isPkg = (sub.subscriptionType && sub.subscriptionType.type === 'PACCHETTO');
+                    if (isPkg) {
+                        $('#edit-sub-entries-container').removeClass('hidden');
+                        $('#edit-sub-remaining-entries').val(sub.remainingEntries != null ? sub.remainingEntries : (sub.totalEntries || ''));
+                        $('#edit-sub-total-entries').val(sub.totalEntries != null ? sub.totalEntries : '');
+                    } else {
+                        $('#edit-sub-entries-container').addClass('hidden');
+                        $('#edit-sub-remaining-entries').val('');
+                        $('#edit-sub-total-entries').val('');
+                    }
+
+                    // Metodo di pagamento e controllo sicurezza 30 giorni
+                    if (sub.paymentMethod) {
+                        $('#edit-sub-payment-method').val(sub.paymentMethod);
+                    } else {
+                        $('#edit-sub-payment-method').val('CASH');
+                    }
+
+                    if (sub.canEditPaymentMethod === false) {
+                        $('#edit-sub-payment-method').prop('disabled', true);
+                        const pDate = sub.paymentDate ? formatDate(sub.paymentDate) : 'data remota';
+                        $('#edit-sub-payment-method-warning-text').text(`Modifica non consentita: il pagamento risale a più di 30 giorni fa (${pDate}).`);
+                        $('#edit-sub-payment-method-warning').removeClass('hidden');
+                    } else {
+                        $('#edit-sub-payment-method').prop('disabled', false);
+                        $('#edit-sub-payment-method-warning').addClass('hidden');
+                    }
+
                     $('#edit-sub-modal').removeClass('hidden');
                     if (window.lucide) lucide.createIcons();
                 });
 
                 $('#edit-sub-start-date, #edit-sub-type-id').on('change', function () {
                     updateEditSubEndDate();
+                    const selEditType = typesMap[$('#edit-sub-type-id').val()];
+                    if (selEditType && selEditType.type === 'PACCHETTO') {
+                        $('#edit-sub-entries-container').removeClass('hidden');
+                        if (!$('#edit-sub-total-entries').val()) {
+                            $('#edit-sub-total-entries').val(selEditType.totalEntries || 10);
+                            $('#edit-sub-remaining-entries').val(selEditType.totalEntries || 10);
+                        }
+                    } else {
+                        $('#edit-sub-entries-container').addClass('hidden');
+                    }
                 });
 
                 $('.close-edit-sub-modal').click(function () {
                     $('#edit-sub-modal').addClass('hidden');
+                    $('#edit-sub-entries-container').addClass('hidden');
                 });
 
                 $('#edit-sub-form').submit(function (e) {
                     e.preventDefault();
 
                     const id = $('#edit-sub-id').val();
+                    const paymentMethodVal = $('#edit-sub-payment-method').is(':disabled') ? null : $('#edit-sub-payment-method').val();
+                    const remVal = $('#edit-sub-remaining-entries').val();
+                    const totVal = $('#edit-sub-total-entries').val();
                     const req = {
                         subscriptionTypeId: $('#edit-sub-type-id').val(),
                         startDate: $('#edit-sub-start-date').val(),
                         endDate: $('#edit-sub-end-date').val() || null,
                         price: $('#edit-sub-price').val() ? parseFloat($('#edit-sub-price').val()) : null,
-                        notes: $('#edit-sub-notes').val()
+                        notes: $('#edit-sub-notes').val(),
+                        paymentMethod: paymentMethodVal,
+                        totalEntries: totVal !== '' ? parseInt(totVal, 10) : null,
+                        remainingEntries: remVal !== '' ? parseInt(remVal, 10) : null
                     };
 
                     $('#submit-edit-sub-btn').prop('disabled', true).text('Salvataggio...');
@@ -2535,6 +2640,13 @@
                         $('#cert-modal').removeClass('hidden');
                         if (window.lucide) lucide.createIcons();
                     });
+                });
+
+                $('#cert-issued-date').on('input change', function () {
+                    const val = $(this).val();
+                    if (val && window.calculateCertificateExpiry) {
+                        $('#cert-expiry-date').val(window.calculateCertificateExpiry(val));
+                    }
                 });
 
                 $('.close-cert-modal').click(function () {

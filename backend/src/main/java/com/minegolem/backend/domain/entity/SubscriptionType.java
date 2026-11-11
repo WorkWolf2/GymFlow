@@ -41,6 +41,9 @@ public class SubscriptionType extends BaseEntity {
     @Column(name = "forced_expiry")
     private LocalDate forcedExpiry;
 
+    @Column(name = "total_entries")
+    private Integer totalEntries;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

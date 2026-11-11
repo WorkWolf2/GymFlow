@@ -54,6 +54,12 @@ public class Subscription extends BaseEntity {
     @Builder.Default
     private boolean stopAndGoApplied = false;
 
+    @Column(name = "total_entries")
+    private Integer totalEntries;
+
+    @Column(name = "remaining_entries")
+    private Integer remainingEntries;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -65,12 +71,20 @@ public class Subscription extends BaseEntity {
         return isSuspended(LocalDate.now());
     }
 
+    public boolean isExhausted() {
+        return subscriptionType != null
+            && subscriptionType.getType() == com.minegolem.backend.domain.enums.SubscriptionTypeEnum.PACCHETTO
+            && remainingEntries != null
+            && remainingEntries <= 0;
+    }
+
     public boolean isActive() {
         LocalDate now = LocalDate.now();
         return deletedAt == null
             && !endDate.isBefore(now)
             && !startDate.isAfter(now)
-            && !isCurrentlySuspended();
+            && !isCurrentlySuspended()
+            && !isExhausted();
     }
 
     public boolean isExpired() {

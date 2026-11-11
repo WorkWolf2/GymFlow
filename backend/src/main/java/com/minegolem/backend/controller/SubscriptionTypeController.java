@@ -108,6 +108,7 @@ public class SubscriptionTypeController {
         type.setBasePrice(request.defaultPrice() != null ? request.defaultPrice() : BigDecimal.ZERO);
         type.setValidityDays(request.validityDays());
         type.setForcedExpiry(request.forcedExpiry());
+        type.setTotalEntries(request.totalEntries());
         type.setDescription(request.description());
         type.setColor(request.color() != null && !request.color().isBlank() ? request.color() : "#6366f1");
         type.setActive(request.active() == null || request.active());

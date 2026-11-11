@@ -106,7 +106,7 @@ public class AccessService {
             .build();
 
         Access saved = accessRepository.save(access);
-        nfcEventPublisher.publishAccessEvent(saved, result.user(), "manual");
+        nfcEventPublisher.publishAccessEvent(saved, result.user(), "manual", result.remainingEntries(), result.packageName());
 
         if (result.granted()) {
             accessBridgeWebSocketHandler.sendOpenDoor(currentGymId(), bridgeRelaySeconds, "manual-validation");
@@ -208,7 +208,7 @@ public class AccessService {
             return;
         }
 
-        nfcEventPublisher.publishAccessEvent(access, result.user(), deviceId);
+        nfcEventPublisher.publishAccessEvent(access, result.user(), deviceId, result.remainingEntries(), result.packageName());
     }
 
     private void saveUnknownTag(String tagUid, Gym gym) {
@@ -242,6 +242,7 @@ public class AccessService {
             case NO_ACTIVE_INSURANCE -> "Assicurazione non attiva";
             case CERT_MISSING -> "Certificato medico mancante";
             case CERT_EXPIRED -> "Certificato medico scaduto";
+            case PACKAGE_ENTRIES_EXHAUSTED -> "Ingressi pacchetto esauriti";
         };
     }
 }

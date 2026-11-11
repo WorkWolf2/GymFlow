@@ -262,7 +262,7 @@ public class UserService {
         if (expiryDate != null) {
             cert.setExpiryDate(expiryDate);
         } else if (cert.getExpiryDate() == null) {
-            cert.setExpiryDate(LocalDate.now().plusYears(1));
+            cert.setExpiryDate(cert.getIssuedDate() != null ? cert.getIssuedDate().plusYears(1) : LocalDate.now().plusYears(1));
         }
 
         if (cert.getExpiryDate().isBefore(cert.getIssuedDate())) {
@@ -316,25 +316,27 @@ public class UserService {
             .map(NfcTag::getTagUid)
             .orElse(null);
 
-        var prediction = computeReturnPrediction(u, hasActiveSub, certStatus);
-
         List<com.minegolem.backend.dto.response.UserPackageInfo> activePackages = java.util.Collections.emptyList();
         try {
             activePackages = subscriptionRepository
                 .findActiveByUserAndType(u.getId(), SubscriptionTypeEnum.PACCHETTO, LocalDate.now())
                 .stream()
-                .filter(s -> s != null && s.getSubscriptionType() != null)
+                .filter(s -> s != null && s.getSubscriptionType() != null && (s.getRemainingEntries() == null || s.getRemainingEntries() > 0))
                 .map(s -> new com.minegolem.backend.dto.response.UserPackageInfo(
                     s.getId(),
                     s.getSubscriptionType().getName() != null ? s.getSubscriptionType().getName() : "Pacchetto",
                     s.getSubscriptionType().getColor() != null ? s.getSubscriptionType().getColor() : "#6366f1",
                     s.getStartDate(),
-                    s.getEndDate()
+                    s.getEndDate(),
+                    s.getTotalEntries(),
+                    s.getRemainingEntries()
                 ))
                 .toList();
         } catch (Exception ex) {
             log.warn("Impossibile caricare pacchetti per utente {}: {}", u.getId(), ex.getMessage());
         }
+
+        var prediction = computeReturnPrediction(u, hasActiveSub || !activePackages.isEmpty(), certStatus);
 
         return new UserResponse(
             u.getId(), u.getClientCode(), u.getFirstName(), u.getLastName(), u.getFullName(),

@@ -47,6 +47,11 @@
                             <option value="ASSICURAZIONE">Assicurazione</option>
                         </select>
                     </div>
+                    <div id="sub-entries-container" class="hidden">
+                        <label class="block text-xs font-medium text-foreground-muted mb-1.5">Numero di Ingressi Inclusi</label>
+                        <input type="number" id="sub-total-entries" min="1" class="input" placeholder="es. 10" />
+                        <p class="text-[10px] text-foreground-subtle mt-1">Numero fisso di ingressi che scaleranno a ogni accesso consentito.</p>
+                    </div>
                     <div>
                         <label class="block text-xs font-medium text-foreground-muted mb-1.5">Colore Associato</label>
                         <div class="flex items-center gap-3">
@@ -126,7 +131,8 @@
                                 const color = sub.color || '#6366f1';
                                 let typeBadge = '';
                                 if (sub.type === 'PACCHETTO') {
-                                    typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border" style="background-color: ${color}20; color: ${color}; border-color: ${color}40;">Pacchetto</span>`;
+                                    const entriesBadge = sub.totalEntries ? ` (${sub.totalEntries} ingressi)` : '';
+                                    typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border" style="background-color: ${color}20; color: ${color}; border-color: ${color}40;">Pacchetto${entriesBadge}</span>`;
                                 } else if (sub.type === 'ASSICURAZIONE') {
                                     typeBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Assicurazione</span>`;
                                 } else {
@@ -157,14 +163,25 @@
 
                 loadSubscriptionTypes();
 
+                $('#sub-type').on('change', function() {
+                    if ($(this).val() === 'PACCHETTO') {
+                        $('#sub-entries-container').removeClass('hidden');
+                    } else {
+                        $('#sub-entries-container').addClass('hidden');
+                        $('#sub-total-entries').val('');
+                    }
+                });
+
                 $('#new-sub-btn').click(function() {
                     $('#sub-color').val('#6366f1');
                     $('#sub-color-hex').val('#6366f1');
+                    $('#sub-entries-container').addClass('hidden');
                     $('#subscription-modal').removeClass('hidden');
                 });
 
                 $('.close-modal').click(function() {
                     $('#subscription-modal').addClass('hidden');
+                    $('#sub-entries-container').addClass('hidden');
                     $('#subscription-form')[0].reset();
                 });
 
@@ -172,12 +189,14 @@
                     e.preventDefault();
                     $('#submit-sub-btn').prop('disabled', true).text('Salvataggio...');
 
+                    const entriesVal = $('#sub-total-entries').val();
                     const req = {
                         name: $('#sub-name').val(),
                         defaultPrice: parseFloat($('#sub-price').val()),
                         validityDays: parseInt($('#sub-days').val(), 10),
                         forcedExpiry: $('#sub-forced-expiry').val() || null,
                         type: $('#sub-type').val(),
+                        totalEntries: $('#sub-type').val() === 'PACCHETTO' && entriesVal ? parseInt(entriesVal, 10) : null,
                         color: $('#sub-color-hex').val() || $('#sub-color').val() || '#6366f1',
                         active: true
                     };

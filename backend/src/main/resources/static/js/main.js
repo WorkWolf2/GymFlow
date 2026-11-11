@@ -36,6 +36,34 @@ $(document).ready(function() {
         return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
+    window.calculateCertificateExpiry = function(startDateStr) {
+        if (!startDateStr) return '';
+        const parts = startDateStr.split('-').map(Number);
+        if (parts.length !== 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) return '';
+        const year = parts[0] + 1;
+        const month = parts[1];
+        let day = parts[2];
+        if (month === 2 && day === 29) {
+            const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            if (!isLeap) day = 28;
+        }
+        const m = String(month).padStart(2, '0');
+        const d = String(day).padStart(2, '0');
+        return `${year}-${m}-${d}`;
+    };
+
+    $(document).on('input change', '#certIssuedDate', function() {
+        if (this.value && window.calculateCertificateExpiry) {
+            $('#certExpiryDate').val(window.calculateCertificateExpiry(this.value));
+        }
+    });
+
+    $(document).on('input change', '#cert-issued-date', function() {
+        if (this.value && window.calculateCertificateExpiry) {
+            $('#cert-expiry-date').val(window.calculateCertificateExpiry(this.value));
+        }
+    });
+
     prepareNfcAudio();
     setupNfcRealtime();
 });
@@ -267,6 +295,16 @@ function showNfcToast(event) {
     const name = escapeNfcText(nameValue);
     const reasonLabel = escapeNfcText(reason);
 
+    let packageInfoHtml = '';
+    if (event.granted && event.remainingEntries !== null && event.remainingEntries !== undefined) {
+        const pkgName = escapeNfcText(event.packageName || 'Pacchetto');
+        if (event.remainingEntries === 0) {
+            packageInfoHtml = `<p class="text-amber-400 font-bold mt-1" style="font-size:13px">${pkgName}: Ultimo ingresso utilizzato (0 rimasti)</p>`;
+        } else {
+            packageInfoHtml = `<p class="text-accent font-semibold mt-1" style="font-size:13px">${pkgName}: ${event.remainingEntries} ingressi rimanenti</p>`;
+        }
+    }
+
     const toast = $(`
         <div class="nfc-access-popup bg-surface border-l-4 ${colorClass} rounded-xl px-5 py-5"
              style="pointer-events:auto;opacity:0;transform:translateY(-18px) scale(.97);transition:opacity .18s cubic-bezier(0.2,0,0,1),transform .18s cubic-bezier(0.2,0,0,1);box-shadow:0 0 0 1px rgba(255,255,255,.1),0 18px 50px rgba(0,0,0,.35)">
@@ -277,6 +315,7 @@ function showNfcToast(event) {
                 <div class="min-w-0 flex-1">
                     <p class="${statusClass} font-bold uppercase tracking-wide text-balance" style="font-size:20px;line-height:1.2">${title}</p>
                     <p class="text-foreground font-semibold truncate mt-1" style="font-size:16px">${name}</p>
+                    ${packageInfoHtml}
                     <p class="text-foreground-muted font-mono mt-1" style="font-size:13px">${tag}${event.granted ? '' : ' - ' + reasonLabel}</p>
                 </div>
                 <button type="button" class="nfc-popup-close icon-button" aria-label="Chiudi avviso">
@@ -357,7 +396,8 @@ function denialText(reason) {
         NO_ACTIVE_SUBSCRIPTION: 'Abbonamento assente',
         NO_ACTIVE_INSURANCE: 'Assicurazione assente',
         CERT_EXPIRED: 'Certificato scaduto',
-        CERT_MISSING: 'Certificato assente'
+        CERT_MISSING: 'Certificato assente',
+        PACKAGE_ENTRIES_EXHAUSTED: 'Ingressi pacchetto esauriti'
     };
     return labels[reason] || reason || 'Negato';
 }

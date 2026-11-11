@@ -32,7 +32,9 @@ public class NfcEventPublisher {
         boolean granted,
         DenialReason denialReason,
         LocalDateTime timestamp,
-        String deviceId
+        String deviceId,
+        Integer remainingEntries,
+        String packageName
     ) {}
 
     public record UnknownTagEvent(
@@ -43,6 +45,10 @@ public class NfcEventPublisher {
     ) {}
 
     public void publishAccessEvent(Access access, User user, String deviceId) {
+        publishAccessEvent(access, user, deviceId, null, null);
+    }
+
+    public void publishAccessEvent(Access access, User user, String deviceId, Integer remainingEntries, String packageName) {
         AccessEvent event = new AccessEvent(
             "ACCESS_EVENT",
             access.getId(),
@@ -54,7 +60,9 @@ public class NfcEventPublisher {
             access.isGranted(),
             access.getDenialReason(),
             access.getAccessTime(),
-            deviceId
+            deviceId,
+            remainingEntries,
+            packageName
         );
 
         messagingTemplate.convertAndSend("/topic/accesses", event);
@@ -62,8 +70,8 @@ public class NfcEventPublisher {
             realtimeEventService.publish(access.getGym().getId(), "ACCESS", "CREATED", access.getId());
             realtimeEventService.publish(access.getGym().getId(), "DASHBOARD", "UPDATED", access.getId());
         }
-        log.debug("Published access event: granted={} user={}", access.isGranted(),
-            user != null ? user.getFullName() : "unknown");
+        log.debug("Published access event: granted={} user={} remainingEntries={}", access.isGranted(),
+            user != null ? user.getFullName() : "unknown", remainingEntries);
     }
 
     public void publishUnknownTag(String tagUid, String deviceId) {

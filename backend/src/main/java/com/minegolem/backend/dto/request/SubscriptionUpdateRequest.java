@@ -1,5 +1,6 @@
 package com.minegolem.backend.dto.request;
 
+import com.minegolem.backend.domain.enums.PaymentMethod;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -11,5 +12,8 @@ public record SubscriptionUpdateRequest(
     @NotNull LocalDate startDate,
     LocalDate endDate,
     BigDecimal price,
-    String notes
+    String notes,
+    PaymentMethod paymentMethod,
+    Integer totalEntries,
+    Integer remainingEntries
 ) {}
